@@ -11,7 +11,7 @@ class Usuario extends Model
 
     protected $table = 'usuarios';
 
-    protected $fillable = ['id_usuario', 'nome', 'email', 'senha_hash', 'id_tipo_usuario'];
+    protected $fillable = ['id_usuario', 'nome', 'email', 'senha_hash', 'data_cadastro','id_tipo_usuario'];
 
     public function id_tipo_usuario()
     {
