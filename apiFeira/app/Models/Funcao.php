@@ -15,7 +15,7 @@ class Funcao extends Model
 
     protected $fillable = ['funcao'];
 
-    public function membro_equipes()
+    public function membroEquipe()
     {
         return $this->hasMany(MembroEquipe::class, 'id_funcao', 'id_funcao');
     }

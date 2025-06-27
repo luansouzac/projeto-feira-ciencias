@@ -13,8 +13,13 @@ class Equipe extends Model
     protected $primaryKey = 'id_equipe';
     protected $fillable = ['id_projeto'];
 
-    public function projetos()
+    public function projeto()
     {
-        return $this->hasMany(Projeto::class, 'id_projeto', 'id_projeto');
+        return $this->belongsTo(Projeto::class, 'id_projeto', 'id_projeto');
+    }
+
+    public function membroEquipe()
+    {
+        return $this->hasMany(MembroEquipe::class, 'id_equipe', 'id_equipe');
     }
 }

@@ -18,6 +18,7 @@ class RegistroTarefa extends Model
         'descricao_atividade',
         'resultado',
         'data_execucao',
+        'arquivo',
         'id_responsavel',
     ];
 
@@ -29,5 +30,10 @@ class RegistroTarefa extends Model
     public function responsavel()
     {
         return $this->belongsTo(Usuario::class, 'id_responsavel', 'id_usuario');
+    }
+
+    public function comentarioDesenvolvimento()
+    {
+        return $this->hasMany(ComentarioDesenvolvimento::class, 'id_registro', 'id_registro');
     }
 }

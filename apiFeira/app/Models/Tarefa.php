@@ -27,7 +27,17 @@ class Tarefa extends Model
     {
         return $this->belongsTo(Projeto::class, 'id_projeto', 'id_projeto');
     }
+    
     public function situacao(){
         return $this->belongsTo(SituacaoProjeto::class,'id_situacao','id_situacao');
+    }
+
+    public function atribuicaoTarefa(){
+        return $this->hasMany(AtribuicaoTarefa::class,'id_tarefa','id_tarefa');
+    }
+
+    public function registroTarefa()
+    {
+        return $this->hasMany(RegistroTarefa::class, 'id_tarefa', 'id_tarefa');
     }
 }

@@ -19,6 +19,4 @@ class ObjetivoProjeto extends Model
     {
         return $this->belongsTo(Projeto::class, 'id_projeto', 'id_projeto');
     }
-
-    
 }

@@ -28,4 +28,9 @@ class MembroEquipe extends Model
         return $this->belongsTo(Equipe::class,'id_equipe','id_equipe');
     }
 
+    public function atribuicaoTarefa()
+    {
+        return $this->hasMany(AtribuicaoTarefa::class,'id_membro','id_membro');
+    }
+
 }

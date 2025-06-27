@@ -15,9 +15,13 @@ class SituacaoProjeto extends Model
 
     protected $fillable = ['situacao'];
 
-    public function situacao() //A Projeto belongs to one SituacaoProjeto.
+    public function projeto() //A Projeto belongs to one SituacaoProjeto.
     {
-        return $this->hasMany(Projetos::class, 'id_situacao', 'id_situacao'); //situacao esta em N Projetos
+        return $this->hasMany(Projeto::class, 'id_situacao', 'id_situacao'); //situacao esta em N Projetos
     }
     
+    public function tarefa()
+    {
+        return $this->hasMany(Tarefa::class, 'id_situacao', 'id_situacao');
+    }
 }

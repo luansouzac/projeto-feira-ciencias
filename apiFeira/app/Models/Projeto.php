@@ -31,4 +31,45 @@ class Projeto extends Model
         {
             return $this->belongsTo(SituacaoProjeto::class, 'id_situacao', 'id_situacao'); //coluna id_situacao PERTENCE a classe Usuario
         }
+
+        public function tarefa()
+        {
+            return $this->hasMany(Projeto::class, 'id_projeto', 'id_projeto');
+        }
+
+        public function comentarioPlanejamento()
+        {
+            return $this->hasMany(ComentarioPlanejamento::class, 'id_projeto', 'id_projeto'); 
+        }
+
+        public function equipe()
+        {
+            return $this->hasMany(Equipe::class, 'id_projeto', 'id_projeto'); 
+        }
+        
+        public function apresentacaoProjeto()
+        {
+            return $this->hasMany(ApresentacaoProjeto::class, 'id_projeto', 'id_projeto'); 
+        }
+        
+        public function discussaoEquipe()
+        {
+            return $this->hasMany(DiscussaoEquipe::class, 'id_projeto', 'id_projeto'); 
+        }
+
+        public function avaliacaoAprendizagem()
+        {
+            return $this->hasMany(avaliacaoAprendizagem::class, 'id_projeto', 'id_projeto'); 
+        }
+
+        public function questaoPesquisa()
+        {
+            return $this->hasMany(questaoPesquisa::class, 'id_projeto', 'id_projeto'); 
+        }
+
+        public function objetivoProjeto()
+        {
+            return $this->hasMany(ObjetivoProjeto::class, 'id_projeto', 'id_projeto'); 
+        }
+
 }
