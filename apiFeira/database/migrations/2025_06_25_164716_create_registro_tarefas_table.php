@@ -17,6 +17,7 @@ return new class extends Migration
             $table->text('descricao_atividade');
             $table->text('resultado')->nullable();
             $table->dateTime('data_execucao')->nullable();
+            $table->string('arquivo', 255); //adicionei, pois não havia colocado no script originalmente
             $table->unsignedBigInteger('id_responsavel');
 
             $table->foreign('id_tarefa')->references('id_tarefa')->on('tarefas')->onDelete('no action');
