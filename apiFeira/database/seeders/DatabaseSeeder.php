@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+// use Illuminate\Database\Console\Seeds\WithoutModelEvents; // Esta linha pode ser removida se não estiver usando
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -14,11 +14,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
+        // Chame todos os seus seeders em um ÚNICO array
         $this->call([
-            TipoUsuarioSeeder::class, // Adicione esta linha
-            // Outros seeders que você possa ter no futuro, por exemplo:
+            TipoUsuarioSeeder::class,
+            SituacaoSeeder::class, // <-- AGORA ESTÁ NO LUGAR CERTO!
+            // Adicione aqui todos os outros seeders que você criar para outras tabelas:
             // UsuarioSeeder::class,
             // ProjetoSeeder::class,
+            // MembroEquipeSeeder::class,
+            // etc.
         ]);
     }
 }
