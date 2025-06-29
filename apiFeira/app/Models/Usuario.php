@@ -15,6 +15,10 @@ class Usuario extends Model
 
     protected $fillable = ['nome', 'email', 'senha_hash', 'data_cadastro','id_tipo_usuario'];
 
+    protected $hidden = [
+        'senha_hash',
+    ];
+
     public function tipoUsuarios()// Um TipoUsuario tem N Usuários.
     {
         return $this->belongsTo(TipoUsuario::class, 'id_tipo_usuario', 'id_tipo_usuario'); //coluna tipo usario PERTENCE a classe TipoUsuario
