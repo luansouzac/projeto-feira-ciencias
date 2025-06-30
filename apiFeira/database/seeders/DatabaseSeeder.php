@@ -17,7 +17,9 @@ class DatabaseSeeder extends Seeder
         // Chame todos os seus seeders em um ÚNICO array
         $this->call([
             TipoUsuarioSeeder::class,
-            SituacaoSeeder::class, // <-- AGORA ESTÁ NO LUGAR CERTO!
+            SituacaoSeeder::class,
+            FuncaoSeeder::class,
+            EquipeSeeder::class, // <-- AGORA ESTÁ NO LUGAR CERTO!
             // Adicione aqui todos os outros seeders que você criar para outras tabelas:
             // UsuarioSeeder::class,
             // ProjetoSeeder::class,
