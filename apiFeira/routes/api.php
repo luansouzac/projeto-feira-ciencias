@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\ProjetoController;
 use App\Http\Controllers\Api\MembroEquipeController;
+use App\Http\Controllers\Api\QuestaoPesquisaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,5 +24,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::apiResource('usuarios', UsuarioController::class);
 Route::apiResource('projetos', ProjetoController::class);
 Route::apiResource('membro_equipes', MembroEquipeController::class);
+Route::apiResource('questao_pesquisas', QuestaoPesquisaController::class);
 
 //Route::apiResource('equipes', EquipeController::class); //colocar o nome da tabela e o nome do controller
