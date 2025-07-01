@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\MembroEquipeController;
 use App\Http\Controllers\Api\QuestaoPesquisaController;
 use App\Http\Controllers\Api\ObjetivoProjetoController;
 use App\Http\Controllers\Api\TarefaController;   
+use App\Http\Controllers\Api\AtribuicaoTarefaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,5 +30,6 @@ Route::apiResource('membro_equipes', MembroEquipeController::class);
 Route::apiResource('questao_pesquisas', QuestaoPesquisaController::class);
 Route::apiResource('objetivo_projetos', ObjetivoProjetoController::class);
 Route::apiResource('tarefas', TarefaController::class);
+Route::apiResource('atribuicao_tarefas', AtribuicaoTarefaController::class);
 
 //Route::apiResource('equipes', EquipeController::class); //colocar o nome da tabela e o nome do controller
