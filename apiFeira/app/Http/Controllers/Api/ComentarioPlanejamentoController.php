@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\ComentarioPlanejamento;
 
 class ComentarioPlanejamentoController extends Controller
 {
@@ -12,7 +13,7 @@ class ComentarioPlanejamentoController extends Controller
      */
     public function index()
     {
-        //
+        return response()->json(ComentarioPlanejamento::all(), 200);
     }
 
     /**
@@ -20,15 +21,22 @@ class ComentarioPlanejamentoController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $item = ComentarioPlanejamento::create($request->all());
+        return response()->json($item, 201);
     }
+
+
 
     /**
      * Display the specified resource.
      */
     public function show(string $id)
     {
-        //
+        $item = ComentarioPlanejamento::find($id);
+        if($item){
+            return response()->json($item,200);
+        }
+        return response()->json(['erro' => 'ComentarioPlanejamento nao encontrado'],404);
     }
 
     /**
@@ -36,7 +44,12 @@ class ComentarioPlanejamentoController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $item = ComentarioPlanejamento::find($id);
+        if($item){
+            $item->update($request->all());
+            return response()->json($item,200);
+        }
+        return response()->json(['erro'=> 'ComentarioPlanejamento nao encontrado'], 404);
     }
 
     /**
@@ -44,6 +57,11 @@ class ComentarioPlanejamentoController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $item = ComentarioPlanejamento::find($id);
+        if($item){
+            $item->delete();
+            return response()->json($item, 200);
+        }
+        return response()->json(['erro'=> 'ComentarioPlanejamento nao encontrado'],404);
     }
 }
