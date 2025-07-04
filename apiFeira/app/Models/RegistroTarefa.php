@@ -13,6 +13,8 @@ class RegistroTarefa extends Model
 
     protected $primaryKey = 'id_registro';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'id_tarefa',
         'descricao_atividade',

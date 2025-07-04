@@ -13,6 +13,8 @@ class QuestaoPesquisa extends Model
 
     protected $primaryKey = 'id_questao';
 
+    public $timestamps = false;
+
     protected $fillable = ['id_projeto', 'descricao'];
 
     public function projeto()

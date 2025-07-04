@@ -13,6 +13,8 @@ class DiscussaoEquipe extends Model
 
     protected $primaryKey = 'id_discussao';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'id_projeto',
         'pontos_fortes',

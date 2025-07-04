@@ -13,6 +13,8 @@ class SituacaoProjeto extends Model
 
     protected $primaryKey = 'id_situacao';
 
+    public $timestamps = false;
+
     protected $fillable = ['situacao'];
 
     public function projeto() //A Projeto belongs to one SituacaoProjeto.

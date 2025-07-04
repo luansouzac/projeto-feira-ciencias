@@ -13,6 +13,8 @@ class TipoUsuario extends Model
 
     protected $primaryKey = 'id_tipo_usuario';
 
+    public $timestamps = false;
+
     protected $fillable = ['tipo'];
 
     public function tipoUsuario()//A Usuario belongs to one TipoUsuario.

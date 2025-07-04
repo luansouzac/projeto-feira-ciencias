@@ -13,6 +13,8 @@ class MembroEquipe extends Model
 
     protected $primaryKey = 'id_membro';
 
+    public $timestamps = false;
+
     protected $fillable = ['id_equipe', 'id_usuario', 'id_funcao'];
 
     public function funcao()

@@ -13,6 +13,8 @@ class ApresentacaoProjeto extends Model
 
     protected $primaryKey = 'id_apresentacao';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'id_projeto',
         'arquivo_pdf',

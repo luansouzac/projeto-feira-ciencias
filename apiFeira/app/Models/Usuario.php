@@ -15,6 +15,8 @@ class Usuario extends Model
 
     protected $fillable = ['nome', 'email', 'senha_hash', 'data_cadastro','id_tipo_usuario'];
 
+    public $timestamps = false;
+
     protected $hidden = [
         'senha_hash',
     ];

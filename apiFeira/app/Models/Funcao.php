@@ -13,6 +13,8 @@ class Funcao extends Model
 
     protected $primaryKey = 'id_funcao';
 
+    public $timestamps = false;
+
     protected $fillable = ['funcao'];
 
     public function membroEquipe()
