@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\AtribuicaoTarefaController;
 use App\Http\Controllers\Api\ComentarioPlanejamentoController;
 use App\Http\Controllers\Api\RegistroTarefaController;
 use App\Http\Controllers\Api\ComentarioDesenvolvimentoController;
+use App\Http\Controllers\Api\ApresentacaoProjetoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,4 +38,5 @@ Route::apiResource('atribuicao_tarefas', AtribuicaoTarefaController::class);
 Route::apiResource('comentarios_planejamentos', ComentarioPlanejamentoController::class);
 Route::apiResource('registros_tarefas', RegistroTarefaController::class);
 Route::apiResource('comentarios_desenvolvimento', ComentarioDesenvolvimentoController::class);
+Route::apiResource('apresentacao_projetos', ApresentacaoProjetoController::class);
 //Route::apiResource('equipes', EquipeController::class); //colocar o nome da tabela e o nome do controller
