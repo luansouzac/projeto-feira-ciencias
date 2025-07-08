@@ -18,7 +18,7 @@ class UsuarioController extends Controller
     public function index()
     {
         // Retorna todos os usuários existentes com status HTTP 200 OK.
-        return response()->json(Usuario::all(), 200);
+        return response()->json(Usuario::with('tipoUsuarios')->get(), 200);
     }
 
     /**
