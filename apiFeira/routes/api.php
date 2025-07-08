@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UserAuthController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\ProjetoController;
 use App\Http\Controllers\Api\MembroEquipeController;
@@ -44,3 +45,7 @@ Route::apiResource('apresentacao_projetos', ApresentacaoProjetoController::class
 Route::apiResource('discussao_equipes', DiscussaoEquipeController::class);
 Route::apiResource('avaliacao_aprendizagem', AvaliacaoAprendizagemController::class);
 //Route::apiResource('equipes', EquipeController::class); //colocar o nome da tabela e o nome do controller
+
+Route::post('register', [UserAuthController::class, 'register']);
+Route::post('login', [UserAuthController::class, 'login']);
+Route::post('logout', [UserAuthController::class, 'logout'])->middleware('auth:sanctum');

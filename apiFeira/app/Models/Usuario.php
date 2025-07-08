@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class Usuario extends Model
+class Usuario extends Authenticatable
 {
-    use HasFactory;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $table = 'usuarios';
 
@@ -21,6 +23,10 @@ class Usuario extends Model
         'senha_hash',
     ];
 
+    public function getAuthPassword()
+    {
+        return $this->senha_hash;
+    }
     public function tipoUsuarios()// Um TipoUsuario tem N Usuários.
     {
         return $this->belongsTo(TipoUsuario::class, 'id_tipo_usuario', 'id_tipo_usuario'); //coluna tipo usario PERTENCE a classe TipoUsuario
