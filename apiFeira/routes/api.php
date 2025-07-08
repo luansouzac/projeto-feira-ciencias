@@ -31,21 +31,24 @@ use App\Http\Controllers\Api\AvaliacaoAprendizagemController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
-Route::apiResource('usuarios', UsuarioController::class);
-Route::apiResource('projetos', ProjetoController::class);
-Route::apiResource('membro_equipes', MembroEquipeController::class);
-Route::apiResource('questao_pesquisas', QuestaoPesquisaController::class);
-Route::apiResource('objetivo_projetos', ObjetivoProjetoController::class);
-Route::apiResource('tarefas', TarefaController::class);
-Route::apiResource('atribuicao_tarefas', AtribuicaoTarefaController::class);
-Route::apiResource('comentarios_planejamentos', ComentarioPlanejamentoController::class);
-Route::apiResource('registros_tarefas', RegistroTarefaController::class);
-Route::apiResource('comentarios_desenvolvimento', ComentarioDesenvolvimentoController::class);
-Route::apiResource('apresentacao_projetos', ApresentacaoProjetoController::class);
-Route::apiResource('discussao_equipes', DiscussaoEquipeController::class);
-Route::apiResource('avaliacao_aprendizagem', AvaliacaoAprendizagemController::class);
-//Route::apiResource('equipes', EquipeController::class); //colocar o nome da tabela e o nome do controller
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('usuarios', UsuarioController::class);
+    Route::apiResource('projetos', ProjetoController::class);
+    Route::apiResource('membro_equipes', MembroEquipeController::class);
+    Route::apiResource('questao_pesquisas', QuestaoPesquisaController::class);
+    Route::apiResource('objetivo_projetos', ObjetivoProjetoController::class);
+    Route::apiResource('tarefas', TarefaController::class);
+    Route::apiResource('atribuicao_tarefas', AtribuicaoTarefaController::class);
+    Route::apiResource('comentarios_planejamentos', ComentarioPlanejamentoController::class);
+    Route::apiResource('registros_tarefas', RegistroTarefaController::class);
+    Route::apiResource('comentarios_desenvolvimento', ComentarioDesenvolvimentoController::class);
+    Route::apiResource('apresentacao_projetos', ApresentacaoProjetoController::class);
+    Route::apiResource('discussao_equipes', DiscussaoEquipeController::class);
+    Route::apiResource('avaliacao_aprendizagem', AvaliacaoAprendizagemController::class);
+    //Route::apiResource('equipes', EquipeController::class); //colocar o nome da tabela e o nome do controller
+    Route::post('logout', [UserAuthController::class, 'logout']);
+});
 
 Route::post('register', [UserAuthController::class, 'register']);
 Route::post('login', [UserAuthController::class, 'login']);
-Route::post('logout', [UserAuthController::class, 'logout'])->middleware('auth:sanctum');
