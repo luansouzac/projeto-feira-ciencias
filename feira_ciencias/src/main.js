@@ -1,7 +1,7 @@
 import './assets/main.css'
 
 //axios
-import '@/plugins/axios'
+import '@/assets/plugins/axios'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
