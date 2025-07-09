@@ -120,10 +120,9 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
             Acessar
           </v-btn>
 
-          <div class="text-center mt-6">
-            <a href="#" class="text-green-darken-3 text-decoration-none">
-              Esqueceu sua senha?
-            </a>
+          <div class="d-flex justify-space-between mt-6">
+            <RouterLink to="/recuperar-senha" class="text-green-darken-3 text-decoration-none">Esqueceu sua senha?</RouterLink>
+            <RouterLink to="/registrar" class="text-green-darken-3 text-decoration-none">Criar conta</RouterLink>
           </div>
         </v-form>
       </v-card>
