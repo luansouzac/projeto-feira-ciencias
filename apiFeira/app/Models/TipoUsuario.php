@@ -13,6 +13,11 @@ class TipoUsuario extends Model
 
     protected $primaryKey = 'id_tipo_usuario';
 
+    protected $hidden = [
+        'created_at',
+        'updated_at'
+    ];
+
     public $timestamps = false;
 
     protected $fillable = ['tipo'];
