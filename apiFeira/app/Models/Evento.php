@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,10 +15,6 @@ class Evento extends Model
     protected $fillable = [
         'nome',
         'ativo',
-    ];
-
-    protected $casts = [
-        'ativo' => 'boolean',
     ];
 
     public function projetos()

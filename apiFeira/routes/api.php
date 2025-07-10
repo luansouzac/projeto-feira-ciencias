@@ -16,7 +16,7 @@ use App\Http\Controllers\Api\ComentarioDesenvolvimentoController;
 use App\Http\Controllers\Api\ApresentacaoProjetoController;
 use App\Http\Controllers\Api\DiscussaoEquipeController;
 use App\Http\Controllers\Api\AvaliacaoAprendizagemController;
-use App\Models\Evento;
+use App\Http\Controllers\Api\EventoController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -36,7 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('apresentacao_projetos', ApresentacaoProjetoController::class);
     Route::apiResource('discussao_equipes', DiscussaoEquipeController::class);
     Route::apiResource('avaliacao_aprendizagem', AvaliacaoAprendizagemController::class);
-    Route::apiResource('eventos', Evento::class);
+    Route::apiResource('eventos', EventoController::class);
     //Route::apiResource('equipes', EquipeController::class); //colocar o nome da tabela e o nome do controller
     Route::post('logout', [UserAuthController::class, 'logout']);
 });
