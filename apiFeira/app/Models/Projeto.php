@@ -23,6 +23,7 @@ class Projeto extends Model
         'id_situacao',
         'data_criacao',
         'data_aprovacao',
+        'id_evento',
         ];
 
         public function responsavel() //Um Projeto PERTENCE a um Usuário.
@@ -74,4 +75,8 @@ class Projeto extends Model
             return $this->hasMany(ObjetivoProjeto::class, 'id_projeto', 'id_projeto'); 
         }
 
+        public function projetos()
+        {
+            return $this->hasMany(Evento::class, 'id_evento', 'id_evento');
+        }
 }
