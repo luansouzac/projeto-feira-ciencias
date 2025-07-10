@@ -16,17 +16,7 @@ use App\Http\Controllers\Api\ComentarioDesenvolvimentoController;
 use App\Http\Controllers\Api\ApresentacaoProjetoController;
 use App\Http\Controllers\Api\DiscussaoEquipeController;
 use App\Http\Controllers\Api\AvaliacaoAprendizagemController;
-
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
+use App\Models\Evento;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -46,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('apresentacao_projetos', ApresentacaoProjetoController::class);
     Route::apiResource('discussao_equipes', DiscussaoEquipeController::class);
     Route::apiResource('avaliacao_aprendizagem', AvaliacaoAprendizagemController::class);
+    Route::apiResource('eventos', Evento::class);
     //Route::apiResource('equipes', EquipeController::class); //colocar o nome da tabela e o nome do controller
     Route::post('logout', [UserAuthController::class, 'logout']);
 });
