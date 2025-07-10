@@ -36,9 +36,11 @@ class ProjetoController extends Controller
             'problema' => 'required|string',
             'relevancia' => 'required|string',
             'id_situacao' => 'required|integer|exists:situacao,id_situacao', // Garante que a situação existe na tabela 'situacao'
+            'id_evento' => 'required|integer|exists:eventos,id_evento', // Garante que o evento existe na tabela 'eventos'
             // 'data_criacao' e 'data_aprovacao' são opcionais aqui se forem gerenciados pelo DB ou posteriormente
             'data_criacao' => 'nullable|date',
             'data_aprovacao' => 'nullable|date',
+
         ]);
 
         // Se a validação falhar, retorna os erros com status HTTP 422 Unprocessable Entity.
@@ -100,6 +102,7 @@ class ProjetoController extends Controller
             'problema' => 'sometimes|string',
             'relevancia' => 'sometimes|string',
             'id_situacao' => 'sometimes|integer|exists:situacao,id_situacao',
+            'id_evento' => 'sometimes|integer|exists:eventos,id_evento',
             'data_criacao' => 'sometimes|nullable|date',
             'data_aprovacao' => 'sometimes|nullable|date',
         ]);
