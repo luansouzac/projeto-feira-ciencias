@@ -13,7 +13,8 @@ const showPassword = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 
-const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
+
+const handleLogin = async () => { 
   if (!form.value.email || !form.value.password) {
     errorMessage.value = 'Por favor, preencha todos os campos.'
     return
@@ -27,7 +28,7 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
     await axios.post('/login', form.value)
 
     console.log('Login bem-sucedido!')
-    router.push({ name: 'about' }) 
+    router.push({ name: 'home' }) 
 
   } catch (error) {
     console.error('Erro ao fazer login:', error)

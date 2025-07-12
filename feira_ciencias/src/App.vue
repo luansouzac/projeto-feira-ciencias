@@ -1,6 +1,23 @@
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { onMounted } from 'vue'
+import { RouterView } from 'vue-router'
+import { useUserStore } from './stores/user'
+import apiClient from 'axios';
+
+const userStore = useUserStore()
+
+onMounted(async () => {
+  const token = userStore.authToken;
+
+  if (token) {
+    console.log("Token encontrado, tentando reautenticar...");
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  
+    await userStore.fetchUser();
+  } else {
+    console.log("Nenhum token encontrado. Usuário não autenticado.");
+  }
+})
 </script>
 
 <template>
