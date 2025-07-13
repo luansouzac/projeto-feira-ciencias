@@ -1,10 +1,9 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/user'
+import axios from 'axios'
 
 const router = useRouter()
-const userStore = useUserStore()
 
 const form = ref({
   email: '',
