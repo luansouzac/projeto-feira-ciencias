@@ -79,7 +79,7 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
           Utilize seu usuário e senha para continuar.
         </p>
 
-        <v-form @click="handleLogin">
+        <v-form @submit.prevent="handleLogin">
           <v-text-field
             v-model="form.email"
             label="Usuário (E-mail)"
