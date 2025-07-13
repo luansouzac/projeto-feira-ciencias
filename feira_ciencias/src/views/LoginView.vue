@@ -14,8 +14,7 @@ const showPassword = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 
-
-const handleLogin = async () => { 
+const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
   if (!form.value.email || !form.value.password) {
     errorMessage.value = 'Por favor, preencha todos os campos.'
     return
@@ -24,11 +23,12 @@ const handleLogin = async () => {
   loading.value = true
   errorMessage.value = ''
 
-   try {
-    await userStore.handleLogin(form.value)
+  try {
+   
+    await axios.post('/login', form.value)
 
-    console.log('Login bem-sucedido! Redirecionando...')
-    router.push({ name: 'home' }) 
+    console.log('Login bem-sucedido!')
+    router.push({ name: 'about' }) 
 
   } catch (error) {
     console.error('Erro retornado ao componente de login:', error)
