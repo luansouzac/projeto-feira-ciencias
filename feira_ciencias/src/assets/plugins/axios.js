@@ -1,5 +1,14 @@
-//Instalar o axios npm install axios
+// src/api/axios.js
+
 import axios from 'axios';
 
-//Caminho raiz da API definido no .env
-axios.defaults.baseURL = import.meta.env.VITE_API_URL
+// Cria uma instância do axios com configurações padrão
+const apiClient = axios.create({
+  // Usa a variável de ambiente que agora aponta para a raiz do servidor
+  baseURL: import.meta.env.VITE_API_URL, 
+  
+  // Essencial para o Laravel Sanctum
+  withCredentials: true, 
+});
+
+export default apiClient;

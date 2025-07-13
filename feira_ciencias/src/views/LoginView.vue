@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios' 
+import { useUserStore } from '../stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 const form = ref({
   email: '',
@@ -23,19 +24,18 @@ const handleLogin = async () => {
   loading.value = true
   errorMessage.value = ''
 
-  try {
-   
-    await axios.post('/login', form.value)
+   try {
+    await userStore.handleLogin(form.value)
 
-    console.log('Login bem-sucedido!')
+    console.log('Login bem-sucedido! Redirecionando...')
     router.push({ name: 'home' }) 
 
   } catch (error) {
-    console.error('Erro ao fazer login:', error)
-    if (error.response && error.response.status === 401) {
-      errorMessage.value = 'Credenciais inválidas. Verifique seu e-mail e senha.'
+    console.error('Erro retornado ao componente de login:', error)
+    if (error.response && (error.response.status === 422 || error.response.status === 401)) {
+        errorMessage.value = 'Credenciais inválidas. Verifique seu e-mail e senha.'
     } else {
-      errorMessage.value = 'Ocorreu um erro no servidor. Tente novamente mais tarde.'
+        errorMessage.value = 'Ocorreu um erro no servidor. Tente novamente mais tarde.'
     }
   } finally {
     loading.value = false 
@@ -80,7 +80,7 @@ const handleLogin = async () => {
           Utilize seu usuário e senha para continuar.
         </p>
 
-        <v-form @submit.prevent="handleLogin">
+        <v-form @click="handleLogin">
           <v-text-field
             v-model="form.email"
             label="Usuário (E-mail)"
