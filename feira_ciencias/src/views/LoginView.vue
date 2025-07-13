@@ -63,7 +63,7 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
         class="mb-6"
       />
       <h1 class="text-h4 font-weight-bold text-center mb-2">
-        Nome do Sistema
+        Feira Ciências
       </h1>
       <p class="text-h6 font-weight-light text-center">
         Plataforma de Gestão de Projetos do IF Sudeste MG

@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
+import api from '../assets/plugins/axios.js'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -27,7 +27,7 @@ const handleRegister = async () => {
     errorMessage.value = ''
 
     try {
-        await axios.post('/register', {
+        await api.post('/register', {
             name: form.value.name,
             email: form.value.email,
             password: form.value.password,
