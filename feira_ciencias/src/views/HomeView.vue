@@ -1,24 +1,23 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import api from '../assets/plugins/axios.js'
 
 const router = useRouter()
 
-const carregando = ref(false) 
+const carregando = ref(true) 
 const erro = ref(null)
-
-const user = localStorage.getItem('user')
-
-const nomeUsuario = ref(user ? JSON.parse(user).nome : '')
-
-const todosProjetos = ref([
-    { id_projeto: 1, titulo: 'Sistema de Irrigação Automatizado', problema: 'Alto consumo de água na agricultura familiar da região.', id_situacao: 1 },
-    { id_projeto: 2, titulo: 'Plataforma de Gestão de TCCs', problema: 'Dificuldade no acompanhamento e versionamento dos trabalhos de conclusão.', id_situacao: 2 },
-    { id_projeto: 3, titulo: 'Análise de Sentimentos em Redes Sociais', problema: 'Compreender a percepção pública sobre a instituição durante eventos.', id_situacao: 2 },
-    { id_projeto: 4, titulo: 'Protótipo de Baixo Custo para IoT', problema: 'Falta de hardware acessível para ensino de Internet das Coisas.', id_situacao: 3 },
-]);
+const todosProjetos = ref([])
 const filtroStatus = ref('Todos')
+const nomeUsuario = ref('')
+let userId = null;
+
+const userDataString = localStorage.getItem('user_data');
+if (userDataString) {
+  const userData = JSON.parse(userDataString);
+  nomeUsuario.value = userData.user.nome;
+  userId = userData.user.id_usuario;
+}
 
 const opcoesStatus = [
   { title: 'Todos', value: 'Todos' },
@@ -26,27 +25,34 @@ const opcoesStatus = [
   { title: 'Aprovado', value: 2 },
   { title: 'Reprovado', value: 3 },
 ]
-
 const statusMap = {
   1: { text: 'Em Elaboração', color: 'orange-darken-2' },
   2: { text: 'Aprovado', color: 'green-darken-2' },
   3: { text: 'Reprovado', color: 'red-darken-2' },
 }
 
-
 onMounted(() => {
-  console.log('Componente montado com dados de exemplo.');
 
-  $todosProjetos = axios.get(`/usuarios/${id}/projetos`)
-  .then(response => {
-    todosProjetos.value = response.data
-  })
-  .catch(error => {
-    erro.value = error.message
-  })
-  .finally(() => {
-    carregando.value = false
-  })
+  if (!userId) {
+    erro.value = "Usuário não encontrado. Por favor, faça o login novamente.";
+    carregando.value = false;
+    return;
+  }
+
+  console.log(`Componente montado. Buscando projetos para o usuário ID: ${userId}`);
+
+  api.get(`/usuarios/${userId}/projetos`)
+    .then(response => {
+      todosProjetos.value = response.data;
+      console.log('Projetos carregados com sucesso:', response.data);
+    })
+    .catch(error => {
+      console.error("Erro ao buscar projetos:", error);
+      erro.value = "Não foi possível carregar os projetos.";
+    })
+    .finally(() => {
+      carregando.value = false;
+    });
 })
 
 const projetosFiltrados = computed(() => {
@@ -95,11 +101,7 @@ const criarNovoProjeto = () => {
           </v-card-text>
           <v-spacer></v-spacer>
           <v-card-actions>
-            <v-btn
-              variant="outlined"
-              block
-              @click="criarNovoProjeto"
-            >
+            <v-btn variant="outlined" block @click="criarNovoProjeto">
               Criar agora
             </v-btn>
           </v-card-actions>
@@ -141,19 +143,11 @@ const criarNovoProjeto = () => {
         <p class="text-subtitle-2 text-grey-darken-1">Gerencie e acompanhe o andamento de suas propostas.</p>
       </v-col>
       <v-col cols="12" md="6" class="d-flex justify-md-end">
-        <v-select
-          v-model="filtroStatus"
-          :items="opcoesStatus"
-          label="Filtrar por Status"
-          variant="outlined"
-          density="compact"
-          hide-details
-          clearable
-          style="max-width: 280px;"
-        ></v-select>
+        <v-select v-model="filtroStatus" :items="opcoesStatus" label="Filtrar por Status" variant="outlined"
+          density="compact" hide-details clearable style="max-width: 280px;"></v-select>
       </v-col>
     </v-row>
-    
+
     <v-row>
       <v-col v-if="projetosFiltrados.length === 0" cols="12">
         <v-card flat border class="text-center pa-8">
@@ -162,11 +156,7 @@ const criarNovoProjeto = () => {
         </v-card>
       </v-col>
 
-      <v-col
-        v-for="projeto in projetosFiltrados"
-        :key="projeto.id_projeto"
-        cols="12" sm="6" lg="4"
-      >
+      <v-col v-for="projeto in projetosFiltrados" :key="projeto.id_projeto" cols="12" sm="6" lg="4">
         <v-card class="d-flex flex-column" height="100%" hover variant="outlined">
           <v-card-item>
             <div>
@@ -174,11 +164,7 @@ const criarNovoProjeto = () => {
                 <v-card-title class="text-wrap py-0">
                   {{ projeto.titulo }}
                 </v-card-title>
-                <v-chip
-                  :color="statusMap[projeto.id_situacao]?.color || 'grey'"
-                  size="small"
-                  label
-                >
+                <v-chip :color="statusMap[projeto.id_situacao]?.color || 'grey'" size="small" label>
                   {{ statusMap[projeto.id_situacao]?.text || 'Desconhecido' }}
                 </v-chip>
               </div>
@@ -190,16 +176,12 @@ const criarNovoProjeto = () => {
               {{ projeto.problema }}
             </p>
           </v-card-text>
-          
+
           <v-spacer></v-spacer>
 
           <v-divider></v-divider>
           <v-card-actions>
-            <v-btn
-              color="green-darken-3"
-              variant="tonal"
-              @click="goToProjectDetails(projeto.id_projeto)"
-            >
+            <v-btn color="green-darken-3" variant="tonal" @click="goToProjectDetails(projeto.id_projeto)">
               Ver Detalhes
             </v-btn>
             <v-spacer></v-spacer>
@@ -219,7 +201,9 @@ const criarNovoProjeto = () => {
   line-height: 1.3em;
   font-weight: 500;
 }
+
 .v-card-text {
-  min-height: 60px; /* Garante alinhamento visual dos cards */
+  min-height: 60px;
+  /* Garante alinhamento visual dos cards */
 }
 </style>
