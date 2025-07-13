@@ -105,27 +105,24 @@ const handleSave = async (formData) => {
   if (!formData.id_projeto) {
       formData.id_responsavel = userId;
       formData.id_situacao = 1; 
-      // formData.id_evento = 1; 
+      formData.id_evento = 1; //aqui trocar pelo id do evento quando tiver
   }
 
-  // try {
-  //   if (formData.id_projeto) {
-  //     // MODO EDIÇÃO (chama a rota PUT)
-  //     const { data } = await api.put(`/projetos/${formData.id_projeto}`, formData);
-  //     const index = todosProjetos.value.findIndex(p => p.id_projeto === data.id_projeto);
-  //     if (index !== -1) todosProjetos.value[index] = data;
-  //   } else {
-  //     // MODO CRIAÇÃO (chama a rota POST)
-  //     const { data } = await api.post('/projetos', formData);
-  //     todosProjetos.value.push(data);
-  //   }
-  //   isModalOpen.value = false; // Fecha o modal em caso de sucesso
-  // } catch (error) {
-  //   console.error("Erro ao salvar o projeto:", error);
-  //   // Aqui você pode mostrar um alerta/notificação de erro para o usuário
-  // } finally {
-  //   isModalLoading.value = false;
-  // }
+  try {
+    if (formData.id_projeto) {
+      const { data } = await api.put(`/projetos/${formData.id_projeto}`, formData);
+      const index = todosProjetos.value.findIndex(p => p.id_projeto === data.id_projeto);
+      if (index !== -1) todosProjetos.value[index] = data;
+    } else {
+      const { data } = await api.post('/projetos', formData);
+      todosProjetos.value.push(data);
+    }
+    isModalOpen.value = false; 
+  } catch (error) {
+    console.error("Erro ao salvar o projeto:", error);
+  } finally {
+    isModalLoading.value = false;
+  }
 };
 
 
