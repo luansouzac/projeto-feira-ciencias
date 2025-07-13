@@ -24,9 +24,9 @@ const isTaskModalLoading = ref(false);
 const currentTask = ref(null);
 
 const kanbanColumns = [
-  { title: 'A Fazer', status: 1, color: 'grey-darken-1' },
-  { title: 'Em Andamento', status: 2, color: 'blue-darken-2' },
-  { title: 'Concluído', status: 3, color: 'green-darken-2' },
+  { title: 'A Fazer', status: 1, color: 'grey' },
+  { title: 'Em Andamento', status: 2, color: 'blue' },
+  { title: 'Concluído', status: 3, color: 'green' },
 ];
 
 const modalConfig = {
