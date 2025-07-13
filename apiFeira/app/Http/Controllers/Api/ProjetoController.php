@@ -78,8 +78,10 @@ class ProjetoController extends Controller
     }
     public function meusProjetos(string $id)
     {
-        $projetos = Projeto::where('id_responsavel', $id)->get();
-        
+        $projetos = Projeto::where('id_responsavel', $id)
+                            ->select('id_projeto', 'titulo', 'problema', 'id_situacao')
+                            ->get();
+
         if ($projetos->isNotEmpty()) {
             return response()->json($projetos, 200);
         }

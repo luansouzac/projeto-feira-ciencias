@@ -36,6 +36,17 @@ const statusMap = {
 
 onMounted(() => {
   console.log('Componente montado com dados de exemplo.');
+
+  $todosProjetos = axios.get(`/usuarios/${id}/projetos`)
+  .then(response => {
+    todosProjetos.value = response.data
+  })
+  .catch(error => {
+    erro.value = error.message
+  })
+  .finally(() => {
+    carregando.value = false
+  })
 })
 
 const projetosFiltrados = computed(() => {

@@ -26,7 +26,7 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
    
     const { data } = await axios.post('/login', form.value);
 
-    localStorage.setItem('token', data.token);
+    localStorage.setItem('token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
 
     console.log('Login bem-sucedido!')
