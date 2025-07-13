@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import api from '../assets/plugins/axios.js'
 
 const router = useRouter()
 
@@ -24,13 +24,17 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
 
   try {
    
-    const { data } = await axios.post('/login', form.value);
+    const { data } = await api.post('/login', form.value);
 
-    localStorage.setItem('token', data.access_token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    const userDataToStore = {
+        token: data.access_token,
+        user: data.user
+    };
+    localStorage.setItem('user_data', JSON.stringify(userDataToStore));
 
-    console.log('Login bem-sucedido!')
-    router.push({ name: 'home' }) 
+    console.log('Login bem-sucedido!');
+    
+    router.push({ name: 'home' });
 
   } catch (error) {
     console.error('Erro retornado ao componente de login:', error)
