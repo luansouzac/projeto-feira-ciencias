@@ -13,32 +13,29 @@ const tasks = ref([]);
 const loading = ref(true);
 const error = ref(null);
 
-// --- Estado para o Modal de Tarefas ---
+//mapa dos estatus dos projetos
 
-const isEditModalOpen = ref(false);
-const isDeleteModalOpen = ref(false);
-const isModalLoading = ref(false);
+const statusMap = {
+  1: { text: 'Em Elaboração', color: 'orange-darken-2', icon: 'mdi-pencil-ruler' },
+  2: { text: 'Aprovado', color: 'green-darken-2', icon: 'mdi-check-decagram' },
+  3: { text: 'Reprovado', color: 'red-darken-2', icon: 'mdi-close-octagon' },
+  
+};
 
-const isTaskModalOpen = ref(false);
-const isTaskModalLoading = ref(false);
-const currentTask = ref(null);
 
+// --- Config kanban
 const kanbanColumns = [
   { title: 'A Fazer', status: 1, color: 'grey' },
   { title: 'Em Andamento', status: 2, color: 'blue' },
   { title: 'Concluído', status: 3, color: 'green' },
 ];
 
-const modalConfig = {
-  title: 'Editar Projeto',
-  fields: [
-    { key: 'titulo', label: 'Título do Projeto', type: 'text', rules: [v => !!v || 'O título é obrigatório'] },
-    { key: 'problema', label: 'Problema a ser Resolvido', type: 'textarea', rules: [v => !!v || 'A descrição do problema é obrigatória'] },
-    { key: 'relevancia', label: 'Relevância e Justificativa', type: 'textarea', rules: [v => !!v || 'A relevância é obrigatória'] },
-  ],
-};
+// --- Estado para o Modal de Tarefas ---
 
-// --- Configuração para o Modal de Tarefas ---
+const isTaskModalOpen = ref(false);
+const isTaskModalLoading = ref(false);
+const currentTask = ref(null);
+
 const taskModalConfig = {
   title: computed(() => (currentTask.value ? 'Editar Tarefa' : 'Nova Tarefa')),
   fields: [
@@ -47,11 +44,7 @@ const taskModalConfig = {
   ],
 };
 
-const statusMap = {
-  1: { text: 'Em Elaboração', color: 'orange-darken-2', icon: 'mdi-pencil-ruler' },
-  2: { text: 'Aprovado', color: 'green-darken-2', icon: 'mdi-check-decagram' },
-  3: { text: 'Reprovado', color: 'red-darken-2', icon: 'mdi-close-octagon' },
-};
+// --- Configuração para o Modal de Tarefas ---
 
 onMounted(async () => {
   const projectId = route.params.id;
@@ -122,31 +115,39 @@ const handleDrop = async (event, newStatus) => {
   const task = tasks.value[taskIndex];
 
   if (task && task.id_situacao !== newStatus) {
-    // Guarda uma cópia do objeto original para reverter em caso de falha
+
     const originalTask = { ...task };
 
-    // Cria um novo objeto de tarefa com o status atualizado
     const updatedTask = { ...task, id_situacao: newStatus };
-    
-    // Substitui o objeto antigo pelo novo no array. Esta é a correção principal.
+
     tasks.value.splice(taskIndex, 1, updatedTask);
 
     try {
       await api.put(`/tarefas/${taskId}`, { id_situacao: newStatus });
     } catch (err) {
       console.error("Falha ao atualizar o status da tarefa:", err);
-      // Se a API falhar, reverte a alteração colocando o objeto original de volta
       tasks.value.splice(taskIndex, 1, originalTask);
     }
   }
 };
 
-
 const filterTasksByStatus = (status) => {
   return tasks.value.filter(task => (task.status === status || task.id_situacao === status));
 };
 
-// --- Funções para os Modais ---
+// --- Funções para o modal generico ---
+const isEditModalOpen = ref(false);
+const isDeleteModalOpen = ref(false);
+const isModalLoading = ref(false);
+
+const modalConfig = {
+  title: 'Editar Projeto',
+  fields: [
+    { key: 'titulo', label: 'Título do Projeto', type: 'text', rules: [v => !!v || 'O título é obrigatório'] },
+    { key: 'problema', label: 'Problema a ser Resolvido', type: 'textarea', rules: [v => !!v || 'A descrição do problema é obrigatória'] },
+    { key: 'relevancia', label: 'Relevância e Justificativa', type: 'textarea', rules: [v => !!v || 'A relevância é obrigatória'] },
+  ],
+};
 
 const openEditModal = () => {
   isEditModalOpen.value = true;
