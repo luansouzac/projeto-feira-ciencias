@@ -57,7 +57,6 @@ class ProjetoController extends Controller
         // Retorna o projeto recém-criado com status HTTP 201 Created.
         return response()->json($item, 201);
     }
-
     /**
      * Exibe os detalhes de um projeto específico.
      *
@@ -77,7 +76,16 @@ class ProjetoController extends Controller
         // Se o projeto não for encontrado, retorna um erro 404 Not Found.
         return response()->json(['erro' => 'Projeto não encontrado'], 404);
     }
+    public function meusProjetos(string $id)
+    {
+        $projetos = Projeto::where('id_responsavel', $id)->get();
+        
+        if ($projetos->isNotEmpty()) {
+            return response()->json($projetos, 200);
+        }
 
+        return response()->json(['erro' => 'Nenhum projeto encontrado para este usuário'], 404);
+    }
     /**
      * Atualiza um projeto existente no banco de dados.
      *
