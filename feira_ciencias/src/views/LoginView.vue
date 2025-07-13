@@ -26,7 +26,7 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
    
     const { data } = await axios.post('/login', form.value);
 
-   localStorage.setItem('token', data.token);
+    localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
 
     console.log('Login bem-sucedido!')
@@ -35,7 +35,7 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
   } catch (error) {
     console.error('Erro retornado ao componente de login:', error)
     if (error.response && (error.response.status === 422 || error.response.status === 401)) {
-        errorMessage.valuej = 'Credenciais inválidas. Verifique seu e-mail e senha.'
+        errorMessage.value = 'Credenciais inválidas. Verifique seu e-mail e senha.'
     } else {
         errorMessage.value = 'Ocorreu um erro no servidor. Tente novamente mais tarde.'
     }
