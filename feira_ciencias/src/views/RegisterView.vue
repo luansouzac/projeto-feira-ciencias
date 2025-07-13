@@ -47,7 +47,6 @@ const handleRegister = async () => {
             errorMessage.value = 'Erro ao registrar. Verifique os dados e tente novamente.'
         }
         successMessage.value = ''
-        loading.value = false
     }
 }
 </script>
