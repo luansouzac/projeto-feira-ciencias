@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Tarefa;
+use App\Models\Projeto;
 
 class TarefaController extends Controller
 {
@@ -36,7 +37,17 @@ class TarefaController extends Controller
         }
         return response()->json(['erro' => 'Tarefa nao encontrado'],404);
     }
+    public function tarefasProjeto(string $id_projeto)
+    {
+    
+        if (!Projeto::find($id_projeto)) {
+            return response()->json(['erro' => 'Projeto não encontrado'], 404);
+        }
+        
+        $tarefas = Tarefa::where('id_projeto', $id_projeto)->get();
 
+        return response()->json($tarefas, 200);
+    }
     /**
      * Update the specified resource in storage.
      */
