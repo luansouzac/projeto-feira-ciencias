@@ -1,13 +1,16 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 
 const carregando = ref(false) 
 const erro = ref(null)
 
-const nomeUsuario = ref('Usuário Exemplo')
+const user = localStorage.getItem('user')
+
+const nomeUsuario = ref(user ? JSON.parse(user).nome : '')
 
 const todosProjetos = ref([
     { id_projeto: 1, titulo: 'Sistema de Irrigação Automatizado', problema: 'Alto consumo de água na agricultura familiar da região.', id_situacao: 1 },
