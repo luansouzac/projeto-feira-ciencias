@@ -1,6 +1,6 @@
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { RouterView } from 'vue-router'
+import GlobalAlert from '@/components/GlobalAlert.vue';
 </script>
 
 <template>
@@ -10,7 +10,7 @@ import HelloWorld from './components/HelloWorld.vue'
         <RouterLink to="/about">About</RouterLink>
       </nav> -->
   </header>
-
+  <GlobalAlert />
   <RouterView />
 </template>
 
