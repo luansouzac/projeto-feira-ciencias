@@ -22,7 +22,9 @@ export const useNotificationStore = defineStore('notification', {
     showError(message) {
       this.show(message, 'error');
     },
-
+    showSuccess(message) {
+      this.show(message, 'success'); 
+    },
     hide() {
       this.visible = false;
     },

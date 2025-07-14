@@ -2,9 +2,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../assets/plugins/axios.js' 
+import { useNotificationStore } from '@/stores/notification'
 import CrudModal from '@/components/CrudModal.vue';
 
-const router = useRouter()
+
+const router = useRouter();
+const notificationStore = useNotificationStore();
 
 // --- ESTADO DA PÁGINA ---
 const carregando = ref(true) 
@@ -113,8 +116,10 @@ const handleSave = async (formData) => {
       const { data } = await api.put(`/projetos/${formData.id_projeto}`, formData);
       const index = todosProjetos.value.findIndex(p => p.id_projeto === data.id_projeto);
       if (index !== -1) todosProjetos.value[index] = data;
+      notificationStore.showSuccess('Projeto alterado com sucesso!');
     } else {
       const { data } = await api.post('/projetos', formData);
+      notificationStore.showSuccess('Projeto criado com sucesso!');
       todosProjetos.value.push(data);
     }
     isModalOpen.value = false; 
