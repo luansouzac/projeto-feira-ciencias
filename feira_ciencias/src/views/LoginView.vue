@@ -62,7 +62,7 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
         contain
         class="mb-6"
       />
-      <h1 class="text-h4 font-weight-bold text-center mb-2">
+      <h1 class="text-h4 font-weight-bold text-center mb-2 brand-title">
         Projetaí
       </h1>
       <p class="text-h6 font-weight-light text-center">
@@ -136,3 +136,9 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
     </v-sheet>
   </div>
 </template>
+
+<style scoped>
+.brand-title{
+  font-family: 'Poppins', sans-serif;
+}
+</style>
