@@ -12,8 +12,8 @@ const nomeUsuario = ref("");
 // Links de navegação (centralizados para fácil manutenção)
 const navLinks = [
   { title: "Home", to: "/home", icon: "mdi-view-dashboard-outline" },
-  { title: "lorem", to: "/projetos", icon: "mdi-folder-account-outline" },
-  { title: "eventos", to: "/eventos", icon: "mdi-chart-bar" },
+  { title: "Projetos", to: "/projetos", icon: "mdi-folder-account-outline" },
+  { title: "Eventos", to: "/eventos", icon: "mdi-chart-bar" },
 ];
 
 const userDataString = localStorage.getItem('user_data');

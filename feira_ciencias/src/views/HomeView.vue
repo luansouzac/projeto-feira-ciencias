@@ -147,120 +147,18 @@ const goToProjectDetails = (id) => {
 </script>
 
 <template>
-  <v-container fluid>
-    <v-row class="mb-6">
-      <v-col cols="12">
-        <h1 class="text-h4 font-weight-bold text-grey-darken-4">Painel Inicial</h1>
-        <p class="text-subtitle-1 text-grey-darken-1">Bem-vindo de volta, {{ nomeUsuario }}!</p>
+  <v-container class="fill-height" fluid>
+    <v-row align="center" justify="center">
+      <v-col cols="12" md="8" lg="6" class="text-center">
+        <h1 class="text-h4 font-weight-bold text-grey-darken-4">Bem-vindo de volta, {{ nomeUsuario }}!</h1>
+        <p class="text-subtitle-1 text-grey-darken-1 mt-2">Aqui ficará as notificações do seu projeto</p>
       </v-col>
     </v-row>
-
-    <v-row class="mb-8">
-      <v-col cols="12" sm="6" md="4">
-        <v-card color="green-darken-4" dark class="d-flex flex-column" height="100%">
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon size="48" class="mr-4">mdi-plus-box-multiple</v-icon>
-              <div>
-                <div class="text-h5 font-weight-bold">Novo Projeto</div>
-                <div class="text-subtitle-1">Inicie uma nova proposta</div>
-              </div>
-            </div>
-          </v-card-text>
-          <v-spacer></v-spacer>
-          <v-card-actions>
-            <v-btn variant="outlined" block @click="openCreateModal">Criar agora</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-col>
-      <v-col cols="12" sm="6" md="4">
-        <v-card variant="tonal" color="grey-darken-1" class="d-flex flex-column" height="100%">
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon size="48" class="mr-4">mdi-folder-account-outline</v-icon>
-              <div>
-                <div class="text-h4 font-weight-bold text-grey-darken-4">{{ totalProjetos }}</div>
-                <div class="text-subtitle-2 text-grey-darken-2">Projetos Registrados</div>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" sm="6" md="4">
-        <v-card variant="tonal" color="green-darken-2" class="d-flex flex-column" height="100%">
-          <v-card-text>
-            <div class="d-flex align-center">
-              <v-icon size="48" class="mr-4">mdi-check-decagram-outline</v-icon>
-              <div>
-                <div class="text-h4 font-weight-bold text-green-darken-4">{{ projetosAprovados }}</div>
-                <div class="text-subtitle-2 text-green-darken-3">Projetos Aprovados</div>
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <v-divider class="my-6"></v-divider>
-    <v-row align="center" class="mb-4">
-      <v-col cols="12" md="6">
-        <h2 class="text-h5 font-weight-bold text-grey-darken-4">Meus Projetos</h2>
-        <p class="text-subtitle-2 text-grey-darken-1">Gerencie e acompanhe o andamento de suas propostas.</p>
-      </v-col>
-      <v-col cols="12" md="6" class="d-flex justify-md-end">
-        <v-select v-model="filtroStatus" :items="opcoesStatus" label="Filtrar por Status" variant="outlined" density="compact" hide-details clearable style="max-width: 280px;"></v-select>
-      </v-col>
-    </v-row>
-    
-    <v-row>
-      <v-col v-if="projetosFiltrados.length === 0 && !carregando" cols="12">
-        <v-card flat border class="text-center pa-8">
-          <v-icon size="60" class="mb-4 text-grey-lighten-1">mdi-folder-search-outline</v-icon>
-          <p class="text-grey-darken-1">Nenhum projeto encontrado.</p>
-        </v-card>
-      </v-col>
-
-      <v-col v-for="projeto in projetosFiltrados" :key="projeto.id_projeto" cols="12" sm="6" lg="4">
-        <v-card class="d-flex flex-column" height="100%" hover variant="outlined">
-          <v-card-item>
-            <div class="d-flex justify-space-between align-center mb-2">
-              <v-card-title class="text-wrap py-0">{{ projeto.titulo }}</v-card-title>
-              <v-chip :color="statusMap[projeto.id_situacao]?.color || 'grey'" size="small" label>{{ statusMap[projeto.id_situacao]?.text || 'Desconhecido' }}</v-chip>
-            </div>
-          </v-card-item>
-          <v-card-text class="py-2">
-            <p class="text-body-2 text-grey-darken-2">{{ projeto.problema }}</p>
-          </v-card-text>
-          <v-spacer></v-spacer>
-          <v-divider></v-divider>
-          <v-card-actions>
-            <v-btn color="green-darken-3" variant="tonal" @click="goToProjectDetails(projeto.id_projeto)">Ver Detalhes</v-btn>
-            <v-spacer></v-spacer>
-            <v-btn icon="mdi-pencil" variant="text" size="small" @click="openEditModal(projeto)"></v-btn>
-            <v-btn icon="mdi-delete" variant="text" color="grey" size="small"></v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <CrudModal
-      v-model="isModalOpen"
-      :title="modalConfig.title"
-      :fields="modalConfig.fields"
-      :item="currentItem"
-      :loading="isModalLoading"
-      @save="handleSave"
-    />
   </v-container>
 </template>
 
 <style scoped>
-.v-card-title.text-wrap {
-  white-space: normal;
-  line-height: 1.3em;
-  font-weight: 500;
-}
-.v-card-text {
-  min-height: 60px;
+.v-container {
+  min-height: 80vh; 
 }
 </style>
