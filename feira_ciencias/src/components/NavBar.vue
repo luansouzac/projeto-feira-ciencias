@@ -13,7 +13,7 @@ const nomeUsuario = ref("");
 const navLinks = [
   { title: "Home", to: "/home", icon: "mdi-view-dashboard-outline" },
   { title: "lorem", to: "/projetos", icon: "mdi-folder-account-outline" },
-  { title: "Lorem", to: "/relatorios", icon: "mdi-chart-bar" },
+  { title: "eventos", to: "/eventos", icon: "mdi-chart-bar" },
 ];
 
 const userDataString = localStorage.getItem('user_data');
