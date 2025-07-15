@@ -48,7 +48,7 @@ const logout = () => {
       ></v-app-bar-nav-icon>
 
       <v-toolbar-title class="font-weight-bold text-white">
-        Submit.ai
+        Projetaí
       </v-toolbar-title>
 
       <v-spacer></v-spacer>
