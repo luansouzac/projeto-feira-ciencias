@@ -22,11 +22,13 @@ const isModalOpen = ref(false)
 const isModalLoading = ref(false)
 const currentItem = ref(null) // Guarda o item para edição (null para criação)
 
-const userDataString = localStorage.getItem('user_data');
+const userDataString = sessionStorage.getItem('user_data');
 if (userDataString) {
   const userData = JSON.parse(userDataString);
   nomeUsuario.value = userData.user.nome;
   userId = userData.user.id_usuario; 
+}else{
+  router.push({ name: 'login' });
 }
 
 const modalConfig = {

@@ -30,7 +30,7 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
         token: data.access_token,
         user: data.user
     };
-    localStorage.setItem('user_data', JSON.stringify(userDataToStore));
+    sessionStorage.setItem('user_data', JSON.stringify(userDataToStore));
 
     console.log('Login bem-sucedido!');
     
