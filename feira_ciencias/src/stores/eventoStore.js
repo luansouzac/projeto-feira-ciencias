@@ -48,7 +48,7 @@ export const useEventoStore = defineStore('evento', {
       try {
         const response = await api.post('/eventos', {
           nome: evento.nome, //Atributos da entidade eventos
-          ativo: evento.ativo,
+          ativo: evento.ativo==1 ? "1" : "0",
         });
 
         //Colocando o retorno da API no array de eventos
@@ -72,7 +72,7 @@ export const useEventoStore = defineStore('evento', {
         // Atualizando os dados na API
         const response = await api.put(`/eventos/${id_evento}`, {
           nome: updated.nome,
-          ativo: updated.ativo==true ? "1" : "0",
+          ativo: updated.ativo==1 ? "1" : "0",
         });
 
         //Atualizando os dados na Array local

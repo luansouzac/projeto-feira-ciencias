@@ -151,7 +151,7 @@ onMounted(() => {
                     {{ evento.nome }}
                   </v-list-item-title>
                   <v-list-item-subtitle>
-                    <v-chip :color="evento.ativo ? 'green' : 'red'" density="compact">
+                    <v-chip :color="evento.ativo==1 ? 'green' : 'red'" density="compact">
                       {{ evento.ativo ? 'Ativo' : 'Inativo' }}
                     </v-chip>
                   </v-list-item-subtitle>
