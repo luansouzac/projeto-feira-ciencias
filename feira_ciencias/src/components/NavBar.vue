@@ -16,7 +16,7 @@ const navLinks = [
   { title: "Eventos", to: "/eventos", icon: "mdi-chart-bar" },
 ];
 
-const userDataString = localStorage.getItem('user_data');
+const userDataString = sessionStorage.getItem('user_data');
 if (userDataString) {
   const userData = JSON.parse(userDataString);
   nomeUsuario.value = userData.user.nome;
@@ -34,7 +34,7 @@ const userInitials = computed(() => {
 
 const logout = () => {
   console.log("Executando logout...");
-  localStorage.removeItem("user_data");
+  sesssionStorage.removeItem("user_data");
   router.push('/login');
 };
 </script>
