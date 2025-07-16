@@ -153,7 +153,7 @@ const goToProjectDetails = (id) => {
     <v-row align="center" justify="center">
       <v-col cols="12" md="8" lg="6" class="text-center">
         <h1 class="text-h4 font-weight-bold text-grey-darken-4">Bem-vindo de volta, {{ nomeUsuario }}!</h1>
-        <p class="text-subtitle-1 text-grey-darken-1 mt-2">Aqui ficará as notificações do seu projeto</p>
+        <p class="text-subtitle-1 text-grey-darken-1 mt-2">Aqui ficarão as notificações do seu projeto</p>
       </v-col>
     </v-row>
   </v-container>
