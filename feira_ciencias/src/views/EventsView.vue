@@ -1,64 +1,59 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import api from '../assets/plugins/axios.js' 
 import { useNotificationStore } from '@/stores/notification'
 import CrudModal from '@/components/CrudModal.vue';
 
 //Adicionando o store do evento
 import { useEventoStore } from '@/stores/eventoStore'
 
-
-const router = useRouter();
 const notificationStore = useNotificationStore();
 const eventoStore = useEventoStore();
 
 
-  const modalConfig = {
-    title: computed(() => (currentItem.value ? 'Editar Projeto' : 'Novo Projeto')),
-    fields: [
-      { 
-        key: 'nome', 
-        label: 'Nome do evento', 
-        type: 'text',
-        rules: [v => !!v || 'O nome do evento é obrigatório'],
-      },
-      { 
-        key: 'ativo', 
-        label: 'Ativo', 
-        type: 'checkbox',
-        rules: '',
-        value: 1,
-      },
-    ],
-  };
+const modalConfig = {
+  title: computed(() => (currentItem.value ? 'Editar Projeto' : 'Novo Projeto')),
+  fields: [
+    { 
+      key: 'nome', 
+      label: 'Nome do evento', 
+      type: 'text',
+      rules: [v => !!v || 'O nome do evento é obrigatório'],
+    },
+    { 
+      key: 'ativo', 
+      label: 'Ativo', 
+      type: 'checkbox',
+      rules: '',
+      value: 1,
+    },
+  ],
+};
 
-  const deleteEvento = async (evento) => {
-    if (confirm(`Tem certeza que deseja deletar o evento ${evento.nome}?`)) {
-      const success = await eventoStore.deleteEvento(evento.id_evento);
-      if (success) {
-        notificationStore.showSuccess('Evento deletado com sucesso!');
-      } else {
-        alert('Falha ao deletar evento: ' + eventoStore.getEventErrors);
-      }
+const deleteEvento = async (evento) => {
+  if (confirm(`Tem certeza que deseja deletar o evento ${evento.nome}?`)) {
+    const success = await eventoStore.deleteEvento(evento.id_evento);
+    if (success) {
+      notificationStore.showSuccess('Evento deletado com sucesso!');
+    } else {
+      alert('Falha ao deletar evento: ' + eventoStore.getEventErrors);
     }
-  };
+  }
+};
   
-  // --- ESTADO DA PÁGINA ---
-  const filtroAtivo = ref('Todos')
+// --- ESTADO DA PÁGINA ---
+const filtroAtivo = ref('Todos')
   
-  // --- ESTADO PARA O MODAL ---
-  const isModalOpen = ref(false)
-  const isModalLoading = ref(false)
-  const currentItem = ref(null) // Guarda o item para edição (null para criação)
+// --- ESTADO PARA O MODAL ---
+const isModalOpen = ref(false)
+const isModalLoading = ref(false)
+const currentItem = ref(null) // Guarda o item para edição (null para criação)
   
-  const eventosFiltrados = computed(() => {
-    if (filtroAtivo.value === 'Todos' || !filtroAtivo.value) {
-      return eventoStore.getAllEventos;
-    }
+const eventosFiltrados = computed(() => {
+  if (filtroAtivo.value === 'Todos' || !filtroAtivo.value) {
     return eventoStore.getAllEventos;
-    //return eventoStore.getAllEventos.filter(p => p.ativo === 1);
-  })
+  }
+  return eventoStore.getAllEventos.filter(p => p.ativo == filtroAtivo.value);
+})
   
   // métodos
   const openCreateModal = () => {
@@ -96,19 +91,15 @@ isModalOpen.value = false;
 
 const opcoesAtivo = [
   { title: 'Todos', value: 'Todos' },
-  { title: 'Ativo', value: 1 },
-  { title: 'Inativo', value: 0 },
+  { title: 'Ativo', value: '1' },
+  { title: 'Inativo', value: '0' },
 ]
 
-
-const totalEventos = useEventoStore.getTotal;
 
 // Carregar eventos ao montar o componente
 onMounted(() => {
   eventoStore.fetchEventos();
 });
-
-
 </script>
 
 <template>
