@@ -12,7 +12,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const userDataString = localStorage.getItem('user_data');
+    const userDataString = sessionStorage.getItem('user_data');
     if (userDataString) {
       const userData = JSON.parse(userDataString);
       const token = userData.token;
