@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             TipoUsuarioSeeder::class,
             SituacaoSeeder::class,
             FuncaoSeeder::class,
+            UsuarioSeeder::class,
             EquipeSeeder::class, // <-- AGORA ESTÁ NO LUGAR CERTO!
             // Adicione aqui todos os outros seeders que você criar para outras tabelas:
             // UsuarioSeeder::class,
