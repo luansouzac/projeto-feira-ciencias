@@ -72,18 +72,18 @@ const eventosFiltrados = computed(() => {
     try {
       if (formData.id_evento) {
         if( eventoStore.updateEvento(formData.id_evento, formData) )
-        notificationStore.showSuccess('Projeto alterado com sucesso!');
+        notificationStore.showSuccess('Evento alterado com sucesso!');
       else
-      console.error("Erro ao salvar o projeto:", error);    
+      console.error("Erro ao salvar o evento:", error);    
   } else {
     if( eventoStore.createEvento(formData) )
-    notificationStore.showSuccess('Projeto criado com sucesso!');
+    notificationStore.showSuccess('Evento criado com sucesso!');
   else
-  console.error("Erro ao salvar o projeto:", error);
+  console.error("Erro ao salvar o evento:", error);
 }
 isModalOpen.value = false; 
 } catch (error) {
-  console.error("Erro ao salvar o projeto:", error);
+  console.error("Erro ao salvar o evento:", error);
 } finally {
   isModalLoading.value = false;
 }
