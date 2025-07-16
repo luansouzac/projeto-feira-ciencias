@@ -206,14 +206,22 @@ const goToProjectDetails = (id) => {
       </v-col>
     </v-row>
     
-    <v-row>
-      <v-col v-if="projetosFiltrados.length === 0 && !carregando" cols="12">
+    <v-row v-if="carregando">
+      <v-col v-for="n in 3" :key="n" cols="12" sm="6" lg="4">
+        <v-skeleton-loader type="card"></v-skeleton-loader>
+      </v-col>
+    </v-row>
+
+    <v-row v-else-if="projetosFiltrados.length === 0">
+      <v-col cols="12">
         <v-card flat border class="text-center pa-8">
           <v-icon size="60" class="mb-4 text-grey-lighten-1">mdi-folder-search-outline</v-icon>
           <p class="text-grey-darken-1">Nenhum projeto encontrado.</p>
         </v-card>
       </v-col>
+    </v-row>
 
+    <v-row v-else>
       <v-col v-for="projeto in projetosFiltrados" :key="projeto.id_projeto" cols="12" sm="6" lg="4">
         <v-card class="d-flex flex-column" height="100%" hover variant="outlined">
           <v-card-item>
