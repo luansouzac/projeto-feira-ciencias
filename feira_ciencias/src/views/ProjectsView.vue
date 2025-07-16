@@ -4,10 +4,14 @@ import { useRouter } from 'vue-router'
 import api from '../assets/plugins/axios.js' 
 import { useNotificationStore } from '@/stores/notification'
 import CrudModal from '@/components/CrudModal.vue';
+import { useEventoStore } from '@/stores/eventoStore'
+import { storeToRefs } from 'pinia'
 
 
 const router = useRouter();
 const notificationStore = useNotificationStore();
+const eventoStore = useEventoStore();
+const { eventos } = storeToRefs(eventoStore);
 
 // --- ESTADO DA PÁGINA ---
 const carregando = ref(true) 
@@ -29,36 +33,39 @@ if (userDataString) {
   userId = userData.user.id_usuario; 
 }
 
-const modalConfig = {
-  title: computed(() => (currentItem.value ? 'Editar Projeto' : 'Novo Projeto')),
+const modalConfig = computed(() => ({
+  title: currentItem.value ? 'Editar Projeto' : 'Novo Projeto',
   fields: [
-    { 
-      key: 'titulo', 
-      label: 'Título do Projeto', 
+    {
+      key: 'titulo',
+      label: 'Título do Projeto',
       type: 'text',
       rules: [v => !!v || 'O título é obrigatório'],
     },
-    { 
-      key: 'problema', 
-      label: 'Problema a ser Resolvido', 
+    {
+      key: 'problema',
+      label: 'Problema a ser Resolvido',
       type: 'textarea',
       rules: [v => !!v || 'A descrição do problema é obrigatória'],
     },
-    { 
-      key: 'relevancia', 
-      label: 'Relevância do Projeto', 
+    {
+      key: 'relevancia',
+      label: 'Relevância do Projeto',
       type: 'textarea',
       rules: [v => !!v || 'A relevância é obrigatória'],
     },
-    // { 
-    //   key: 'id_evento', 
-    //   label: 'Evento Associado', 
-    //   type: 'select',
-    //   options: [ { text: 'Feira de Ciências 2025', value: 1 }, { text: 'Mostra de Inovação', value: 2 } ],
-    //   rules: [v => !!v || 'É necessário selecionar um evento'],
-    // },
+    {
+      key: 'id_evento',
+      label: 'Evento Associado',
+      type: 'select',
+      options: eventos.value.map(evento => ({
+        title: evento.nome,
+        value: evento.id_evento, 
+      })),
+      rules: [v => !!v || 'É necessário selecionar um evento'],
+    },
   ],
-};
+}));
 
 const opcoesStatus = [
   { title: 'Todos', value: 'Todos' },
@@ -73,24 +80,32 @@ const statusMap = {
 }
 
 // métodos
-onMounted(() => {
+onMounted(async () => { 
   if (!userId) {
     erro.value = "Usuário não encontrado. Por favor, faça o login novamente.";
     carregando.value = false;
     return;
   }
-  api.get(`/usuarios/${userId}/projetos`)
-    .then(response => {
-      todosProjetos.value = response.data;
-    })
-    .catch(error => {
-      console.error("Erro ao buscar projetos:", error);
-      erro.value = "Não foi possível carregar os projetos.";
-    })
-    .finally(() => {
-      carregando.value = false;
-    });
-})
+
+  const fetchProjetosPromise = api.get(`/usuarios/${userId}/projetos`);
+  const fetchEventosPromise = eventoStore.fetchEventos();
+
+  try {
+    const [projetosResponse] = await Promise.all([
+      fetchProjetosPromise,
+      fetchEventosPromise,
+    ]);
+
+    todosProjetos.value = projetosResponse.data;
+
+  } catch (error) {
+    console.error("Erro ao buscar dados iniciais:", error);
+    erro.value = "Não foi possível carregar os dados da página.";
+  } finally {
+    carregando.value = false;
+  }
+});
+
 
 const openCreateModal = () => {
   currentItem.value = null;
@@ -108,23 +123,23 @@ const handleSave = async (formData) => {
   if (!formData.id_projeto) {
       formData.id_responsavel = userId;
       formData.id_situacao = 1; 
-      formData.id_evento = 1; //aqui trocar pelo id do evento quando tiver
   }
 
   try {
-    if (formData.id_projeto) {
+    if (formData.id_projeto) { 
       const { data } = await api.put(`/projetos/${formData.id_projeto}`, formData);
       const index = todosProjetos.value.findIndex(p => p.id_projeto === data.id_projeto);
-      if (index !== -1) todosProjetos.value[index] = data;
+      if (index !== -1) todosProjetos.value.splice(index, 1, data);
       notificationStore.showSuccess('Projeto alterado com sucesso!');
-    } else {
+    } else { 
       const { data } = await api.post('/projetos', formData);
-      notificationStore.showSuccess('Projeto criado com sucesso!');
       todosProjetos.value.push(data);
+      notificationStore.showSuccess('Projeto criado com sucesso!');
     }
-    isModalOpen.value = false; 
+    isModalOpen.value = false;
   } catch (error) {
     console.error("Erro ao salvar o projeto:", error);
+    notificationStore.showError('Ocorreu um erro ao salvar o projeto.');
   } finally {
     isModalLoading.value = false;
   }

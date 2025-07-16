@@ -83,10 +83,8 @@ const onSave = async () => {
 
       <v-card-text class="pa-4">
         <v-form ref="formRef" @submit.prevent="onSave">
-          <!-- Loop para criar os campos do formulário dinamicamente -->
           <div v-for="field in fields" :key="field.key">
             
-            <!-- Campo de Texto -->
             <v-text-field
               v-if="field.type === 'text'"
               v-model="formData[field.key]"
@@ -96,7 +94,6 @@ const onSave = async () => {
               class="mb-3"
             ></v-text-field>
 
-            <!-- Área de Texto -->
             <v-textarea
               v-if="field.type === 'textarea'"
               v-model="formData[field.key]"
@@ -106,20 +103,17 @@ const onSave = async () => {
               class="mb-3"
             ></v-textarea>
 
-            <!-- Campo de Seleção (Select) -->
             <v-select
               v-if="field.type === 'select'"
               v-model="formData[field.key]"
               :label="field.label"
               :items="field.options"
               :rules="field.rules"
-              item-title="text"
-              item-value="value"
+              item-title="title" item-value="value"
               variant="outlined"
               class="mb-3"
             ></v-select>
 
-            <!-- Campo checkbox -->
             <v-checkbox
               v-if="field.type === 'checkbox'"
               v-model="formData[field.key]"
@@ -128,8 +122,6 @@ const onSave = async () => {
               :value="field.value"
               class="mb-3"
             ></v-checkbox>
-
-            <!-- Adicione outros tipos de campo aqui (ex: v-checkbox, v-autocomplete) -->
 
           </div>
         </v-form>
