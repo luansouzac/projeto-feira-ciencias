@@ -119,6 +119,16 @@ const onSave = async () => {
               class="mb-3"
             ></v-select>
 
+            <!-- Campo checkbox -->
+            <v-checkbox
+              v-if="field.type === 'checkbox'"
+              v-model="formData[field.key]"
+              :label="field.label"
+              :rules="field.rules"
+              :value="field.value"
+              class="mb-3"
+            ></v-checkbox>
+
             <!-- Adicione outros tipos de campo aqui (ex: v-checkbox, v-autocomplete) -->
 
           </div>
