@@ -156,7 +156,7 @@ const projetosFiltrados = computed(() => {
 const totalProjetos = computed(() => todosProjetos.value.length)
 const projetosAprovados = computed(() => todosProjetos.value.filter(p => p.id_situacao === 2).length)
 
-const goToProjectDetails = (id) => {
+function goToProjectDetails(id){
   router.push(`/projetos/${id}`)
 }
 </script>
