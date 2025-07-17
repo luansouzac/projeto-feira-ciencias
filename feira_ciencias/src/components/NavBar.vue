@@ -32,9 +32,9 @@ const userInitials = computed(() => {
   return names[0].substring(0, 2).toUpperCase();
 });
 
-const logout = () => {
+function logout () {
   console.log("Executando logout...");
-  sesssionStorage.removeItem("user_data");
+  sessionStorage.removeItem("user_data");
   router.push('/login');
 };
 </script>
