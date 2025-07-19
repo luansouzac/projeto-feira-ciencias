@@ -22,7 +22,12 @@ class EventoController extends Controller
         // Define as regras de validação para os dados de atualização.
         $validator = Validator::make($request->all(), [
             'nome' => 'required|string|max:255',
-            'ativo' => 'boolean'
+            'ativo' => 'boolean',
+            'data_evento' => 'nullable|date',
+            'inicio_submissao' => 'nullable|date',
+            'fim_submissao' => 'nullable|date',
+            'min_pessoas' => 'required|integer|min:1',
+            'max_pessoas' => 'required|integer|min:1',
         ]);
 
         // Se a validação falhar, retorna os erros com status HTTP 422 Unprocessable Entity.

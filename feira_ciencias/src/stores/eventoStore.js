@@ -49,6 +49,11 @@ export const useEventoStore = defineStore('evento', {
         const response = await api.post('/eventos', {
           nome: evento.nome, //Atributos da entidade eventos
           ativo: evento.ativo==1 ? "1" : "0",
+          data_evento: evento.data_evento,
+          inicio_submissao: evento.inicio_submissao,
+          fim_submissao:evento.fim_submissao,
+          min_pessoas:evento.min_pessoas,
+          max_pessoas:evento.max_pessoas	
         });
 
         //Colocando o retorno da API no array de eventos
@@ -73,6 +78,11 @@ export const useEventoStore = defineStore('evento', {
         const response = await api.put(`/eventos/${id_evento}`, {
           nome: updated.nome,
           ativo: updated.ativo==1 ? "1" : "0",
+          data_evento: evento.data_evento,
+          inicio_submissao: evento.inicio_submissao,
+          fim_submissao:evento.fim_submissao,
+          min_pessoas:evento.min_pessoas,
+          max_pessoas:evento.max_pessoas	
         });
 
         //Atualizando os dados na Array local

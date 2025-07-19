@@ -15,6 +15,11 @@ class Evento extends Model
     protected $fillable = [
         'nome',
         'ativo',
+        'data_evento',
+        'inicio_submissao',
+        'fim_submissao',
+        'min_pessoas',
+        'max_pessoas'
     ];
 
     public function projetos()
