@@ -15,6 +15,8 @@ return new class extends Migration
             $table->date("data_evento")->nullable()->after("nome");
             $table->dateTime("inicio_submissao")->nullable()->after("data_evento");
             $table->dateTime("fim_submissao")->nullable()->after("inicio_submissao");
+            $table->unsignedInteger('min_pessoas')->default(1);
+            $table->unsignedInteger('max_pessoas');
         });
     }
 
@@ -27,6 +29,8 @@ return new class extends Migration
             $table->dropColumn("data_evento");
             $table->dropColumn("inicio_submissao");
             $table->dropColumn("fim_submissao");
+            $table->dropColumn("min_pessoas");
+            $table->dropColumn("max_pessoas");
         });
     }
 };
