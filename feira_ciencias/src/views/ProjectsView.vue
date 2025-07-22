@@ -58,7 +58,7 @@ const modalConfig = computed(() => ({
       key: 'id_evento',
       label: 'Evento Associado',
       type: 'select',
-      options: eventos.value.map(evento => ({
+      items: eventos.value.map(evento => ({
         title: evento.nome,
         value: evento.id_evento, 
       })),
@@ -95,7 +95,7 @@ onMounted(async () => {
       fetchProjetosPromise,
       fetchEventosPromise,
     ]);
-
+    
     todosProjetos.value = projetosResponse.data;
 
   } catch (error) {
