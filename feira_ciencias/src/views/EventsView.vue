@@ -11,20 +11,68 @@ const eventoStore = useEventoStore();
 
 
 const modalConfig = {
-  title: computed(() => (currentItem.value ? 'Editar Projeto' : 'Novo Projeto')),
+  title: computed(() => (currentItem.value ? 'Editar Evento' : 'Novo Evento')),
   fields: [
     { 
       key: 'nome', 
-      label: 'Nome do evento', 
+      label: 'Nome do Evento', 
       type: 'text',
-      rules: [v => !!v || 'O nome do evento é obrigatório'],
+      cols: 12, // Largura do campo
+      rules: [v => !!v || 'O nome é obrigatório'],
+      defaultValue: '',
+    },
+    {
+      key: 'data_evento',
+      label: 'Data do Evento', 
+      type: 'date',
+      cols: 12,
+      rules: [v => !!v || 'A data é obrigatória'],
+      defaultValue: null,
+    },
+    {
+      key: 'inicio_submissao',
+      label: 'Início da Submissão', 
+      type: 'datetime-local',
+      cols: 12, md: 6, // Lado a lado em telas médias
+      rules: [v => !!v || 'O início é obrigatório'],
+      defaultValue: '',
+    },
+    {
+      key: 'fim_submissao',
+      label: 'Fim da Submissão', 
+      type: 'datetime-local',
+      cols: 12, md: 6,
+      rules: [
+        v => !!v || 'O fim é obrigatório',
+        (v, form) => new Date(v) > new Date(form.inicio_submissao) || 'Deve ser após o início.',
+      ],
+      defaultValue: '',
+    },
+    {
+      key: 'min_pessoas',
+      label: 'Mínimo de Pessoas', 
+      type: 'number',
+      cols: 12, md: 6,
+      rules: [v => v > 0 || 'Deve ser maior que zero'],
+      defaultValue: 1,
+    },
+    {
+      key: 'max_pessoas',
+      label: 'Máximo de Pessoas', 
+      type: 'number',
+      cols: 12, md: 6,
+      rules: [
+        v => v > 0 || 'Deve ser maior que zero',
+        (v, form) => v >= form.min_pessoas || 'Deve ser maior ou igual ao mínimo.',
+      ],
+      defaultValue: 5,
     },
     { 
       key: 'ativo', 
       label: 'Ativo', 
       type: 'checkbox',
-      rules: '',
-      value: 1,
+      cols: 12,
+      defaultValue: 1,
     },
   ],
 };

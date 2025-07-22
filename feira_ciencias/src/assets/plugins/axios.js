@@ -42,8 +42,6 @@ api.interceptors.response.use(
       const router = (await import('@/router')).default;
       router.push('/login');
 
-    } else {
-      notificationStore.showError('Ocorreu um erro inesperado.');
     }
     
     return Promise.reject(error);
