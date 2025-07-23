@@ -30,7 +30,7 @@ export const useEventoStore = defineStore('evento', {
       try {
         const response = await api.get('/eventos');
         this.eventos = response.data; 
-        //console.log('Eventos carregados:', response.data);
+        console.log('Eventos carregados:', response.data);
         return true;
       } catch (err) {
         this.error = err.response?.data?.message || 'Erro ao carregar eventos.';

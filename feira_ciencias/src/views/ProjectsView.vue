@@ -37,6 +37,16 @@ const modalConfig = computed(() => ({
   title: currentItem.value ? 'Editar Projeto' : 'Novo Projeto',
   fields: [
     {
+      key: 'id_evento',
+      label: 'Evento Associado',
+      type: 'select',
+      items: eventos.value.map(evento => ({
+        title: evento.nome,
+        value: evento.id_evento, 
+      })),
+      rules: [v => !!v || 'É necessário selecionar um evento'],
+    },
+    {
       key: 'titulo',
       label: 'Título do Projeto',
       type: 'text',
@@ -53,16 +63,6 @@ const modalConfig = computed(() => ({
       label: 'Relevância do Projeto',
       type: 'textarea',
       rules: [v => !!v || 'A relevância é obrigatória'],
-    },
-    {
-      key: 'id_evento',
-      label: 'Evento Associado',
-      type: 'select',
-      options: eventos.value.map(evento => ({
-        title: evento.nome,
-        value: evento.id_evento, 
-      })),
-      rules: [v => !!v || 'É necessário selecionar um evento'],
     },
   ],
 }));
@@ -95,7 +95,7 @@ onMounted(async () => {
       fetchProjetosPromise,
       fetchEventosPromise,
     ]);
-
+    
     todosProjetos.value = projetosResponse.data;
 
   } catch (error) {
