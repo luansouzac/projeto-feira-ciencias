@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Projeto; // Importa a Model Projeto (sua versão)
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator; // Para validação de dados de entrada
+use Illuminate\Validation\Rule;
 
 class ProjetoController extends Controller
 {
@@ -40,7 +41,22 @@ class ProjetoController extends Controller
             // 'data_criacao' e 'data_aprovacao' são opcionais aqui se forem gerenciados pelo DB ou posteriormente
             'data_criacao' => 'nullable|date',
             'data_aprovacao' => 'nullable|date',
-
+            'id_orientador' => [
+                'required',
+                'integer',
+                Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
+                    // Supondo que a coluna do perfil se chame 'perfil' ou 'role'
+                    $query->whereIn('id_tipo_usuario', ['3']);
+                }),
+            ],
+            'id_coorientador' => [
+                'required',
+                'integer',
+                Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
+                    // Supondo que a coluna do perfil se chame 'perfil' ou 'role'
+                    $query->whereIn('id_tipo_usuario', ['3']);
+                }),
+            ],
         ]);
 
         // Se a validação falhar, retorna os erros com status HTTP 422 Unprocessable Entity.
@@ -79,8 +95,8 @@ class ProjetoController extends Controller
     public function meusProjetos(string $id)
     {
         $projetos = Projeto::where('id_responsavel', $id)
-                            ->select('id_projeto', 'titulo', 'problema', 'id_situacao')
-                            ->get();
+            ->select('id_projeto', 'titulo', 'problema', 'id_situacao')
+            ->get();
 
         if ($projetos->isNotEmpty()) {
             return response()->json($projetos, 200);
@@ -107,14 +123,31 @@ class ProjetoController extends Controller
 
         // Define as regras de validação para os dados de atualização.
         $validator = Validator::make($request->all(), [
-            'id_responsavel' => 'sometimes|integer|exists:usuarios,id_usuario',
-            'titulo' => 'sometimes|string|max:200',
-            'problema' => 'sometimes|string',
-            'relevancia' => 'sometimes|string',
-            'id_situacao' => 'sometimes|integer|exists:situacao,id_situacao',
-            'id_evento' => 'sometimes|integer|exists:eventos,id_evento',
-            'data_criacao' => 'sometimes|nullable|date',
-            'data_aprovacao' => 'sometimes|nullable|date',
+            'id_responsavel' => 'required|integer|exists:usuarios,id_usuario', // Garante que o responsável existe na tabela 'usuarios'
+            'titulo' => 'required|string|max:200',
+            'problema' => 'required|string',
+            'relevancia' => 'required|string',
+            'id_situacao' => 'required|integer|exists:situacao,id_situacao', // Garante que a situação existe na tabela 'situacao'
+            'id_evento' => 'required|integer|exists:eventos,id_evento', // Garante que o evento existe na tabela 'eventos'
+            // 'data_criacao' e 'data_aprovacao' são opcionais aqui se forem gerenciados pelo DB ou posteriormente
+            'data_criacao' => 'nullable|date',
+            'data_aprovacao' => 'nullable|date',
+            'id_orientador' => [
+                'required',
+                'integer',
+                Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
+                    // Supondo que a coluna do perfil se chame 'perfil' ou 'role'
+                    $query->whereIn('id_tipo_usuario', ['3']);
+                }),
+            ],
+            'id_coorientador' => [
+                'required',
+                'integer',
+                Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
+                    // Supondo que a coluna do perfil se chame 'perfil' ou 'role'
+                    $query->whereIn('id_tipo_usuario', ['3']);
+                }),
+            ],
         ]);
 
         // Se a validação falhar, retorna os erros com status HTTP 422 Unprocessable Entity.

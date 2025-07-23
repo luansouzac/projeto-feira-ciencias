@@ -24,12 +24,24 @@ class Projeto extends Model
         'data_criacao',
         'data_aprovacao',
         'id_evento',
+        'id_orientador',
+        'id_coorientador'
         ];
 
         public function responsavel() //Um Projeto PERTENCE a um Usuário.
         {
             return $this->belongsTo(Usuario::class, 'id_responsavel', 'id_usuario'); //coluna id_responsavel PERTENCE a classe Usuario
         }// uma projeto pertence a um respnsevel (mas cho que seria equipe, nao?)
+
+        public function orientador()
+        {
+            return $this->belongsTo(Usuario::class, 'id_orientador', 'id_usuario');
+        }
+        public function coorientador()
+        {
+            return $this->belongsTo(Usuario::class, 'id_coorientador', 'id_usuario');
+        }
+
         public function situacao()// Um Projeto PERTENCE a uma SituacaoProjeto.
         {
             return $this->belongsTo(SituacaoProjeto::class, 'id_situacao', 'id_situacao'); //coluna id_situacao PERTENCE a classe Usuario

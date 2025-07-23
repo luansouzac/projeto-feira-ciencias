@@ -31,6 +31,14 @@ class Usuario extends Authenticatable
     {
         return $this->belongsTo(TipoUsuario::class, 'id_tipo_usuario', 'id_tipo_usuario'); //coluna tipo usario PERTENCE a classe TipoUsuario
     }
+    public function orientador()
+    {
+        return $this->hasMany(Projeto::class, 'id_orientador', 'id_usuario');
+    }
+    public function coorientador()
+    {
+        return $this->hasMany(Projeto::class, 'id_coorientador', 'id_usuario');
+    }
 
     public function registroTarefa()
     {
