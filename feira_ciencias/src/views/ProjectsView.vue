@@ -113,17 +113,13 @@ onMounted(async () => {
   const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=3`); //lista os avaliadores
 
   try {
-    const [projetosResponse] = await Promise.all([
+    const [projetosResponse, avaliadoresResponse] = await Promise.all([
       fetchProjetosPromise,
+      fetchAvaliadoresPromise,
       fetchEventosPromise,
     ]);
     
     todosProjetos.value = projetosResponse.data;
-
-    const [avaliadoresResponse] = await Promise.all([
-      fetchAvaliadoresPromise
-    ])
-
     avaliadores.value = avaliadoresResponse.data;
 
   } catch (error) {
