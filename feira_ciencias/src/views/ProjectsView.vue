@@ -20,7 +20,7 @@ const todosProjetos = ref([])
 const filtroStatus = ref('Todos')
 const nomeUsuario = ref('')
 let userId = null;
-const Avaliadores = ref('');
+const avaliadores = ref([]);
 
 // --- ESTADO PARA O MODAL ---
 const isModalOpen = ref(false)
@@ -66,15 +66,23 @@ const modalConfig = computed(() => ({
       rules: [v => !!v || 'A relevância é obrigatória'],
     },
     {
-      key: 'Orientador',
+      key: 'id_orientador',
       label: 'Professor orientador',
       type: 'select',
+      items: avaliadores.value.map(avaliador => ({
+        title: avaliador.nome,
+        value: avaliador.id_usuario,
+      })),
       rules: [v => !!v || 'O Orientador é obrigatório'],
     },
     {
-      key: 'Coorientador',
+      key: 'id_coorientador',
       label: 'Professor coorientador',
       type: 'select',
+      items: avaliadores.value.map(avaliador => ({
+        title: avaliador.nome,
+        value: avaliador.id_usuario,
+      })),
       rules: [v => !!v || 'O Corientador é obrigatório'],
     },
   ],
@@ -102,6 +110,7 @@ onMounted(async () => {
 
   const fetchProjetosPromise = api.get(`/usuarios/${userId}/projetos`);
   const fetchEventosPromise = eventoStore.fetchEventos();
+  const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=3`); //lista os avaliadores
 
   try {
     const [projetosResponse] = await Promise.all([
@@ -110,6 +119,12 @@ onMounted(async () => {
     ]);
     
     todosProjetos.value = projetosResponse.data;
+
+    const [avaliadoresResponse] = await Promise.all([
+      fetchAvaliadoresPromise
+    ])
+
+    avaliadores.value = avaliadoresResponse.data;
 
   } catch (error) {
     console.error("Erro ao buscar dados iniciais:", error);
