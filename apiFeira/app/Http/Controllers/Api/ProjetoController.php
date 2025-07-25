@@ -46,7 +46,7 @@ class ProjetoController extends Controller
                 'integer',
                 Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
                     // Supondo que a coluna do perfil se chame 'perfil' ou 'role'
-                    $query->whereIn('id_tipo_usuario', ['3']);
+                    $query->whereIn('id_tipo_usuario', ['1','3']);
                 }),
             ],
             'id_coorientador' => [
@@ -54,7 +54,7 @@ class ProjetoController extends Controller
                 'integer',
                 Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
                     // Supondo que a coluna do perfil se chame 'perfil' ou 'role'
-                    $query->whereIn('id_tipo_usuario', ['3']);
+                    $query->whereIn('id_tipo_usuario', ['1','3']);
                 }),
             ],
         ]);

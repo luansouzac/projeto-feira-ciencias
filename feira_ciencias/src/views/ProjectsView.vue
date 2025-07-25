@@ -20,6 +20,7 @@ const todosProjetos = ref([])
 const filtroStatus = ref('Todos')
 const nomeUsuario = ref('')
 let userId = null;
+const Avaliadores = ref('');
 
 // --- ESTADO PARA O MODAL ---
 const isModalOpen = ref(false)
@@ -63,6 +64,18 @@ const modalConfig = computed(() => ({
       label: 'Relevância do Projeto',
       type: 'textarea',
       rules: [v => !!v || 'A relevância é obrigatória'],
+    },
+    {
+      key: 'Orientador',
+      label: 'Professor orientador',
+      type: 'select',
+      rules: [v => !!v || 'O Orientador é obrigatório'],
+    },
+    {
+      key: 'Coorientador',
+      label: 'Professor coorientador',
+      type: 'select',
+      rules: [v => !!v || 'O Corientador é obrigatório'],
     },
   ],
 }));
