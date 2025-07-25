@@ -15,10 +15,15 @@ class UsuarioController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse Retorna uma resposta JSON com todos os usuários.
      */
-    public function index()
+    public function index(Request $request)
     {
+        $query = Usuario::with('tipoUsuarios');
+
+         if ($request->has('id_tipo_usuario')) {
+            $query->where('id_tipo_usuario', $request->input('id_tipo_usuario'));
+        }
         // Retorna todos os usuários existentes com status HTTP 200 OK.
-        return response()->json(Usuario::with('tipoUsuarios')->get(), 200);
+        return response()->json($query->get(), 200);
     }
 
     /**
