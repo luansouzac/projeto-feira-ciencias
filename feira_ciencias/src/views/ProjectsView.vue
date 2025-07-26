@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '../assets/plugins/axios.js' 
+import api from '../assets/plugins/axios.js'
 import { useNotificationStore } from '@/stores/notification'
 import CrudModal from '@/components/CrudModal.vue';
 import { useEventoStore } from '@/stores/eventoStore'
@@ -14,7 +14,7 @@ const eventoStore = useEventoStore();
 const { eventos } = storeToRefs(eventoStore);
 
 // --- ESTADO DA PÁGINA ---
-const carregando = ref(true) 
+const carregando = ref(true)
 const erro = ref(null)
 const todosProjetos = ref([])
 const filtroStatus = ref('Todos')
@@ -27,11 +27,15 @@ const isModalOpen = ref(false)
 const isModalLoading = ref(false)
 const currentItem = ref(null) // Guarda o item para edição (null para criação)
 
+// --- ESTADO PARA O MODAL DE EXCLUSÃO ---
+const isDeleteModalOpen = ref(false);
+const projectToDelete = ref(null); // Guarda o item para exclusão
+
 const userDataString = sessionStorage.getItem('user_data');
 if (userDataString) {
   const userData = JSON.parse(userDataString);
   nomeUsuario.value = userData.user.nome;
-  userId = userData.user.id_usuario; 
+  userId = userData.user.id_usuario;
 }
 
 const modalConfig = computed(() => ({
@@ -43,7 +47,7 @@ const modalConfig = computed(() => ({
       type: 'select',
       items: eventos.value.map(evento => ({
         title: evento.nome,
-        value: evento.id_evento, 
+        value: evento.id_evento,
       })),
       rules: [v => !!v || 'É necessário selecionar um evento'],
     },
@@ -100,8 +104,8 @@ const statusMap = {
   3: { text: 'Reprovado', color: 'red-darken-2' },
 }
 
-// métodos
-onMounted(async () => { 
+// --- MÉTODOS ---
+onMounted(async () => {
   if (!userId) {
     erro.value = "Usuário não encontrado. Por favor, faça o login novamente.";
     carregando.value = false;
@@ -130,6 +134,7 @@ onMounted(async () => {
   }
 });
 
+// --- MÉTODOS PARA MODAIS ---
 
 const openCreateModal = () => {
   currentItem.value = null;
@@ -141,21 +146,27 @@ const openEditModal = (projeto) => {
   isModalOpen.value = true;
 };
 
+const openDeleteModal = (projeto) => {
+  projectToDelete.value = projeto; // Guarda o projeto a ser excluído
+  isDeleteModalOpen.value = true;
+};
+
+
 const handleSave = async (formData) => {
   isModalLoading.value = true;
   
   if (!formData.id_projeto) {
       formData.id_responsavel = userId;
-      formData.id_situacao = 1; 
+      formData.id_situacao = 1;
   }
 
   try {
-    if (formData.id_projeto) { 
+    if (formData.id_projeto) {
       const { data } = await api.put(`/projetos/${formData.id_projeto}`, formData);
       const index = todosProjetos.value.findIndex(p => p.id_projeto === data.id_projeto);
       if (index !== -1) todosProjetos.value.splice(index, 1, data);
       notificationStore.showSuccess('Projeto alterado com sucesso!');
-    } else { 
+    } else {
       const { data } = await api.post('/projetos', formData);
       todosProjetos.value.push(data);
       notificationStore.showSuccess('Projeto criado com sucesso!');
@@ -169,6 +180,33 @@ const handleSave = async (formData) => {
   }
 };
 
+const handleDelete = async () => {
+  if (!projectToDelete.value) return;
+
+  isModalLoading.value = true;
+  try {
+    await api.delete(`/projetos/${projectToDelete.value.id_projeto}`);
+    
+    // Remove o projeto da lista local para atualizar a UI
+    const index = todosProjetos.value.findIndex(p => p.id_projeto === projectToDelete.value.id_projeto);
+    if (index !== -1) {
+      todosProjetos.value.splice(index, 1);
+    }
+    
+    notificationStore.showSuccess('Projeto excluído com sucesso!');
+    isDeleteModalOpen.value = false;
+    projectToDelete.value = null; // Limpa a referência
+
+  } catch (err) {
+    console.error("Erro ao excluir o projeto:", err);
+    notificationStore.showError('Ocorreu um erro ao excluir o projeto.');
+  } finally {
+    isModalLoading.value = false;
+  }
+};
+
+
+// --- COMPUTED PROPERTIES ---
 
 const projetosFiltrados = computed(() => {
   if (filtroStatus.value === 'Todos' || !filtroStatus.value) {
@@ -278,7 +316,7 @@ function goToProjectDetails(id){
             <v-btn color="green-darken-3" variant="tonal" @click="goToProjectDetails(projeto.id_projeto)">Ver Detalhes</v-btn>
             <v-spacer></v-spacer>
             <v-btn icon="mdi-pencil" variant="text" size="small" @click="openEditModal(projeto)"></v-btn>
-            <v-btn icon="mdi-delete" variant="text" color="grey" size="small"></v-btn>
+            <v-btn icon="mdi-delete" variant="text" color="grey" size="small" @click="openDeleteModal(projeto)"></v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
@@ -292,6 +330,22 @@ function goToProjectDetails(id){
       :loading="isModalLoading"
       @save="handleSave"
     />
+    
+    <v-dialog v-model="isDeleteModalOpen" max-width="450">
+      <v-card prepend-icon="mdi-alert-circle-outline" title="Confirmar Exclusão">
+        <v-card-text>
+          Você tem certeza que deseja excluir o projeto <strong>{{ projectToDelete?.titulo }}</strong>? Esta ação não pode ser desfeita.
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="isDeleteModalOpen = false" :disabled="isModalLoading">Cancelar</v-btn>
+          <v-btn color="red-darken-2" variant="flat" @click="handleDelete" :loading="isModalLoading">
+            Excluir
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
