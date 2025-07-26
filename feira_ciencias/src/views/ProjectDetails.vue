@@ -197,7 +197,7 @@ const handleDelete = async () => {
   try {
     await api.delete(`/projetos/${project.value.id_projeto}`);
     isDeleteModalOpen.value = false; // Fecha o modal
-    router.push({ name: 'home' }); // Redireciona para a home, pois o projeto não existe mais
+    router.push({ name: 'projetos' }); // Redireciona para a home, pois o projeto não existe mais
   } catch (err) {
     console.error("Erro ao excluir o projeto:", err);
   } finally {
