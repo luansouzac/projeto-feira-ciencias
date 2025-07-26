@@ -113,7 +113,7 @@ const confirmarAvaliacao = async () => {
 
     await api.patch(`/projetos/${projetoSendoAvaliado.value.id_projeto}/situacao`, payload);
     avaliacoes.value = avaliacoes.value.filter(p => p.id_projeto !== projetoSendoAvaliado.value.id_projeto);
-
+    isModalLoading.value = false;
     notificationStore.showNotification({ message: 'Projeto avaliado com sucesso!', type: 'success' });
     closeModal();
 
