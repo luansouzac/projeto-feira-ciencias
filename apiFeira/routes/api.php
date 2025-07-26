@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\ApresentacaoProjetoController;
 use App\Http\Controllers\Api\DiscussaoEquipeController;
 use App\Http\Controllers\Api\AvaliacaoAprendizagemController;
 use App\Http\Controllers\Api\EventoController;
+use App\Http\Controllers\Api\AvaliacaoController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -29,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('projetos/{id_projeto}/situacao', [ProjetoController::class, 'updateSituacao']);
     Route::apiResource('projetos', ProjetoController::class);
     Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
+    Route::apiResource('projeto_avaliacoes', AvaliacaoController::class);
     Route::apiResource('membro_equipes', MembroEquipeController::class);
     Route::apiResource('questao_pesquisas', QuestaoPesquisaController::class);
     Route::apiResource('objetivo_projetos', ObjetivoProjetoController::class);

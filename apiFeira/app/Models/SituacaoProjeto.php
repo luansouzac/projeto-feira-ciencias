@@ -26,4 +26,8 @@ class SituacaoProjeto extends Model
     {
         return $this->hasMany(Tarefa::class, 'id_situacao', 'id_situacao');
     }
+    public function projetoAvaliacao()
+    {
+        return $this->hasMany(ProjetoAvaliacao::class, 'id_situacao', 'id_situacao');
+    }
 }

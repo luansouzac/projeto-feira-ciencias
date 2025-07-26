@@ -91,4 +91,8 @@ class Projeto extends Model
         {
             return $this->belongsTo(Evento::class, 'id_evento', 'id_evento');
         }
+        public function projetoAvaliacao()
+        {
+            return $this->hasMany(ProjetoAvaliacao::class, 'id_projeto', 'id_projeto');
+        }
 }
