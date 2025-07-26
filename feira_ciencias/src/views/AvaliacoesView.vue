@@ -106,14 +106,7 @@ const confirmarAvaliacao = async () => {
 
   const payload = {
     id_situacao: situacaoMap[tipoAvaliacao.value],
-    // id_responsavel: projetoSendoAvaliado.value.id_responsavel,
-    // titulo: projetoSendoAvaliado.value.titulo,
-    // problema: projetoSendoAvaliado.value.problema,
-    // relevancia: projetoSendoAvaliado.value.relevancia,
-    // id_evento: projetoSendoAvaliado.value.id_evento,
-    // id_orientador: projetoSendoAvaliado.value.id_orientador,
-    // id_coorientador: projetoSendoAvaliado.value.id_coorientador,
-    justificativa: tipoAvaliacao.value === 'ressalva' ? justificativa.value : null,
+    //justificativa: tipoAvaliacao.value === 'ressalva' ? justificativa.value : null,
   };
 
   try {
