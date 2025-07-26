@@ -106,12 +106,15 @@ const confirmarAvaliacao = async () => {
 
   const payload = {
     id_situacao: situacaoMap[tipoAvaliacao.value],
+    id_projeto: projetoSendoAvaliado.value.id_projeto,
+    id_avaliador: userId,
+    feedback: justificativa.value,
     //justificativa: tipoAvaliacao.value === 'ressalva' ? justificativa.value : null,
   };
 
   try {
 
-    await api.patch(`/projetos/${projetoSendoAvaliado.value.id_projeto}/situacao`, payload);
+    await api.post('projeto_avaliacoes', payload);
     avaliacoes.value = avaliacoes.value.filter(p => p.id_projeto !== projetoSendoAvaliado.value.id_projeto);
     isModalLoading.value = false;
     notificationStore.showNotification({ message: 'Projeto avaliado com sucesso!', type: 'success' });
