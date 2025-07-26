@@ -82,7 +82,6 @@ const openModal = (projeto, tipo) => {
 const closeModal = () => {
   isModalAvaliacaoOpen.value = false;
   isModalLoading.value = false;
-  // Delay para animação de fechamento
   setTimeout(() => {
     projetoSendoAvaliado.value = null;
     tipoAvaliacao.value = '';
@@ -90,14 +89,13 @@ const closeModal = () => {
 };
 
 const confirmarAvaliacao = async () => {
-  if (tipoAvaliacao.value === 'ressalva' && !justificativa.value.trim()) {
+  if ((tipoAvaliacao.value === 'ressalva' || tipoAvaliacao.value === 'reprovado') && !justificativa.value.trim()) {
     notificationStore.showNotification({ message: 'A justificativa é obrigatória para esta ação.', type: 'warning' });
     return;
   }
   
   isModalLoading.value = true;
   
-  // Mapeia o tipo de avaliação para o ID da situação no backend
   const situacaoMap = {
     aprovado: 2,
     reprovado: 3,
@@ -109,12 +107,11 @@ const confirmarAvaliacao = async () => {
     id_projeto: projetoSendoAvaliado.value.id_projeto,
     id_avaliador: userId,
     feedback: justificativa.value,
-    //justificativa: tipoAvaliacao.value === 'ressalva' ? justificativa.value : null,
   };
 
   try {
-
     await api.post('projeto_avaliacoes', payload);
+    
     avaliacoes.value = avaliacoes.value.filter(p => p.id_projeto !== projetoSendoAvaliado.value.id_projeto);
     isModalLoading.value = false;
     notificationStore.showNotification({ message: 'Projeto avaliado com sucesso!', type: 'success' });
@@ -145,7 +142,7 @@ const confirmarAvaliacao = async () => {
           </v-card-text>
         </v-card>
       </v-col>
-      </v-row>
+    </v-row>
 
     <v-divider class="my-6"></v-divider>
 
@@ -161,7 +158,6 @@ const confirmarAvaliacao = async () => {
         <v-skeleton-loader type="card"></v-skeleton-loader>
       </v-col>
     </v-row>
-
     <v-row v-else-if="avaliacoes.length === 0">
       <v-col cols="12">
         <v-card flat border class="text-center pa-8">
@@ -189,7 +185,6 @@ const confirmarAvaliacao = async () => {
           <v-card-actions>
             <v-btn color="grey-darken-1" variant="text" @click="goToProjectDetails(projeto.id_projeto)">Ver Detalhes</v-btn>
             <v-spacer></v-spacer>
-            
             <v-menu offset-y>
               <template v-slot:activator="{ props }">
                 <v-btn color="blue-darken-2" variant="tonal" v-bind="props">
@@ -199,26 +194,19 @@ const confirmarAvaliacao = async () => {
               </template>
               <v-list density="compact">
                 <v-list-item @click="openModal(projeto, 'aprovado')">
-                  <template v-slot:prepend>
-                    <v-icon color="green">mdi-check-circle-outline</v-icon>
-                  </template>
+                  <template v-slot:prepend> <v-icon color="green">mdi-check-circle-outline</v-icon> </template>
                   <v-list-item-title>Aprovar</v-list-item-title>
                 </v-list-item>
                 <v-list-item @click="openModal(projeto, 'ressalva')">
-                   <template v-slot:prepend>
-                    <v-icon color="orange">mdi-alert-circle-outline</v-icon>
-                  </template>
+                  <template v-slot:prepend> <v-icon color="orange">mdi-alert-circle-outline</v-icon> </template>
                   <v-list-item-title>Reprovar com Ressalvas</v-list-item-title>
                 </v-list-item>
                 <v-list-item @click="openModal(projeto, 'reprovado')">
-                   <template v-slot:prepend>
-                    <v-icon color="red">mdi-close-circle-outline</v-icon>
-                  </template>
+                  <template v-slot:prepend> <v-icon color="red">mdi-close-circle-outline</v-icon> </template>
                   <v-list-item-title>Reprovar</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-menu>
-
           </v-card-actions>
         </v-card>
       </v-col>
@@ -231,17 +219,18 @@ const confirmarAvaliacao = async () => {
         </v-card-title>
         <v-card-text class="pt-4">
           Você está prestes a avaliar o projeto <strong>"{{ projetoSendoAvaliado?.titulo }}"</strong>.
+          
           <v-textarea
-            v-if="tipoAvaliacao === 'ressalva'"
             v-model="justificativa"
-            label="Justificativa / Ressalvas"
-            placeholder="Descreva os pontos que precisam ser ajustados pelo aluno."
+            :label="tipoAvaliacao === 'aprovado' ? 'Feedback (Opcional)' : 'Justificativa (Obrigatório)'"
+            placeholder="Descreva seu parecer sobre o projeto..."
             rows="4"
             class="mt-4"
             variant="outlined"
-            required
+            :required="tipoAvaliacao !== 'aprovado'"
+            autofocus
           ></v-textarea>
-          <p v-if="tipoAvaliacao !== 'ressalva'" class="mt-4">Deseja confirmar esta ação?</p>
+
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -261,15 +250,14 @@ const confirmarAvaliacao = async () => {
   white-space: normal !important;
   word-break: break-word;
 }
-
 .text-truncate-3-lines {
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3; /* Adicionado para compatibilidade */
+  line-clamp: 3; /* Adicionado para compatibilidade */
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* Garante que o título do modal tenha cor de texto branca */
 .v-card-title.white--text {
   color: white !important;
 }
