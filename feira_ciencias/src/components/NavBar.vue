@@ -14,6 +14,7 @@ const navLinks = [
   { title: "Home", to: "/home", icon: "mdi-view-dashboard-outline" },
   { title: "Projetos", to: "/projetos", icon: "mdi-folder-account-outline" },
   { title: "Eventos", to: "/eventos", icon: "mdi-chart-bar" },
+  { title: "Avaliações", to: "/avaliacoes", icon: "mdi-star-outline" },
 ];
 
 const userDataString = sessionStorage.getItem('user_data');

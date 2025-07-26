@@ -104,6 +104,18 @@ class ProjetoController extends Controller
 
         return response()->json(['erro' => 'Nenhum projeto encontrado para este usuário'], 404);
     }
+    public function projetosAvaliacao(string $id){
+
+        $projetos = Projeto::where('id_orientador', $id)
+            ->select('id_projeto', 'titulo', 'problema', 'id_situacao')
+            ->get();
+
+        if ($projetos->isNotEmpty()) {
+            return response()->json($projetos, 200);
+        }
+
+        return response()->json(['erro' => 'Nenhum projeto encontrado para este orientador'], 404);
+    }
     /**
      * Atualiza um projeto existente no banco de dados.
      *
@@ -163,6 +175,19 @@ class ProjetoController extends Controller
 
         // Retorna o projeto atualizado com status HTTP 200 OK.
         return response()->json($item, 200);
+    }
+    public function updateSituacao(Request $request, $id)
+    {
+        $projeto = Projeto::findOrFail($id);
+
+        $validatedData = $request->validate([
+            'id_situacao' => 'required|integer',
+            // Os demais campos podem ser opcionais
+        ]);
+
+        $projeto->update($validatedData);
+
+        return response()->json($projeto);
     }
 
     /**
