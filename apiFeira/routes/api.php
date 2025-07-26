@@ -25,6 +25,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('usuarios', UsuarioController::class);
     Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
+    Route::get('/usuarios/{id}/projetos/avaliacao', [ProjetoController::class, 'projetosAvaliacao']);
+    Route::patch('projetos/{id_projeto}/situacao', [ProjetoController::class, 'updateSituacao']);
     Route::apiResource('projetos', ProjetoController::class);
     Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
     Route::apiResource('membro_equipes', MembroEquipeController::class);
