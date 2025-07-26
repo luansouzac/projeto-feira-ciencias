@@ -102,6 +102,7 @@ const statusMap = {
   1: { text: 'Em Elaboração', color: 'orange-darken-2' },
   2: { text: 'Aprovado', color: 'green-darken-2' },
   3: { text: 'Reprovado', color: 'red-darken-2' },
+  4: { text: 'Reprovado com Ressalvas', color: 'orange-darken-2' },
 }
 
 // --- MÉTODOS ---

@@ -69,4 +69,8 @@ class Usuario extends Authenticatable
     {
         return $this->hasMany(avaliacaoAprendizagem::class, 'id_avaliador', 'id_usuario');
     }
+    public function avaliacaoProjeto()
+    {
+        return $this->hasMany(ProjetoAvaliacao::class, 'id_avaliador', 'id_usuario');
+    }
 }
