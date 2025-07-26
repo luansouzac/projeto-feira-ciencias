@@ -82,7 +82,7 @@ class ProjetoController extends Controller
     public function show(string $id)
     {
         // Tenta encontrar o projeto pelo ID.
-        $item = Projeto::find($id);
+        $item = Projeto ::with(['responsavel', 'orientador', 'coorientador'])->find($id);
 
         // Se o projeto for encontrado, retorna-o com status HTTP 200 OK.
         if ($item) {

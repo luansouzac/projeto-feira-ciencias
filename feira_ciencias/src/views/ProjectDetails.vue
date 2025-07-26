@@ -306,6 +306,14 @@ const formatDate = (dateString) => {
             <v-list-item-title class="text-overline">Data de Criação</v-list-item-title>
             <v-list-item-subtitle class="text-body-1">{{ formatDate(project.data_criacao) }}</v-list-item-subtitle>
           </v-list-item>
+          <v-list-item prepend-icon="mdi-account-group-outline">
+            <v-list-item-title class="text-overline">Orientador(a)</v-list-item-title>
+            <v-list-item-subtitle class="text-body-1">{{ project.orientador.nome }}</v-list-item-subtitle>
+          </v-list-item>
+          <v-list-item prepend-icon="mdi-account-group-outline">
+            <v-list-item-title class="text-overline">Coorientador(a)</v-list-item-title>
+            <v-list-item-subtitle class="text-body-1">{{ project.coorientador.nome }}</v-list-item-subtitle>
+          </v-list-item>
         </v-list>
 
         <v-divider></v-divider>
