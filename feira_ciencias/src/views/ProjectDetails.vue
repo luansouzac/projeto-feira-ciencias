@@ -329,8 +329,8 @@ const formatDate = (dateString) => {
           <!-- ABA 4: TAREFAS (Kanban) -->
           <v-window-item value="tarefas">
             <v-card-title class="d-flex justify-space-between align-center">
-              <span>Quadro Kanban</span>
-              <v-btn color="white" variant="flat" @click="openCreateTaskModal" prepend-icon="mdi-plus">
+              <span>Tarefas do projeto</span>
+              <v-btn color="green" variant="flat" @click="openCreateTaskModal" prepend-icon="mdi-plus">
                 Nova Tarefa
               </v-btn>
             </v-card-title>
