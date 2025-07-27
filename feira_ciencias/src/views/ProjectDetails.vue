@@ -13,8 +13,10 @@ const eventoStore = useEventoStore();
 // --- Estado do Componente ---
 const project = ref(null);
 const tasks = ref([]);
+const avaliacoes = ref([]);
 const loading = ref(true);
 const error = ref(null);
+const activeTab = ref(null);
 
 //mapa dos estatus dos projetos
 
@@ -22,9 +24,14 @@ const statusMap = {
   1: { text: 'Em Elaboração', color: 'white-darken-2', icon: 'mdi-pencil-ruler' },
   2: { text: 'Aprovado', color: 'green-darken-2', icon: 'mdi-check-decagram' },
   3: { text: 'Reprovado', color: 'red-darken-2', icon: 'mdi-close-octagon' },
-
+  4: { text: 'Com Ressalvas', color: 'orange-darken-2', icon: 'mdi-alert-circle-outline' },
 };
 
+const avaliacaoStatusMap = {
+  2: { text: 'Aprovado', color: 'green', icon: 'mdi-check-circle' },
+  3: { text: 'Reprovado', color: 'red', icon: 'mdi-close-circle' },
+  4: { text: 'Reprovado com Ressalvas', color: 'orange', icon: 'mdi-alert-circle' },
+};
 
 // --- Config kanban
 const kanbanColumns = [
@@ -65,7 +72,8 @@ onMounted(async () => {
   try {
     const promises = [
       api.get(`/projetos/${projectId}`),
-      api.get(`/projetos/${projectId}/tarefas`)
+      api.get(`/projetos/${projectId}/tarefas`),
+      api.get(`/projetos/${projectId}/avaliacoes`),
     ];
 
     if (eventoStore.eventos.length === 0) {
@@ -73,10 +81,11 @@ onMounted(async () => {
       promises.push(eventoStore.fetchEventos());
     }
 
-    const [projectResponse, tasksResponse] = await Promise.all(promises);
+    const [projectResponse, tasksResponse, avaliacoesResponse] = await Promise.all(promises);
 
     project.value = projectResponse.data;
     tasks.value = tasksResponse.data;
+    avaliacoes.value = avaliacoesResponse.data;
 
   } catch (err) {
     console.error("Erro ao buscar detalhes do projeto:", err);
@@ -226,7 +235,6 @@ const formatDate = (dateString) => {
       <v-card theme="dark" class="mb-8 bg-green-darken-4">
         <v-card-item class="pa-4 pa-sm-6">
           <div class="d-flex flex-wrap justify-space-between align-center">
-
             <div>
               <p class="text-overline">Projeto</p>
               <h1 class="text-h4 font-weight-bold">{{ project.titulo }}</h1>
@@ -235,134 +243,167 @@ const formatDate = (dateString) => {
                 <span class="text-subtitle-1">{{ event.nome }}</span>
               </div>
             </div>
+            <v-chip :color="projectStatus.color" :prepend-icon="projectStatus.icon" variant="tonal" label>
+              {{ projectStatus.text }}
+            </v-chip>
+          </div>
+        </v-card-item>
+      </v-card>
 
-            <div class="d-flex align-center mt-4 mt-sm-0">
-              <v-chip :color="projectStatus.color" :prepend-icon="projectStatus.icon" variant="tonal" class="mr-4"
-                label>
-                {{ projectStatus.text }}
-              </v-chip>
+      <v-card theme="dark" color="green-darken-4">
+        <v-tabs v-model="activeTab" color="white" grow>
+          <v-tab value="detalhes">
+            <v-icon start>mdi-text-box-search-outline</v-icon>
+            Detalhes
+          </v-tab>
+          <v-tab value="feedback">
+            <v-icon start>mdi-comment-quote-outline</v-icon>
+            Feedback
+          </v-tab>
+          <v-tab value="equipe">
+            <v-icon start>mdi-account-group-outline</v-icon>
+            Equipe
+          </v-tab>
+          <v-tab value="tarefas" :disabled="project.id_situacao !== 2">
+            <v-icon start>mdi-view-dashboard-outline</v-icon>
+            Tarefas
+          </v-tab>
+        </v-tabs>
 
-              <v-btn v-if="project.id_situacao === 2" color="white" variant="outlined" @click="openCreateTaskModal"
-                prepend-icon="mdi-plus">
-                Adicionar Tarefa
+        <v-window v-model="activeTab">
+          <!-- ABA 1: DETALHES DO PROJETO -->
+          <v-window-item value="detalhes">
+            <v-card-text class="pa-4 pa-md-6">
+              <v-list lines="two" bg-color="transparent">
+                <v-list-item prepend-icon="mdi-lightbulb-on-outline" title="Problema a ser Resolvido" :subtitle="project.problema" class="mb-4"></v-list-item>
+                <v-list-item prepend-icon="mdi-bullseye-arrow" title="Relevância e Justificativa" :subtitle="project.relevancia" class="mb-4"></v-list-item>
+                <v-list-item prepend-icon="mdi-account-tie" title="Orientador(a)" :subtitle="project.orientador?.nome || 'Não definido'"></v-list-item>
+                <v-list-item prepend-icon="mdi-account-tie-outline" title="Coorientador(a)" :subtitle="project.coorientador?.nome || 'Não definido'"></v-list-item>
+              </v-list>
+            </v-card-text>
+            <v-divider></v-divider>
+            <v-card-actions class="pa-3">
+              <v-spacer></v-spacer>
+              <v-btn variant="tonal" color="white" @click="openEditModal">Editar Proposta</v-btn>
+              <v-btn color="red-lighten-2" variant="text" @click="openDeleteModal">Excluir</v-btn>
+            </v-card-actions>
+          </v-window-item>
+
+          <!-- ABA 2: FEEDBACK DE AVALIAÇÕES -->
+          <v-window-item value="feedback">
+            <v-card-text class="pa-4 pa-md-6">
+              <div v-if="!avaliacoes || avaliacoes.length === 0" class="text-center pa-8">
+                <v-icon size="48" class="mb-4">mdi-comment-question-outline</v-icon>
+                <p>Nenhum feedback de avaliação foi registrado.</p>
+              </div>
+              <v-timeline v-else side="end" align="start">
+                <v-timeline-item
+                  v-for="avaliacao in avaliacoes"
+                  :key="avaliacao.id_projeto_avaliacao"
+                  :dot-color="avaliacaoStatusMap[avaliacao.id_situacao]?.color || 'grey-lighten-1'"
+                  :icon="avaliacaoStatusMap[avaliacao.id_situacao]?.icon"
+                >
+                  <template v-slot:opposite>
+                    <span class="text-caption">{{ formatDate(avaliacao.created_at) }}</span>
+                  </template>
+                  <div>
+                    <div class="text-h6">{{ avaliacaoStatusMap[avaliacao.id_situacao]?.text || 'Avaliação' }}</div>
+                    <p class="text-body-2 mt-2 font-italic">"{{ avaliacao.feedback || 'Nenhum comentário adicional.' }}"</p>
+                    <div class="text-caption opacity-75 mt-3">
+                      Por: {{ avaliacao.avaliador?.nome || 'Avaliador desconhecido' }}
+                    </div>
+                  </div>
+                </v-timeline-item>
+              </v-timeline>
+            </v-card-text>
+          </v-window-item>
+
+          <!-- ABA 3: EQUIPE -->
+          <v-window-item value="equipe">
+            <v-card-text class="text-center pa-8">
+              <v-icon size="48" class="mb-4">mdi-account-group-outline</v-icon>
+              <p>A funcionalidade de Equipe será implementada aqui.</p>
+            </v-card-text>
+          </v-window-item>
+
+          <!-- ABA 4: TAREFAS (Kanban) -->
+          <v-window-item value="tarefas">
+            <v-card-title class="d-flex justify-space-between align-center">
+              <span>Quadro Kanban</span>
+              <v-btn color="white" variant="flat" @click="openCreateTaskModal" prepend-icon="mdi-plus">
+                Nova Tarefa
               </v-btn>
-            </div>
-          </div>
-        </v-card-item>
+            </v-card-title>
+            <v-card-text>
+              <v-row>
+                <v-col v-for="column in kanbanColumns" :key="column.status" cols="12" md="4" @dragover.prevent @drop="handleDrop($event, column.status)">
+                  <div class="pa-4 rounded-lg fill-height" :class="`bg-${column.color}-lighten-5`">
+                    <div class="d-flex align-center mb-4">
+                      <v-icon :color="column.color" class="mr-2">mdi-circle-medium</v-icon>
+                      <span class="font-weight-bold text-grey-darken-3">{{ column.title }}</span>
+                      <v-chip size="small" :color="column.color" class="ml-2">{{ filterTasksByStatus(column.status).length }}</v-chip>
+                    </div>
+                    <div v-if="filterTasksByStatus(column.status).length === 0" class="text-center text-grey-darken-1 pa-4">Nenhuma tarefa aqui.</div>
+                    
+                    <!-- ✅ CORREÇÃO: Adicionado theme="light" para o card da tarefa -->
+                    <v-card 
+                      v-for="task in filterTasksByStatus(column.status)" 
+                      :key="task.id_tarefa" 
+                      class="mb-3 task-card" 
+                      theme="light" 
+                      variant="flat" 
+                      draggable="true" 
+                      @dragstart="handleDragStart($event, task)"
+                    >
+                      <v-card-text class="font-weight-medium text-grey-darken-4">
+                        {{ task.descricao }}
+                        <p v-if="task.detalhe" class="text-caption font-weight-regular text-grey-darken-1 mt-1">{{ task.detalhe }}</p>
+                      </v-card-text>
+                      <v-card-actions class="pa-1">
+                        <v-spacer></v-spacer>
+                        <v-btn icon="mdi-pencil" variant="text" size="x-small" @click="openEditTaskModal(task)"></v-btn>
+                      </v-card-actions>
+                    </v-card>
+                  </div>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-window-item>
+        </v-window>
       </v-card>
-
-      <v-row v-if="project.id_situacao === 2">
-        <v-col v-for="column in kanbanColumns" :key="column.status" cols="12" md="4" @dragover.prevent
-          @drop="handleDrop($event, column.status)">
-          <div class="pa-4 rounded-lg fill-height" :class="`bg-${column.color}-lighten-5`">
-            <div class="d-flex align-center mb-4">
-              <v-icon :color="column.color" class="mr-2">mdi-circle-medium</v-icon>
-              <span class="font-weight-bold text-grey-darken-3">{{ column.title }}</span>
-              <v-chip size="small" :color="column.color" class="ml-2">{{ filterTasksByStatus(column.status).length
-                }}</v-chip>
-            </div>
-
-            <div v-if="filterTasksByStatus(column.status).length === 0" class="text-center text-grey-darken-1 pa-4">
-              Nenhuma tarefa aqui.
-            </div>
-
-            <v-card v-for="task in filterTasksByStatus(column.status)" :key="task.id_tarefa" class="mb-3 task-card"
-              variant="flat" draggable="true" @dragstart="handleDragStart($event, task)">
-              <v-card-text class="font-weight-medium text-grey-darken-4">
-                {{ task.descricao }}
-                <p v-if="task.detalhe" class="text-caption font-weight-regular text-grey-darken-1 mt-1">{{ task.detalhe
-                  }}</p>
-              </v-card-text>
-              <v-card-actions class="pa-1">
-                <v-spacer></v-spacer>
-                <v-btn icon="mdi-pencil" variant="text" size="x-small" @click="openEditTaskModal(task)"></v-btn>
-              </v-card-actions>
-            </v-card>
-          </div>
-        </v-col>
-      </v-row>
-
-      <v-card v-else class="mb-8 bg-green-darken-4">
-        <v-card-item class="pb-0">
-          <v-card-title class="d-flex align-center">
-            <v-icon start icon="mdi-text-box-search-outline"></v-icon>
-            Detalhes do Projeto
-          </v-card-title>
-          <v-card-subtitle>Informações sobre a proposta</v-card-subtitle>
-        </v-card-item>
-
-        <v-list bg-color="transparent" class="mt-2">
-          <v-list-item prepend-icon="mdi-lightbulb-on-outline">
-            <v-list-item-title class="text-overline">Problema a ser Resolvido</v-list-item-title>
-            <v-list-item-subtitle class="text-body-1 text-wrap">{{ project.problema }}</v-list-item-subtitle>
-          </v-list-item>
-
-          <v-list-item prepend-icon="mdi-lightbulb-on-outline">
-            <v-list-item-title class="text-overline">Relevância e Justificativa</v-list-item-title>
-            <v-list-item-subtitle class="text-body-1 text-wrap">{{ project.relevancia }}</v-list-item-subtitle>
-          </v-list-item>
-
-          <v-list-item prepend-icon="mdi-calendar-plus">
-            <v-list-item-title class="text-overline">Data de Criação</v-list-item-title>
-            <v-list-item-subtitle class="text-body-1">{{ formatDate(project.data_criacao) }}</v-list-item-subtitle>
-          </v-list-item>
-          <v-list-item prepend-icon="mdi-account-group-outline">
-            <v-list-item-title class="text-overline">Orientador(a)</v-list-item-title>
-            <v-list-item-subtitle class="text-body-1">{{ project?.orientador?.nome }}</v-list-item-subtitle>
-          </v-list-item>
-          <v-list-item prepend-icon="mdi-account-group-outline">
-            <v-list-item-title class="text-overline">Coorientador(a)</v-list-item-title>
-            <v-list-item-subtitle class="text-body-1">{{ project?.coorientador?.nome }}</v-list-item-subtitle>
-          </v-list-item>
-        </v-list>
-
-        <v-divider></v-divider>
-
-        <v-card-actions class="pa-3">
-          <v-spacer></v-spacer>
-          <v-btn variant="tonal" @click="openEditModal">Editar Proposta</v-btn>
-          <v-btn color="red-lighten-2" variant="text" @click="openDeleteModal">Excluir</v-btn>
-        </v-card-actions>
-      </v-card>
-
     </div>
 
-    <CrudModal v-model="isTaskModalOpen" :title="taskModalConfig.title" :fields="taskModalConfig.fields"
-      :item="currentTask" :loading="isTaskModalLoading" @save="handleSaveTask" />
-
-    <CrudModal v-model="isEditModalOpen" :title="modalConfig.title" :fields="modalConfig.fields" :item="project"
-      :loading="isModalLoading" @save="handleUpdate" />
-
+    <!-- MODAIS (sem alterações) -->
+    <CrudModal v-model="isTaskModalOpen" :title="taskModalConfig.title" :fields="taskModalConfig.fields" :item="currentTask" :loading="isModalLoading" @save="handleSaveTask" />
+    <CrudModal v-model="isEditModalOpen" :title="modalConfig.title" :fields="modalConfig.fields" :item="project" :loading="isModalLoading" @save="handleUpdate" />
     <v-dialog v-model="isDeleteModalOpen" max-width="450">
       <v-card prepend-icon="mdi-alert-circle-outline" title="Confirmar Exclusão">
         <v-card-text>
-          Você tem certeza que deseja excluir o projeto **{{ project?.titulo }}**? Esta ação não pode ser desfeita.
+          Você tem certeza que deseja excluir o projeto <strong>{{ project?.titulo }}</strong>? Esta ação não pode ser desfeita.
         </v-card-text>
-
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn @click="isDeleteModalOpen = false" :disabled="isModalLoading">Cancelar</v-btn>
-          <v-btn color="red-darken-2" variant="flat" @click="handleDelete" :loading="isModalLoading">
-            Excluir
-          </v-btn>
+          <v-btn color="red-darken-2" variant="flat" @click="handleDelete" :loading="isModalLoading">Excluir</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </v-container>
 </template>
 
 <style scoped>
 .fill-height {
-  height: 100%;
+  min-height: 400px; 
 }
-
 .task-card {
   cursor: move;
   transition: box-shadow 0.2s ease-in-out;
 }
-
 .task-card:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
+.text-wrap {
+  white-space: normal !important;
+}
 </style>
+
