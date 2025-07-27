@@ -17,6 +17,11 @@ class AvaliacaoController extends Controller
     {
         return response()->json(ProjetoAvaliacao::all(), 200);
     }
+    public function getByProject(Projeto $projeto)
+    {
+        $avaliacoes = ProjetoAvaliacao::where('id_projeto', $projeto->id_projeto)->get();
+        return response()->json($avaliacoes, 200);
+    }
 
     /**
      * Store a newly created resource in storage.

@@ -13,8 +13,10 @@ const eventoStore = useEventoStore();
 // --- Estado do Componente ---
 const project = ref(null);
 const tasks = ref([]);
+const avaliacoes = ref([]);
 const loading = ref(true);
 const error = ref(null);
+const activeTab = ref(null);
 
 //mapa dos estatus dos projetos
 
@@ -22,9 +24,14 @@ const statusMap = {
   1: { text: 'Em Elaboração', color: 'white-darken-2', icon: 'mdi-pencil-ruler' },
   2: { text: 'Aprovado', color: 'green-darken-2', icon: 'mdi-check-decagram' },
   3: { text: 'Reprovado', color: 'red-darken-2', icon: 'mdi-close-octagon' },
-
+  4: { text: 'Com Ressalvas', color: 'orange-darken-2', icon: 'mdi-alert-circle-outline' },
 };
 
+const avaliacaoStatusMap = {
+  'aprovado': { text: 'Aprovado', color: 'green', icon: 'mdi-check-circle' },
+  'reprovado': { text: 'Reprovado', color: 'red', icon: 'mdi-close-circle' },
+  'ressalva': { text: 'Reprovado com Ressalvas', color: 'orange', icon: 'mdi-alert-circle' },
+};
 
 // --- Config kanban
 const kanbanColumns = [

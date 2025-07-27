@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('projetos', ProjetoController::class);
     Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
     Route::apiResource('projeto_avaliacoes', AvaliacaoController::class);
+    Route::get('/projetos/{projeto}/avaliacoes', [AvaliacaoController::class, 'getByProject']);
     Route::apiResource('membro_equipes', MembroEquipeController::class);
     Route::apiResource('questao_pesquisas', QuestaoPesquisaController::class);
     Route::apiResource('objetivo_projetos', ObjetivoProjetoController::class);
