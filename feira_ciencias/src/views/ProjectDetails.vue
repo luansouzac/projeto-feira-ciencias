@@ -28,9 +28,9 @@ const statusMap = {
 };
 
 const avaliacaoStatusMap = {
-  'aprovado': { text: 'Aprovado', color: 'green', icon: 'mdi-check-circle' },
-  'reprovado': { text: 'Reprovado', color: 'red', icon: 'mdi-close-circle' },
-  'ressalva': { text: 'Reprovado com Ressalvas', color: 'orange', icon: 'mdi-alert-circle' },
+  2: { text: 'Aprovado', color: 'green', icon: 'mdi-check-circle' },
+  3: { text: 'Reprovado', color: 'red', icon: 'mdi-close-circle' },
+  4: { text: 'Reprovado com Ressalvas', color: 'orange', icon: 'mdi-alert-circle' },
 };
 
 // --- Config kanban
@@ -289,6 +289,7 @@ const formatDate = (dateString) => {
             </v-card-actions>
           </v-window-item>
 
+          <!-- ABA 2: FEEDBACK DE AVALIAÇÕES -->
           <v-window-item value="feedback">
             <v-card-text class="pa-4 pa-md-6">
               <div v-if="!avaliacoes || avaliacoes.length === 0" class="text-center text-grey-darken-1 pa-8">
@@ -296,12 +297,17 @@ const formatDate = (dateString) => {
                 <p>Nenhum feedback de avaliação foi registrado.</p>
               </div>
               <v-timeline v-else side="end" align="start">
-                <v-timeline-item v-for="avaliacao in avaliacoes" :key="avaliacao.id_projeto_avaliacao" :dot-color="avaliacaoStatusMap[avaliacao.status]?.color || 'grey'" :icon="avaliacaoStatusMap[avaliacao.status]?.icon">
+                <v-timeline-item
+                  v-for="avaliacao in avaliacoes"
+                  :key="avaliacao.id_projeto_avaliacao"
+                  :dot-color="avaliacaoStatusMap[avaliacao.id_situacao]?.color || 'grey'"
+                  :icon="avaliacaoStatusMap[avaliacao.id_situacao]?.icon"
+                >
                   <template v-slot:opposite>
                     <span class="text-caption">{{ formatDate(avaliacao.created_at) }}</span>
                   </template>
                   <div>
-                    <div class="text-h6">{{ avaliacaoStatusMap[avaliacao.status]?.text || 'Avaliação' }}</div>
+                    <div class="text-h6">{{ avaliacaoStatusMap[avaliacao.id_situacao]?.text || 'Avaliação' }}</div>
                     <p class="text-body-2 mt-2 font-italic">"{{ avaliacao.feedback || 'Nenhum comentário adicional.' }}"</p>
                     <div class="text-caption text-grey-darken-1 mt-3">
                       Por: {{ avaliacao.avaliador?.nome || 'Avaliador desconhecido' }}

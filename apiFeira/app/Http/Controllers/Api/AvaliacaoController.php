@@ -19,7 +19,9 @@ class AvaliacaoController extends Controller
     }
     public function getByProject(Projeto $projeto)
     {
-        $avaliacoes = ProjetoAvaliacao::where('id_projeto', $projeto->id_projeto)->get();
+        $avaliacoes = ProjetoAvaliacao::where('id_projeto', $projeto->id_projeto)
+                                            ->with('avaliador', 'situacao')
+                                            ->get();
         return response()->json($avaliacoes, 200);
     }
 
