@@ -250,8 +250,8 @@ const formatDate = (dateString) => {
         </v-card-item>
       </v-card>
 
-      <v-card>
-        <v-tabs v-model="activeTab" bg-color="green-lighten-5" grow>
+      <v-card theme="dark" color="green-darken-4">
+        <v-tabs v-model="activeTab" color="white" grow>
           <v-tab value="detalhes">
             <v-icon start>mdi-text-box-search-outline</v-icon>
             Detalhes
@@ -284,7 +284,7 @@ const formatDate = (dateString) => {
             <v-divider></v-divider>
             <v-card-actions class="pa-3">
               <v-spacer></v-spacer>
-              <v-btn variant="tonal" @click="openEditModal">Editar Proposta</v-btn>
+              <v-btn variant="tonal" color="white" @click="openEditModal">Editar Proposta</v-btn>
               <v-btn color="red-lighten-2" variant="text" @click="openDeleteModal">Excluir</v-btn>
             </v-card-actions>
           </v-window-item>
@@ -292,7 +292,7 @@ const formatDate = (dateString) => {
           <!-- ABA 2: FEEDBACK DE AVALIAÇÕES -->
           <v-window-item value="feedback">
             <v-card-text class="pa-4 pa-md-6">
-              <div v-if="!avaliacoes || avaliacoes.length === 0" class="text-center text-grey-darken-1 pa-8">
+              <div v-if="!avaliacoes || avaliacoes.length === 0" class="text-center pa-8">
                 <v-icon size="48" class="mb-4">mdi-comment-question-outline</v-icon>
                 <p>Nenhum feedback de avaliação foi registrado.</p>
               </div>
@@ -300,7 +300,7 @@ const formatDate = (dateString) => {
                 <v-timeline-item
                   v-for="avaliacao in avaliacoes"
                   :key="avaliacao.id_projeto_avaliacao"
-                  :dot-color="avaliacaoStatusMap[avaliacao.id_situacao]?.color || 'grey'"
+                  :dot-color="avaliacaoStatusMap[avaliacao.id_situacao]?.color || 'grey-lighten-1'"
                   :icon="avaliacaoStatusMap[avaliacao.id_situacao]?.icon"
                 >
                   <template v-slot:opposite>
@@ -309,7 +309,7 @@ const formatDate = (dateString) => {
                   <div>
                     <div class="text-h6">{{ avaliacaoStatusMap[avaliacao.id_situacao]?.text || 'Avaliação' }}</div>
                     <p class="text-body-2 mt-2 font-italic">"{{ avaliacao.feedback || 'Nenhum comentário adicional.' }}"</p>
-                    <div class="text-caption text-grey-darken-1 mt-3">
+                    <div class="text-caption opacity-75 mt-3">
                       Por: {{ avaliacao.avaliador?.nome || 'Avaliador desconhecido' }}
                     </div>
                   </div>
@@ -320,7 +320,7 @@ const formatDate = (dateString) => {
 
           <!-- ABA 3: EQUIPE -->
           <v-window-item value="equipe">
-            <v-card-text class="text-center text-grey-darken-1 pa-8">
+            <v-card-text class="text-center pa-8">
               <v-icon size="48" class="mb-4">mdi-account-group-outline</v-icon>
               <p>A funcionalidade de Equipe será implementada aqui.</p>
             </v-card-text>
@@ -330,7 +330,7 @@ const formatDate = (dateString) => {
           <v-window-item value="tarefas">
             <v-card-title class="d-flex justify-space-between align-center">
               <span>Quadro Kanban</span>
-              <v-btn color="green-darken-2" variant="flat" @click="openCreateTaskModal" prepend-icon="mdi-plus">
+              <v-btn color="white" variant="flat" @click="openCreateTaskModal" prepend-icon="mdi-plus">
                 Nova Tarefa
               </v-btn>
             </v-card-title>
@@ -344,7 +344,17 @@ const formatDate = (dateString) => {
                       <v-chip size="small" :color="column.color" class="ml-2">{{ filterTasksByStatus(column.status).length }}</v-chip>
                     </div>
                     <div v-if="filterTasksByStatus(column.status).length === 0" class="text-center text-grey-darken-1 pa-4">Nenhuma tarefa aqui.</div>
-                    <v-card v-for="task in filterTasksByStatus(column.status)" :key="task.id_tarefa" class="mb-3 task-card" variant="flat" draggable="true" @dragstart="handleDragStart($event, task)">
+                    
+                    <!-- ✅ CORREÇÃO: Adicionado theme="light" para o card da tarefa -->
+                    <v-card 
+                      v-for="task in filterTasksByStatus(column.status)" 
+                      :key="task.id_tarefa" 
+                      class="mb-3 task-card" 
+                      theme="light" 
+                      variant="flat" 
+                      draggable="true" 
+                      @dragstart="handleDragStart($event, task)"
+                    >
                       <v-card-text class="font-weight-medium text-grey-darken-4">
                         {{ task.descricao }}
                         <p v-if="task.detalhe" class="text-caption font-weight-regular text-grey-darken-1 mt-1">{{ task.detalhe }}</p>
@@ -364,7 +374,7 @@ const formatDate = (dateString) => {
     </div>
 
     <!-- MODAIS (sem alterações) -->
-    <CrudModal v-model="isTaskModalOpen" :title="taskModalConfig.title" :fields="taskModalConfig.fields" :item="currentTask" :loading="isTaskModalLoading" @save="handleSaveTask" />
+    <CrudModal v-model="isTaskModalOpen" :title="taskModalConfig.title" :fields="taskModalConfig.fields" :item="currentTask" :loading="isModalLoading" @save="handleSaveTask" />
     <CrudModal v-model="isEditModalOpen" :title="modalConfig.title" :fields="modalConfig.fields" :item="project" :loading="isModalLoading" @save="handleUpdate" />
     <v-dialog v-model="isDeleteModalOpen" max-width="450">
       <v-card prepend-icon="mdi-alert-circle-outline" title="Confirmar Exclusão">
@@ -396,3 +406,4 @@ const formatDate = (dateString) => {
   white-space: normal !important;
 }
 </style>
+
