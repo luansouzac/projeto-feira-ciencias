@@ -117,19 +117,36 @@ onMounted(async () => {
   const fetchEventosPromise = eventoStore.fetchEventos();
   const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=3`); //lista os avaliadores
 
-  try {
-    const [projetosResponse, avaliadoresResponse] = await Promise.all([
+   try {
+
+    const results = await Promise.allSettled([
       fetchProjetosPromise,
       fetchAvaliadoresPromise,
       fetchEventosPromise,
     ]);
-    
-    todosProjetos.value = projetosResponse.data;
-    avaliadores.value = avaliadoresResponse.data;
-    console.log("Avaliadores:", avaliadores.value);
 
-  } catch (error) {
-    console.error("Erro ao buscar dados iniciais:", error);
+    const [projetosResult, avaliadoresResult, eventosResult] = results;
+
+    if (projetosResult.status === 'fulfilled') {
+      todosProjetos.value = projetosResult.value.data;
+    } else {
+      console.error("Erro ao buscar projetos:", projetosResult.reason);
+      todosProjetos.value = [];
+    }
+
+    if (avaliadoresResult.status === 'fulfilled') {
+      avaliadores.value = avaliadoresResult.value.data;
+      console.log("Avaliadores carregados:", avaliadores.value);
+    } else {
+        console.error("Erro ao buscar avaliadores:", avaliadoresResult.reason);
+    }
+
+    if (eventosResult.status === 'rejected') {
+        console.error("Erro ao buscar eventos:", eventosResult.reason);
+    }
+
+  } catch (geralError) {
+    console.error("Ocorreu um erro inesperado:", geralError);
     erro.value = "Não foi possível carregar os dados da página.";
   } finally {
     carregando.value = false;
