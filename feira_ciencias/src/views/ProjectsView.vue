@@ -126,6 +126,7 @@ onMounted(async () => {
     
     todosProjetos.value = projetosResponse.data;
     avaliadores.value = avaliadoresResponse.data;
+    console.log("Avaliadores:", avaliadores.value);
 
   } catch (error) {
     console.error("Erro ao buscar dados iniciais:", error);
