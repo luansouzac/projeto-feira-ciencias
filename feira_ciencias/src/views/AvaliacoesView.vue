@@ -1,23 +1,23 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import api from '../assets/plugins/axios.js'; // Ajuste o caminho se necessário
-import { useNotificationStore } from '@/stores/notification'; // Ajuste o caminho se necessário
+import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '../assets/plugins/axios.js' // Ajuste o caminho se necessário
+import { useNotificationStore } from '@/stores/notification' // Ajuste o caminho se necessário
 
-const router = useRouter();
-const notificationStore = useNotificationStore();
+const router = useRouter()
+const notificationStore = useNotificationStore()
 
 // --- ESTADOS DA PÁGINA ---
-const carregando = ref(true);
-const avaliacoes = ref([]);
-let userId = null;
+const carregando = ref(true)
+const avaliacoes = ref([])
+let userId = null
 
 // --- ESTADOS DO MODAL DE AVALIAÇÃO ---
-const isModalAvaliacaoOpen = ref(false);
-const isModalLoading = ref(false);
-const projetoSendoAvaliado = ref(null);
-const tipoAvaliacao = ref(''); // 'aprovado', 'ressalva', 'reprovado'
-const justificativa = ref('');
+const isModalAvaliacaoOpen = ref(false)
+const isModalLoading = ref(false)
+const projetoSendoAvaliado = ref(null)
+const tipoAvaliacao = ref('') // 'aprovado', 'ressalva', 'reprovado'
+const justificativa = ref('')
 
 // --- MAPA DE STATUS (para os chips) ---
 const statusMap = {
@@ -27,107 +27,119 @@ const statusMap = {
   4: { text: 'Ressalvas', color: 'orange' },
   5: { text: 'Em Desenvolvimento', color: 'teal' },
   6: { text: 'Concluído', color: 'purple' },
-};
+}
 
 // --- CONFIGURAÇÃO DINÂMICA DO MODAL ---
 const modalConfig = computed(() => {
   switch (tipoAvaliacao.value) {
     case 'aprovado':
-      return { title: 'Aprovar Projeto', color: 'green-darken-2' };
+      return { title: 'Aprovar Projeto', color: 'green-darken-2' }
     case 'ressalva':
-      return { title: 'Reprovar com Ressalvas', color: 'orange-darken-2' };
+      return { title: 'Reprovar com Ressalvas', color: 'orange-darken-2' }
     case 'reprovado':
-      return { title: 'Reprovar Projeto', color: 'red-darken-2' };
+      return { title: 'Reprovar Projeto', color: 'red-darken-2' }
     default:
-      return { title: 'Confirmar Ação', color: 'grey' };
+      return { title: 'Confirmar Ação', color: 'grey' }
   }
-});
+})
 
 // --- OBTENÇÃO DE DADOS ---
 const buscarAvaliacoes = async () => {
-  carregando.value = true;
+  carregando.value = true
   try {
-    const userDataString = sessionStorage.getItem('user_data');
+    const userDataString = sessionStorage.getItem('user_data')
     if (userDataString) {
-      const userData = JSON.parse(userDataString);
-      userId = userData.user.id_usuario;
+      const userData = JSON.parse(userDataString)
+      userId = userData.user.id_usuario
     } else {
-      router.push({ name: 'login' });
-      return;
+      router.push({ name: 'login' })
+      return
     }
-    const response = await api.get(`/usuarios/${userId}/projetos/avaliacao`);
-    avaliacoes.value = response.data.filter(p => p.id_situacao === 1);
+    const response = await api.get(`/usuarios/${userId}/projetos/avaliacao`)
+    avaliacoes.value = response.data.filter((p) => p.id_situacao === 1)
   } catch (err) {
-    console.error("Erro ao buscar as avaliações:", err);
-    notificationStore.showNotification({ message: 'Falha ao carregar projetos.', type: 'error' });
+    console.error('Erro ao buscar as avaliações:', err)
+    notificationStore.showNotification({ message: 'Falha ao carregar projetos.', type: 'error' })
   } finally {
-    carregando.value = false;
+    carregando.value = false
   }
-};
+}
 
-onMounted(buscarAvaliacoes);
+onMounted(buscarAvaliacoes)
 
 // --- FUNÇÕES DE AÇÃO ---
-function goToProjectDetails(id){
+function goToProjectDetails(id) {
   router.push(`/projetos/${id}`)
 }
 
 const openModal = (projeto, tipo) => {
-  projetoSendoAvaliado.value = projeto;
-  tipoAvaliacao.value = tipo;
-  justificativa.value = '';
-  isModalAvaliacaoOpen.value = true;
-};
+  projetoSendoAvaliado.value = projeto
+  tipoAvaliacao.value = tipo
+  justificativa.value = ''
+  isModalAvaliacaoOpen.value = true
+}
 
 const closeModal = () => {
-  isModalAvaliacaoOpen.value = false;
-  isModalLoading.value = false;
+  isModalAvaliacaoOpen.value = false
+  isModalLoading.value = false
   setTimeout(() => {
-    projetoSendoAvaliado.value = null;
-    tipoAvaliacao.value = '';
-  }, 300);
-};
+    projetoSendoAvaliado.value = null
+    tipoAvaliacao.value = ''
+  }, 300)
+}
 
 const confirmarAvaliacao = async () => {
-  if ((tipoAvaliacao.value === 'ressalva' || tipoAvaliacao.value === 'reprovado') && !justificativa.value.trim()) {
-    notificationStore.showNotification({ message: 'A justificativa é obrigatória para esta ação.', type: 'warning' });
-    return;
+  if (
+    (tipoAvaliacao.value === 'ressalva' || tipoAvaliacao.value === 'reprovado') &&
+    !justificativa.value.trim()
+  ) {
+    notificationStore.showNotification({
+      message: 'A justificativa é obrigatória para esta ação.',
+      type: 'warning',
+    })
+    return
   }
-  
-  isModalLoading.value = true;
-  
+
+  isModalLoading.value = true
+
   const situacaoMap = {
     aprovado: 2,
     reprovado: 3,
-    ressalva: 4
-  };
+    ressalva: 4,
+  }
 
   const payload = {
     id_situacao: situacaoMap[tipoAvaliacao.value],
     id_projeto: projetoSendoAvaliado.value.id_projeto,
     id_avaliador: userId,
     feedback: justificativa.value,
-  };
+  }
 
   try {
-    await api.post('projeto_avaliacoes', payload);
-    
-    avaliacoes.value = avaliacoes.value.filter(p => p.id_projeto !== projetoSendoAvaliado.value.id_projeto);
-    isModalLoading.value = false;
-    notificationStore.showNotification({ message: 'Projeto avaliado com sucesso!', type: 'success' });
-    closeModal();
+    await api.post('projeto_avaliacoes', payload)
 
+    avaliacoes.value = avaliacoes.value.filter(
+      (p) => p.id_projeto !== projetoSendoAvaliado.value.id_projeto,
+    )
+    isModalLoading.value = false
+    notificationStore.showNotification({
+      message: 'Projeto avaliado com sucesso!',
+      type: 'success',
+    })
+    closeModal()
   } catch (err) {
-    console.error("Erro ao confirmar avaliação:", err);
-    notificationStore.showNotification({ message: 'Ocorreu um erro ao salvar a avaliação.', type: 'error' });
-    isModalLoading.value = false;
+    console.error('Erro ao confirmar avaliação:', err)
+    notificationStore.showNotification({
+      message: 'Ocorreu um erro ao salvar a avaliação.',
+      type: 'error',
+    })
+    isModalLoading.value = false
   }
-};
+}
 </script>
 
 <template>
   <v-container fluid>
-
     <v-row class="mb-8">
       <v-col cols="12" sm="6" md="4">
         <v-card color="green-darken-4" dark class="d-flex flex-column" height="100%">
@@ -149,10 +161,12 @@ const confirmarAvaliacao = async () => {
     <v-row align="center" class="mb-4">
       <v-col cols="12">
         <h2 class="text-h5 font-weight-bold text-grey-darken-4">Projetos para Avaliação</h2>
-        <p class="text-subtitle-2 text-grey-darken-1">Analise e forneça seu parecer sobre as propostas de projeto.</p>
+        <p class="text-subtitle-2 text-grey-darken-1">
+          Analise e forneça seu parecer sobre as propostas de projeto.
+        </p>
       </v-col>
     </v-row>
-    
+
     <v-row v-if="carregando">
       <v-col v-for="n in 3" :key="n" cols="12" sm="6" lg="4">
         <v-skeleton-loader type="card"></v-skeleton-loader>
@@ -171,19 +185,61 @@ const confirmarAvaliacao = async () => {
     <v-row v-else>
       <v-col v-for="projeto in avaliacoes" :key="projeto.id_projeto" cols="12" sm="6" lg="4">
         <v-card class="d-flex flex-column" height="100%" hover variant="outlined">
-          <v-card-item class="pb-0">
-            <div class="d-flex justify-space-between align-start mb-2">
+          <v-card-item class="pb-2">
+            <div class="d-flex justify-space-between align-start mb-1">
               <v-card-title class="text-wrap me-2">{{ projeto.titulo }}</v-card-title>
-              <v-chip :color="statusMap[projeto.id_situacao]?.color || 'grey'" size="small" label>{{ statusMap[projeto.id_situacao]?.text || 'Pendente' }}</v-chip>
+              <v-chip :color="statusMap[projeto.id_situacao]?.color || 'grey'" size="small" label>
+                {{ statusMap[projeto.id_situacao]?.text || 'Pendente' }}
+              </v-chip>
             </div>
+            <v-card-subtitle class="d-flex align-center">
+              <v-icon start size="small">mdi-calendar-star</v-icon>
+              {{ projeto.eventos.nome }}
+            </v-card-subtitle>
           </v-card-item>
-          <v-card-text class="py-2">
-            <p class="text-body-2 text-grey-darken-2 text-truncate-3-lines">{{ projeto.problema }}</p>
+
+          <v-card-text class="py-3">
+            <p class="text-body-2 text-grey-darken-2 mb-4 text-truncate-3-lines">
+              {{ projeto.problema }}
+            </p>
+
+            <v-row dense>
+              <v-col cols="12" sm="6">
+                <div class="d-flex align-center">
+                  <v-icon start color="grey-darken-1">mdi-account-school-outline</v-icon>
+                  <div>
+                    <div class="text-caption text-grey-darken-1">Responsável</div>
+                    <div class="text-body-2 font-weight-medium text-truncate">
+                      {{ projeto.responsavel.nome }}
+                    </div>
+                  </div>
+                </div>
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <div class="d-flex align-center">
+                  <v-icon start color="grey-darken-1">mdi-account-tie-outline</v-icon>
+                  <div>
+                    <div class="text-caption text-grey-darken-1">Orientador</div>
+                    <div class="text-body-2 font-weight-medium text-truncate">
+                      {{ projeto.orientador.nome }}
+                    </div>
+                  </div>
+                </div>
+              </v-col>
+            </v-row>
           </v-card-text>
+
           <v-spacer></v-spacer>
           <v-divider></v-divider>
+
           <v-card-actions>
-            <v-btn color="grey-darken-1" variant="text" @click="goToProjectDetails(projeto.id_projeto)">Ver Detalhes</v-btn>
+            <v-btn
+              color="grey-darken-1"
+              variant="text"
+              @click="goToProjectDetails(projeto.id_projeto)"
+              >Ver Detalhes</v-btn
+            >
             <v-spacer></v-spacer>
             <v-menu offset-y>
               <template v-slot:activator="{ props }">
@@ -194,15 +250,21 @@ const confirmarAvaliacao = async () => {
               </template>
               <v-list density="compact">
                 <v-list-item @click="openModal(projeto, 'aprovado')">
-                  <template v-slot:prepend> <v-icon color="green">mdi-check-circle-outline</v-icon> </template>
+                  <template v-slot:prepend>
+                    <v-icon color="green">mdi-check-circle-outline</v-icon>
+                  </template>
                   <v-list-item-title>Aprovar</v-list-item-title>
                 </v-list-item>
                 <v-list-item @click="openModal(projeto, 'ressalva')">
-                  <template v-slot:prepend> <v-icon color="orange">mdi-alert-circle-outline</v-icon> </template>
+                  <template v-slot:prepend>
+                    <v-icon color="orange">mdi-alert-circle-outline</v-icon>
+                  </template>
                   <v-list-item-title>Reprovar com Ressalvas</v-list-item-title>
                 </v-list-item>
                 <v-list-item @click="openModal(projeto, 'reprovado')">
-                  <template v-slot:prepend> <v-icon color="red">mdi-close-circle-outline</v-icon> </template>
+                  <template v-slot:prepend>
+                    <v-icon color="red">mdi-close-circle-outline</v-icon>
+                  </template>
                   <v-list-item-title>Reprovar</v-list-item-title>
                 </v-list-item>
               </v-list>
@@ -218,11 +280,14 @@ const confirmarAvaliacao = async () => {
           {{ modalConfig.title }}
         </v-card-title>
         <v-card-text class="pt-4">
-          Você está prestes a avaliar o projeto <strong>"{{ projetoSendoAvaliado?.titulo }}"</strong>.
-          
+          Você está prestes a avaliar o projeto
+          <strong>"{{ projetoSendoAvaliado?.titulo }}"</strong>.
+
           <v-textarea
             v-model="justificativa"
-            :label="tipoAvaliacao === 'aprovado' ? 'Feedback (Opcional)' : 'Justificativa (Obrigatório)'"
+            :label="
+              tipoAvaliacao === 'aprovado' ? 'Feedback (Opcional)' : 'Justificativa (Obrigatório)'
+            "
             placeholder="Descreva seu parecer sobre o projeto..."
             rows="4"
             class="mt-4"
@@ -230,18 +295,21 @@ const confirmarAvaliacao = async () => {
             :required="tipoAvaliacao !== 'aprovado'"
             autofocus
           ></v-textarea>
-
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn color="grey-darken-1" text @click="closeModal">Cancelar</v-btn>
-          <v-btn :color="modalConfig.color" variant="tonal" @click="confirmarAvaliacao" :loading="isModalLoading">
+          <v-btn
+            :color="modalConfig.color"
+            variant="tonal"
+            @click="confirmarAvaliacao"
+            :loading="isModalLoading"
+          >
             Confirmar
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </v-container>
 </template>
 
