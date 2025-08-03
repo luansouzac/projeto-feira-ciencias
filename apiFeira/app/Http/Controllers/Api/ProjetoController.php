@@ -28,6 +28,11 @@ class ProjetoController extends Controller
             $query->where('id_situacao', $request->input('id_situacao'));
         }
 
+        if ($request->filled('situacao_in')) {
+        $listaDeStatus = explode(',', $request->input('situacao_in'));
+        $query->whereIn('id_situacao', $listaDeStatus);
+    }
+
         $projetos = $query->get();
 
         return response()->json($projetos, 200);

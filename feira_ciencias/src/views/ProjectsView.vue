@@ -113,7 +113,7 @@ onMounted(async () => {
     return;
   }
 
-  const fetchProjetosPromise = api.get(`/usuarios/${userId}/projetos`);
+  const fetchProjetosPromise = api.get(`/projetos?id_responsavel=${userId}&situacao_in=1,3,4`); // Busca todos os projetos do usuário com qualquer status
   const fetchEventosPromise = eventoStore.fetchEventos();
   const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=3`); //lista os avaliadores
 
