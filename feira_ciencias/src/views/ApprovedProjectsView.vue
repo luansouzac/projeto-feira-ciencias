@@ -2,19 +2,17 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../assets/plugins/axios.js'
-
-// 1. Importando nosso componente de card reutilizável
 import ProjectCard from '@/components/ProjectCard.vue'
 
-const userId = ref(null)
+const router = useRouter()
 
+// O userId aqui é ESSENCIAL
+const userId = ref(null)
 const userDataString = sessionStorage.getItem('user_data');
 if (userDataString) {
   const userData = JSON.parse(userDataString);
-  userId = userData.user.id_usuario;
+  userId.value = userData.user.id_usuario;
 }
-
-const router = useRouter()
 
 // Estado da página
 const projetosAprovados = ref([])
@@ -22,18 +20,27 @@ const carregando = ref(true)
 const erro = ref(null)
 
 onMounted(async () => {
+  // Adicionamos uma verificação para não fazer a chamada se não houver usuário
+  if (!userId.value) {
+    erro.value = "Usuário não encontrado. Faça o login para ver seus projetos aprovados.";
+    carregando.value = false;
+    return;
+  }
+
+  carregando.value = true;
   try {
-    const { data } = await api.get('/projetos?id_situacao=2')
-    projetosAprovados.value = data
+    // A MUDANÇA ESTÁ AQUI! Combinamos os dois filtros que sua API agora suporta.
+    const url = `/projetos?id_responsavel=${userId.value}&id_situacao=2`;
+    const { data } = await api.get(url);
+    projetosAprovados.value = data;
   } catch (err) {
-    console.error("Erro ao buscar projetos aprovados:", err)
-    erro.value = "Não foi possível carregar a galeria de projetos."
+    console.error("Erro ao buscar projetos aprovados do usuário:", err);
+    erro.value = "Não foi possível carregar seus projetos aprovados.";
   } finally {
-    carregando.value = false
+    carregando.value = false;
   }
 })
 
-// Esta função será chamada quando o ProjectCard emitir o evento 'ver-detalhes'.
 function goToProjectDetails(id) {
   router.push(`/projetos/${id}`)
 }
