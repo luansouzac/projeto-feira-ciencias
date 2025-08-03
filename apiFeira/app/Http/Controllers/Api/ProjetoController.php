@@ -29,9 +29,12 @@ class ProjetoController extends Controller
         }
 
         if ($request->filled('situacao_in')) {
-        $listaDeStatus = explode(',', $request->input('situacao_in'));
-        $query->whereIn('id_situacao', $listaDeStatus);
-    }
+            $listaDeStatus = explode(',', $request->input('situacao_in'));
+            $query->whereIn('id_situacao', $listaDeStatus);
+        }
+        if ($request->filled('situacao_not')) {
+            $query->where('id_situacao', '!=', $request->input('situacao_not'));
+        }
 
         $projetos = $query->get();
 

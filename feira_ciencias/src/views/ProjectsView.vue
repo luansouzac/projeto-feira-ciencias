@@ -6,6 +6,7 @@ import { useNotificationStore } from '@/stores/notification'
 import CrudModal from '@/components/CrudModal.vue';
 import { useEventoStore } from '@/stores/eventoStore'
 import { storeToRefs } from 'pinia'
+import ProjectCard from '@/components/ProjectCard.vue'
 
 
 const router = useRouter();
@@ -21,6 +22,7 @@ const filtroStatus = ref('Todos')
 const nomeUsuario = ref('')
 let userId = null;
 const avaliadores = ref([]);
+const totalProjetosAprovados = ref(0)
 
 // --- ESTADO PARA O MODAL ---
 const isModalOpen = ref(false)
@@ -95,12 +97,10 @@ const modalConfig = computed(() => ({
 const opcoesStatus = [
   { title: 'Todos', value: 'Todos' },
   { title: 'Em Elaboração', value: 1 },
-  { title: 'Aprovado', value: 2 },
   { title: 'Reprovado', value: 3 },
 ]
 const statusMap = {
   1: { text: 'Em Elaboração', color: 'orange-darken-2' },
-  2: { text: 'Aprovado', color: 'green-darken-2' },
   3: { text: 'Reprovado', color: 'red-darken-2' },
   4: { text: 'Reprovado com Ressalvas', color: 'orange-darken-2' },
 }
@@ -113,9 +113,10 @@ onMounted(async () => {
     return;
   }
 
-  const fetchProjetosPromise = api.get(`/projetos?id_responsavel=${userId}&situacao_in=1,3,4`); // Busca todos os projetos do usuário com qualquer status
+  const fetchProjetosPromise = api.get(`/projetos?id_responsavel=${userId}&situacao_not=2`); // Busca todos os projetos do usuário com qualquer status
   const fetchEventosPromise = eventoStore.fetchEventos();
   const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=3`); //lista os avaliadores
+  const fetchAprovadosCountPromise = api.get(`/projetos?id_responsavel=${userId}&id_situacao=2`);
 
    try {
 
@@ -123,9 +124,10 @@ onMounted(async () => {
       fetchProjetosPromise,
       fetchAvaliadoresPromise,
       fetchEventosPromise,
+      fetchAprovadosCountPromise
     ]);
 
-    const [projetosResult, avaliadoresResult, eventosResult] = results;
+    const [projetosResult, avaliadoresResult, eventosResult, aprovadosCountResult] = results;
 
     if (projetosResult.status === 'fulfilled') {
       todosProjetos.value = projetosResult.value.data;
@@ -139,6 +141,11 @@ onMounted(async () => {
       console.log("Avaliadores carregados:", avaliadores.value);
     } else {
         console.error("Erro ao buscar avaliadores:", avaliadoresResult.reason);
+    }
+    if (aprovadosCountResult.status === 'fulfilled') {
+      totalProjetosAprovados.value = aprovadosCountResult.value.data.length;
+    } else {
+      console.error("Erro ao buscar contagem de aprovados:", aprovadosCountResult.reason);
     }
 
     if (eventosResult.status === 'rejected') {
@@ -235,16 +242,17 @@ const projetosFiltrados = computed(() => {
 })
 
 const totalProjetos = computed(() => todosProjetos.value.length)
-const projetosAprovados = computed(() => todosProjetos.value.filter(p => p.id_situacao === 2).length)
 
 function goToProjectDetails(id){
   router.push(`/projetos/${id}`)
+}
+function goToApprovedProjects() {
+  router.push('/projetos/aprovados')
 }
 </script>
 
 <template>
   <v-container fluid>
-
     <v-row class="mb-8">
       <v-col cols="12" sm="6" md="4">
         <v-card color="green-darken-4" dark class="d-flex flex-column" height="100%">
@@ -277,12 +285,19 @@ function goToProjectDetails(id){
         </v-card>
       </v-col>
       <v-col cols="12" sm="6" md="4">
-        <v-card variant="tonal" color="green-darken-2" class="d-flex flex-column" height="100%">
+        <v-card
+          variant="tonal"
+          color="green-darken-2"
+          class="d-flex flex-column"
+          height="100%"
+          hover
+          @click="goToApprovedProjects"
+        >
           <v-card-text>
             <div class="d-flex align-center">
               <v-icon size="48" class="mr-4">mdi-check-decagram-outline</v-icon>
               <div>
-                <div class="text-h4 font-weight-bold text-green-darken-4">{{ projetosAprovados }}</div>
+                <div class="text-h4 font-weight-bold text-green-darken-4">{{ totalProjetosAprovados }}</div>
                 <div class="text-subtitle-2 text-green-darken-3">Projetos Aprovados</div>
               </div>
             </div>
@@ -298,16 +313,24 @@ function goToProjectDetails(id){
         <p class="text-subtitle-2 text-grey-darken-1">Gerencie e acompanhe o andamento de suas propostas.</p>
       </v-col>
       <v-col cols="12" md="6" class="d-flex justify-md-end">
-        <v-select v-model="filtroStatus" :items="opcoesStatus" label="Filtrar por Status" variant="outlined" density="compact" hide-details clearable style="max-width: 280px;"></v-select>
+        <v-select
+          v-model="filtroStatus"
+          :items="opcoesStatus"
+          label="Filtrar por Status"
+          variant="outlined"
+          density="compact"
+          hide-details
+          clearable
+          style="max-width: 280px;"
+        ></v-select>
       </v-col>
     </v-row>
     
     <v-row v-if="carregando">
       <v-col v-for="n in 3" :key="n" cols="12" sm="6" lg="4">
-        <v-skeleton-loader type="card"></v-skeleton-loader>
+        <v-skeleton-loader type="image, article, actions"></v-skeleton-loader>
       </v-col>
     </v-row>
-
     <v-row v-else-if="projetosFiltrados.length === 0">
       <v-col cols="12">
         <v-card flat border class="text-center pa-8">
@@ -319,25 +342,15 @@ function goToProjectDetails(id){
 
     <v-row v-else>
       <v-col v-for="projeto in projetosFiltrados" :key="projeto.id_projeto" cols="12" sm="6" lg="4">
-        <v-card class="d-flex flex-column" height="100%" hover variant="outlined">
-          <v-card-item>
-            <div class="d-flex justify-space-between align-center mb-2">
-              <v-card-title class="text-wrap py-0">{{ projeto.titulo }}</v-card-title>
-              <v-chip :color="statusMap[projeto.id_situacao]?.color || 'grey'" size="small" label>{{ statusMap[projeto.id_situacao]?.text || 'Desconhecido' }}</v-chip>
-            </div>
-          </v-card-item>
-          <v-card-text class="py-2">
-            <p class="text-body-2 text-grey-darken-2">{{ projeto.problema }}</p>
-          </v-card-text>
-          <v-spacer></v-spacer>
-          <v-divider></v-divider>
-          <v-card-actions>
-            <v-btn color="green-darken-3" variant="tonal" @click="goToProjectDetails(projeto.id_projeto)">Ver Detalhes</v-btn>
-            <v-spacer></v-spacer>
+        <ProjectCard
+          :projeto="projeto"
+          @ver-detalhes="goToProjectDetails"
+        >
+          <template #actions>
             <v-btn icon="mdi-pencil" variant="text" size="small" @click="openEditModal(projeto)"></v-btn>
             <v-btn icon="mdi-delete" variant="text" color="grey" size="small" @click="openDeleteModal(projeto)"></v-btn>
-          </v-card-actions>
-        </v-card>
+          </template>
+        </ProjectCard>
       </v-col>
     </v-row>
 
@@ -355,7 +368,6 @@ function goToProjectDetails(id){
         <v-card-text>
           Você tem certeza que deseja excluir o projeto <strong>{{ projectToDelete?.titulo }}</strong>? Esta ação não pode ser desfeita.
         </v-card-text>
-
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn @click="isDeleteModalOpen = false" :disabled="isModalLoading">Cancelar</v-btn>
