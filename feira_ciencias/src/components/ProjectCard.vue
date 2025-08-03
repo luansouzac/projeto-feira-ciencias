@@ -35,11 +35,11 @@ function emitVerDetalhes() {
   <v-card class="d-flex flex-column" height="100%" hover variant="outlined">
     <v-img
       height="180"
-      :src="projeto.imagem_url || 'https://cdn.vuetifyjs.com/images/cards/dunes.jpg'"
+      :src="projeto.imagem_url || 'https://smp.ifsp.edu.br/images/2022/extensao/PROJETOS-DE-EXTENSAO.png'"  
       cover
       class="text-white"
     >
-      <v-toolbar color="rgba(0, 0, 0, 0.3)" theme="dark">
+      <v-toolbar class="bg-green-darken-4" theme="dark">
         <v-toolbar-title class="text-body-2 text-truncate">
           {{ projeto.eventos?.nome || 'Evento não definido' }}
         </v-toolbar-title>
