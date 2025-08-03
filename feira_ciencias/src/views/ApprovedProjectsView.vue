@@ -48,6 +48,9 @@ function goToProjectDetails(id) {
 
 <template>
   <v-container fluid>
+    <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="router.go(-1)" class="mb-6">
+      Voltar
+    </v-btn>
     <v-row class="mb-6">
       <v-col>
         <h1 class="text-h4 font-weight-bold text-grey-darken-4">Galeria de Projetos</h1>
