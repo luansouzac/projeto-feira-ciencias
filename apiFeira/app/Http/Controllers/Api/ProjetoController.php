@@ -15,10 +15,22 @@ class ProjetoController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse Retorna uma resposta JSON com todos os projetos.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // Retorna todos os projetos existentes com status HTTP 200 OK.
-        return response()->json(Projeto::all(), 200);
+     
+        $query = Projeto::with('responsavel', 'orientador', 'coorientador', 'situacao', 'eventos');
+
+        if ($request->filled('id_responsavel')) {
+            $query->where('id_responsavel', $request->input('id_responsavel'));
+        }
+
+        if ($request->filled('id_situacao')) {
+            $query->where('id_situacao', $request->input('id_situacao'));
+        }
+
+        $projetos = $query->get();
+
+        return response()->json($projetos, 200);
     }
 
     /**
