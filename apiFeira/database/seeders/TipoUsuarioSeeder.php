@@ -21,6 +21,7 @@ class TipoUsuarioSeeder extends Seeder
             ['tipo' => 'Administrador'],
             ['tipo' => 'Aluno'],
             ['tipo' => 'Avaliador'], 
+            ['tipo' => 'Orientador'], 
         ];
 
         foreach ($tipos as $tipo) {
