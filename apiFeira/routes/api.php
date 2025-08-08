@@ -27,11 +27,16 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::middleware(['auth:sanctum', 'permission:exibir usuario'])->group(function () {
     Route::get('/usuarios', [UsuarioController::class, 'index']);
     Route::get('/usuarios/{id}', [UsuarioController::class, 'show']);
+    Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
+    Route::get('/usuarios/{id}/projetos/avaliacao', [ProjetoController::class, 'projetosAvaliacao']);
 });
 
 
 Route::middleware(['auth:sanctum', 'permission:crud usuario'])->group(function () {
     Route::apiResource('usuarios', UsuarioController::class);
+    Route::get('/usuarios/{id}', [UsuarioController::class, 'show']);
+    Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
+    Route::get('/usuarios/{id}/projetos/avaliacao', [ProjetoController::class, 'projetosAvaliacao']);
 });
 
 //Exibir Projeto e Crud Projeto
@@ -42,6 +47,7 @@ Route::middleware(['auth:sanctum', 'permission:exibir projeto'])->group(function
 });
 
 Route::middleware(['auth:sanctum', 'permission:crud projetos'])->group(function () {
+    Route::patch('projetos/{id_projeto}/situacao', [ProjetoController::class, 'updateSituacao']);
     Route::apiResource('projetos', ProjetoController::class);
 });
 
@@ -74,11 +80,16 @@ Route::middleware(['auth:sanctum', 'permission:exibir tarefa'])->group(function 
     Route::get('/tarefas/{id}', [TarefaController::class, 'show']);
     Route::get('/atribuicao_tarefas', [AtribuicaoTarefaController::class, 'index']);
     Route::get('/atribuicao_tarefas/{id}', [AtribuicaoTarefaController::class, 'show']);
+    Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
+    Route::get('/registros_tarefas', RegistroTarefaController::class, 'index');
+    Route::get('/registros_tarefas/{id}', RegistroTarefaController::class, 'show');
 });
 
 Route::middleware(['auth:sanctum', 'permission:crud tarefa'])->group(function () {
     Route::apiResource('tarefas', TarefaController::class);
     Route::apiResource('atribuicao_tarefas', AtribuicaoTarefaController::class);
+    Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
+    Route::apiResource('registros_tarefas', RegistroTarefaController::class);
 });
 
 //Exibir Apresentação e Crud Apresentação
@@ -120,6 +131,19 @@ Route::middleware(['auth:sanctum', 'permission:exibir comentario planejamento'])
 Route::middleware(['auth:sanctum', 'permission:crud comentario planejamento'])->group(function () {
     Route::apiResource('comentarios_planejamentos', ComentarioPlanejamentoController::class);
 });
+
+//Exibir Comentários avaliacao projeto e Crud avaliacao projeto
+Route::middleware(['auth:sanctum', 'permission:exibir avaliacao projeto'])->group(function () {
+    Route::get('/projeto_avaliacoes', [AvaliacaoController::class, 'index']);
+    Route::get('/projeto_avaliacoes/{id}', [AvaliacaoController::class, 'show']);
+    Route::get('/projetos/{projeto}/avaliacoes', [AvaliacaoController::class, 'getByProject']);
+});
+
+Route::middleware(['auth:sanctum', 'permission:crud avaliacao projeto'])->group(function () {
+    Route::apiResource('projeto_avaliacoes', AvaliacaoController::class);
+    Route::get('/projetos/{projeto}/avaliacoes', [AvaliacaoController::class, 'getByProject']);
+});
+
 
 //Exibir Comentários Desenvolvimento e Crud Comentários Desenvolvimento
 Route::middleware(['auth:sanctum', 'permission:exibir comentario desenvolvimento'])->group(function () {
