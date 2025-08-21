@@ -52,9 +52,7 @@ function logout () {
         Projetaí
       </v-toolbar-title>
 
-      <v-spacer></v-spacer>
-
-      <div class="d-none d-md-flex">
+      <div class="centralizar-menu d-none d-md-flex">
         <v-btn
           v-for="link in navLinks"
           :key="link.title"
@@ -115,6 +113,12 @@ function logout () {
 
 <style scoped>
 /* Adicione este novo bloco de estilo */
+.centralizar-menu {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .user-menu-activator {
   transition: background-color 0.2s ease-in-out;
 }

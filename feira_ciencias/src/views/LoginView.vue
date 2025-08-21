@@ -54,7 +54,7 @@ const handleLogin = async () => { // Adicionamos 'async' para poder usar 'await'
     <v-sheet
       color="green-darken-4"
       class="d-flex flex-column justify-center align-center pa-6 text-white"
-      style="flex: 0.4 1 0;"
+      style="flex: 0.2 1 0;"
     >
       <v-img
         src="https://www.ifsudestemg.edu.br/comunicacao-social/logos/if-sudeste-mg/logo-if-sudeste-mg-branco-vertical.png/@@images/image.png"
