@@ -23,7 +23,7 @@ class UsuarioController extends Controller
             $query->where('id_tipo_usuario', $request->input('id_tipo_usuario'));
         }
         // Retorna todos os usuários existentes com status HTTP 200 OK.
-        return response()->json($query->get(), 200);
+        return response()->json(Usuario::with('tipoUsuario')->get(), 200);
     }
 
     /**

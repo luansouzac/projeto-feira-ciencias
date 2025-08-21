@@ -4,10 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class TipoUsuario extends Model
 {
-    use HasFactory; //preencher model
+    use HasFactory, HasRoles, HasApiTokens; //preencher model
+
+    protected $guard_name = 'sanctum';
 
     protected $table = 'tipo_usuarios';
 

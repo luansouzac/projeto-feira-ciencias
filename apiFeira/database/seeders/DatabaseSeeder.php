@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             FuncaoSeeder::class,
             UsuarioSeeder::class,
             EquipeSeeder::class, // <-- AGORA ESTÁ NO LUGAR CERTO!
+            RolesAndPermissionsSeeder::class, 
             // Adicione aqui todos os outros seeders que você criar para outras tabelas:
             // UsuarioSeeder::class,
             // ProjetoSeeder::class,
