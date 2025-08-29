@@ -7,14 +7,7 @@ const router = createRouter({
       path: '/home',
       name: 'home',
       component: () => import('../views/HomeView.vue'),
-    },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/',
@@ -23,9 +16,6 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
       component: () => import('../views/LoginView.vue'),
     },
     {
@@ -38,28 +28,68 @@ const router = createRouter({
     path: '/projetos/:id', 
     name: 'project-details',
     component: () => import('../views/ProjectDetails.vue'),
+    meta: { requiresAuth: true }
     },
     {
       path: '/projetos',
       name: 'projetos',
       component: () => import('../views/ProjectsView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/projetos/aprovados',
       name: 'projetos-aprovados',
       component: () => import('../views/ApprovedProjectsView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/eventos',
       name: 'eventos',
       component: () => import('../views/EventsView.vue'),
+      meta: {
+        requiresAuth: true,
+        requiredTypeId: [1, 3, 4] 
+      }
     },
     {
       path: '/avaliacoes',
       name: 'avaliacoes',
       component: () => import('../views/AvaliacoesView.vue'),
+      meta: {
+        requiresAuth: true,
+        requiredTypeId: [1, 3, 4] 
+      }
     },
   ],
 })
+
+router.beforeEach((to, from, next) => {
+  const userDataString = sessionStorage.getItem('user_data');
+  const isAuthenticated = !!userDataString; 
+  let userTypeId = null;
+
+  if (isAuthenticated) {
+    const userData = JSON.parse(userDataString);
+    if (userData.user && userData.user.tipoUsuario) {
+      userTypeId = userData.user.tipoUsuario.id_tipo_usuario;
+    }
+  }
+
+  if (isAuthenticated && (to.name === 'login' || to.name === 'registrar')) {
+    return next({ name: 'home' });
+  }
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    return next({ name: 'login' });
+  }
+
+  if (to.meta.requiredTypeId) {
+    if (!userTypeId || !to.meta.requiredTypeId.includes(userTypeId)) {
+      return next({ name: 'home' });
+    }
+  }
+
+  next();
+});
 
 export default router
