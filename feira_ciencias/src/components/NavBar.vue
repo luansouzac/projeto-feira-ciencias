@@ -8,20 +8,43 @@ const router = useRouter();
 const drawer = ref(false);
 
 const nomeUsuario = ref("");
+const tipoUsuario = ref(null);
 
-// Links de navegação (centralizados para fácil manutenção)
-const navLinks = [
+const allNavLinks = [
   { title: "Home", to: "/home", icon: "mdi-view-dashboard-outline" },
   { title: "Projetos", to: "/projetos", icon: "mdi-folder-account-outline" },
-  { title: "Eventos", to: "/eventos", icon: "mdi-chart-bar" },
-  { title: "Avaliações", to: "/avaliacoes", icon: "mdi-star-outline" },
+  {
+    title: "Eventos",
+    to: "/eventos",
+    icon: "mdi-chart-bar",
+    meta: { requiredTypeId: [1, 3, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+  },
+  {
+    title: "Avaliações",
+    to: "/avaliacoes",
+    icon: "mdi-star-outline",
+    meta: { requiredTypeId: [1, 3, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+  },
 ];
 
 const userDataString = sessionStorage.getItem('user_data');
 if (userDataString) {
   const userData = JSON.parse(userDataString);
   nomeUsuario.value = userData.user.nome;
+
+  if (userData.user.id_tipo_usuario){
+    tipoUsuario.value = userData.user.id_tipo_usuario;
+  }
 }
+
+const visibleNavLinks = computed(() => {
+  return allNavLinks.filter(link => {
+    if (link.meta && link.meta.requiredTypeId) {
+      return link.meta.requiredTypeId.includes(tipoUsuario.value);
+    }
+    return true; // Se não há restrição, o link é visível para todos
+  });
+});
 
 const userInitials = computed(() => {
   if (!nomeUsuario.value) return '';
@@ -54,7 +77,7 @@ function logout () {
 
       <div class="centralizar-menu d-none d-md-flex">
         <v-btn
-          v-for="link in navLinks"
+          v-for="link in visibleNavLinks"
           :key="link.title"
           :to="link.to"
           variant="text"
@@ -99,7 +122,7 @@ function logout () {
     <v-navigation-drawer v-model="drawer" temporary app>
       <v-list nav>
         <v-list-item
-          v-for="link in navLinks"
+          v-for="link in visibleNavLinks"
           :key="link.title"
           :to="link.to"
           :prepend-icon="link.icon"
