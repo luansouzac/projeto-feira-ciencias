@@ -32,7 +32,10 @@ if (userDataString) {
   const userData = JSON.parse(userDataString);
   nomeUsuario.value = userData.user.nome;
 
-  if (userData.user.id_tipo_usuario){
+    if (userData.user.tipo_usuario) {
+    tipoUsuario.value = userData.user.tipo_usuario.id_tipo_usuario;
+  }
+  else if (userData.user.id_tipo_usuario) {
     tipoUsuario.value = userData.user.id_tipo_usuario;
   }
 }

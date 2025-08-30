@@ -7,11 +7,11 @@ const router = createRouter({
       path: '/home',
       name: 'home',
       component: () => import('../views/HomeView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/',
-      redirect: '/login'
+      redirect: '/login',
     },
     {
       path: '/login',
@@ -25,22 +25,22 @@ const router = createRouter({
       component: () => import('../views/RegisterView.vue'),
     },
     {
-    path: '/projetos/:id', 
-    name: 'project-details',
-    component: () => import('../views/ProjectDetails.vue'),
-    meta: { requiresAuth: true }
+      path: '/projetos/:id',
+      name: 'project-details',
+      component: () => import('../views/ProjectDetails.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/projetos',
       name: 'projetos',
       component: () => import('../views/ProjectsView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/projetos/aprovados',
       name: 'projetos-aprovados',
       component: () => import('../views/ApprovedProjectsView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/eventos',
@@ -48,8 +48,8 @@ const router = createRouter({
       component: () => import('../views/EventsView.vue'),
       meta: {
         requiresAuth: true,
-        requiredTypeId: [1, 3, 4] 
-      }
+        requiredTypeId: [1, 3, 4],
+      },
     },
     {
       path: '/avaliacoes',
@@ -57,39 +57,40 @@ const router = createRouter({
       component: () => import('../views/AvaliacoesView.vue'),
       meta: {
         requiresAuth: true,
-        requiredTypeId: [1, 3, 4] 
-      }
+        requiredTypeId: [1, 3, 4],
+      },
     },
   ],
 })
 
 router.beforeEach((to, from, next) => {
-  const userDataString = sessionStorage.getItem('user_data');
-  const isAuthenticated = !!userDataString; 
-  let userTypeId = null;
+  const userDataString = sessionStorage.getItem('user_data')
+  const isAuthenticated = !!userDataString
+  let userTypeId = null
 
   if (isAuthenticated) {
-    const userData = JSON.parse(userDataString);
-    if (userData.user && userData.user.tipoUsuario) {
-      userTypeId = userData.user.tipoUsuario.id_tipo_usuario;
+    const userData = JSON.parse(userDataString)
+
+    if (userData.user && userData.user.tipo_usuario) {
+      userTypeId = userData.user.tipo_usuario.id_tipo_usuario
     }
   }
 
   if (isAuthenticated && (to.name === 'login' || to.name === 'registrar')) {
-    return next({ name: 'home' });
+    return next({ name: 'home' })
   }
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    return next({ name: 'login' });
+    return next({ name: 'login' })
   }
 
   if (to.meta.requiredTypeId) {
     if (!userTypeId || !to.meta.requiredTypeId.includes(userTypeId)) {
-      return next({ name: 'home' });
+      return next({ name: 'home' })
     }
   }
 
-  next();
-});
+  next()
+})
 
 export default router
