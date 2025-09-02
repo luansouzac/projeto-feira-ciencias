@@ -118,7 +118,7 @@ onMounted(async () => {
   const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=3`); //lista os avaliadores
   const fetchAprovadosCountPromise = api.get(`/projetos?id_responsavel=${userId}&id_situacao=2`);
 
-   try {
+    try {
 
     const results = await Promise.allSettled([
       fetchProjetosPromise,
@@ -249,11 +249,23 @@ function goToProjectDetails(id){
 function goToApprovedProjects() {
   router.push('/projetos/aprovados')
 }
+
+function handleApprovedCardClick() {
+  if (totalProjetosAprovados.value > 0) {
+    goToApprovedProjects();
+  } else {
+    notificationStore.showNotification({
+      message: 'É necessário ter um projeto aprovado para acessar esta área.',
+      type: 'info'
+    });
+  }
+}
 </script>
 
 <template>
   <v-container fluid>
     <v-row class="mb-8">
+      <!-- Card Novo Projeto -->
       <v-col cols="12" sm="6" md="4">
         <v-card color="green-darken-4" dark class="d-flex flex-column" height="100%">
           <v-card-text>
@@ -271,6 +283,8 @@ function goToApprovedProjects() {
           </v-card-actions>
         </v-card>
       </v-col>
+
+      <!-- Card Projetos Registrados -->
       <v-col cols="12" sm="6" md="4">
         <v-card variant="tonal" color="grey-darken-1" class="d-flex flex-column" height="100%">
           <v-card-text>
@@ -289,19 +303,28 @@ function goToApprovedProjects() {
           variant="tonal"
           color="green-darken-2"
           class="d-flex flex-column"
+          :class="{ 'card-clicavel': totalProjetosAprovados > 0 }"
           height="100%"
-          hover
-          @click="goToApprovedProjects"
+          :hover="totalProjetosAprovados > 0"
+          @click="handleApprovedCardClick"
         >
-          <v-card-text>
+          <v-card-text class="flex-grow-1">
             <div class="d-flex align-center">
               <v-icon size="48" class="mr-4">mdi-check-decagram-outline</v-icon>
               <div>
                 <div class="text-h4 font-weight-bold text-green-darken-4">{{ totalProjetosAprovados }}</div>
                 <div class="text-subtitle-2 text-green-darken-3">Projetos Aprovados</div>
               </div>
+              <v-spacer></v-spacer>
+              <v-icon v-if="totalProjetosAprovados > 0" size="36" class="icon-arrow">mdi-arrow-right-circle-outline</v-icon>
             </div>
           </v-card-text>
+          <template v-if="totalProjetosAprovados > 0">
+            <v-divider></v-divider>
+            <v-card-actions class="justify-center text-caption pa-1">
+              <span class="opacity-75">Clique para visualizar</span>
+            </v-card-actions>
+          </template>
         </v-card>
       </v-col>
     </v-row>
@@ -389,4 +412,29 @@ function goToApprovedProjects() {
 .v-card-text {
   min-height: 60px;
 }
+
+.card-clicavel {
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card-clicavel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.icon-arrow {
+  transition: transform 0.3s ease;
+  opacity: 0.7;
+}
+
+.card-clicavel:hover .icon-arrow {
+  transform: translateX(5px);
+  opacity: 1;
+}
+
+.opacity-75 {
+  opacity: 0.75;
+}
 </style>
+
