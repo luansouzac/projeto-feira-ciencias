@@ -1,8 +1,8 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '../assets/plugins/axios.js' // Ajuste o caminho se necessário
-import { useNotificationStore } from '@/stores/notification' // Ajuste o caminho se necessário
+import api from '../assets/plugins/axios.js' 
+import { useNotificationStore } from '@/stores/notification' 
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
@@ -121,19 +121,19 @@ const confirmarAvaliacao = async () => {
     avaliacoes.value = avaliacoes.value.filter(
       (p) => p.id_projeto !== projetoSendoAvaliado.value.id_projeto,
     )
-    isModalLoading.value = false
+    
     notificationStore.showNotification({
       message: 'Projeto avaliado com sucesso!',
       type: 'success',
     })
-    closeModal()
   } catch (err) {
     console.error('Erro ao confirmar avaliação:', err)
     notificationStore.showNotification({
       message: 'Ocorreu um erro ao salvar a avaliação.',
       type: 'error',
     })
-    isModalLoading.value = false
+  } finally {
+    closeModal()
   }
 }
 </script>
@@ -276,7 +276,7 @@ const confirmarAvaliacao = async () => {
 
     <v-dialog v-model="isModalAvaliacaoOpen" persistent max-width="500px">
       <v-card>
-        <v-card-title :class="['text-h5', 'white--text', modalConfig.color]">
+        <v-card-title :class="['text-h5', 'text-white', modalConfig.color]">
           {{ modalConfig.title }}
         </v-card-title>
         <v-card-text class="pt-4">
@@ -298,7 +298,7 @@ const confirmarAvaliacao = async () => {
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="grey-darken-1" text @click="closeModal">Cancelar</v-btn>
+          <v-btn color="grey-darken-1" variant="text" @click="closeModal">Cancelar</v-btn>
           <v-btn
             :color="modalConfig.color"
             variant="tonal"
@@ -321,12 +321,9 @@ const confirmarAvaliacao = async () => {
 .text-truncate-3-lines {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3; /* Adicionado para compatibilidade */
-  line-clamp: 3; /* Adicionado para compatibilidade */
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.v-card-title.white--text {
-  color: white !important;
 }
 </style>
