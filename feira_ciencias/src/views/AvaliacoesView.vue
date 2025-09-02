@@ -10,6 +10,7 @@ const notificationStore = useNotificationStore()
 // --- ESTADOS DA PÁGINA ---
 const carregando = ref(true)
 const avaliacoes = ref([])
+const totalProjetosOrientados = ref(0)
 let userId = null
 
 // --- ESTADOS DO MODAL DE AVALIAÇÃO ---
@@ -44,28 +45,36 @@ const modalConfig = computed(() => {
 })
 
 // --- OBTENÇÃO DE DADOS ---
-const buscarAvaliacoes = async () => {
+const buscarDadosPagina = async () => {
   carregando.value = true
   try {
     const userDataString = sessionStorage.getItem('user_data')
-    if (userDataString) {
-      const userData = JSON.parse(userDataString)
-      userId = userData.user.id_usuario
-    } else {
+    if (!userDataString) {
       router.push({ name: 'login' })
       return
     }
-    const response = await api.get(`/usuarios/${userId}/projetos/avaliacao`)
-    avaliacoes.value = response.data.filter((p) => p.id_situacao === 1)
+    const userData = JSON.parse(userDataString)
+    userId = userData.user.id_usuario
+
+    // Unica chamada que retorna todos os projetos (para avaliar e os orientados)
+    const response = await api.get(`/usuarios/${userId}/projetos/avaliacao`);
+    const todosOsProjetos = response.data;
+
+    // Filtra para avaliações pendentes (situação 1)
+    avaliacoes.value = todosOsProjetos.filter((p) => p.id_situacao === 1);
+
+    // Filtra para projetos orientados e aprovados (situação 2) e pega a contagem
+    totalProjetosOrientados.value = todosOsProjetos.filter((p) => p.id_situacao === 2).length;
+
   } catch (err) {
-    console.error('Erro ao buscar as avaliações:', err)
-    notificationStore.showNotification({ message: 'Falha ao carregar projetos.', type: 'error' })
+    console.error('Erro ao buscar dados dos projetos:', err)
+    notificationStore.showNotification({ message: 'Falha ao carregar dados da página.', type: 'error' })
   } finally {
     carregando.value = false
   }
 }
 
-onMounted(buscarAvaliacoes)
+onMounted(buscarDadosPagina)
 
 // --- FUNÇÕES DE AÇÃO ---
 function goToProjectDetails(id) {
@@ -122,6 +131,11 @@ const confirmarAvaliacao = async () => {
       (p) => p.id_projeto !== projetoSendoAvaliado.value.id_projeto,
     )
     
+    // ✅ Atualiza a contagem de orientados caso um projeto seja aprovado
+    if (tipoAvaliacao.value === 'aprovado') {
+        totalProjetosOrientados.value++;
+    }
+
     notificationStore.showNotification({
       message: 'Projeto avaliado com sucesso!',
       type: 'success',
@@ -134,6 +148,22 @@ const confirmarAvaliacao = async () => {
     })
   } finally {
     closeModal()
+  }
+}
+
+// --- FUNÇÕES DE NAVEGAÇÃO DO CARD DE ORIENTADOS ---
+function goToOrientadosManagement() {
+  router.push('/projetos/orientados'); // Rota para a nova tela de gerenciamento
+}
+
+function handleOrientadosCardClick() {
+  if (totalProjetosOrientados.value > 0) {
+    goToOrientadosManagement();
+  } else {
+    notificationStore.showNotification({
+      message: 'Você não possui projetos aprovados para gerenciar no momento.',
+      type: 'info'
+    });
   }
 }
 </script>
@@ -152,6 +182,36 @@ const confirmarAvaliacao = async () => {
               </div>
             </div>
           </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" md="4">
+        <v-card
+          color="green-darken-4"
+          class="d-flex flex-column text-white"
+          :class="{ 'card-clicavel': totalProjetosOrientados > 0 }"
+          height="100%"
+          :hover="totalProjetosOrientados > 0"
+          @click="handleOrientadosCardClick"
+          variant="tonal"
+        >
+          <v-card-text class="flex-grow-1">
+            <div class="d-flex align-center">
+              <v-icon size="48" class="mr-4">mdi-school-outline</v-icon>
+              <div>
+                <div class="text-h4 font-weight-bold">{{ totalProjetosOrientados }}</div>
+                <div class="text-subtitle-1">Projetos Orientados</div>
+              </div>
+              <v-spacer></v-spacer>
+              <v-icon v-if="totalProjetosOrientados > 0" size="36" class="icon-arrow">mdi-arrow-right-circle-outline</v-icon>
+            </div>
+          </v-card-text>
+          <template v-if="totalProjetosOrientados > 0">
+            <v-divider></v-divider>
+            <v-card-actions class="justify-center text-caption pa-1">
+              <span class="opacity-75">Clique para gerenciar</span>
+            </v-card-actions>
+          </template>
         </v-card>
       </v-col>
     </v-row>
@@ -326,4 +386,28 @@ const confirmarAvaliacao = async () => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.card-clicavel {
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card-clicavel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.icon-arrow {
+  transition: transform 0.3s ease;
+  opacity: 0.7;
+}
+
+.card-clicavel:hover .icon-arrow {
+  transform: translateX(5px);
+  opacity: 1;
+}
+
+.opacity-75 {
+  opacity: 0.75;
+}
 </style>
+
