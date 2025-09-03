@@ -27,11 +27,20 @@ const totalProjetosAprovados = ref(0)
 // --- ESTADO PARA O MODAL ---
 const isModalOpen = ref(false)
 const isModalLoading = ref(false)
-const currentItem = ref(null) // Guarda o item para edição (null para criação)
+
+const getInitialFormData = () => ({
+  id_evento: null,
+  titulo: '',
+  problema: '',
+  relevancia: '',
+  id_orientador: null,
+  id_coorientador: null,
+});
+const currentItem = ref(getInitialFormData())
 
 // --- ESTADO PARA O MODAL DE EXCLUSÃO ---
 const isDeleteModalOpen = ref(false);
-const projectToDelete = ref(null); // Guarda o item para exclusão
+const projectToDelete = ref(null);
 
 const userDataString = sessionStorage.getItem('user_data');
 if (userDataString) {
@@ -41,7 +50,7 @@ if (userDataString) {
 }
 
 const modalConfig = computed(() => ({
-  title: currentItem.value ? 'Editar Projeto' : 'Novo Projeto',
+  title: currentItem.value && currentItem.value.id_projeto ? 'Editar Projeto' : 'Novo Projeto',
   fields: [
     {
       key: 'id_evento',
@@ -113,9 +122,9 @@ onMounted(async () => {
     return;
   }
 
-  const fetchProjetosPromise = api.get(`/projetos?id_responsavel=${userId}&situacao_not=2`); // Busca todos os projetos do usuário com qualquer status
+  const fetchProjetosPromise = api.get(`/projetos?id_responsavel=${userId}&situacao_not=2`);
   const fetchEventosPromise = eventoStore.fetchEventos();
-  const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=3`); //lista os avaliadores
+  const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=3`);
   const fetchAprovadosCountPromise = api.get(`/projetos?id_responsavel=${userId}&id_situacao=2`);
 
     try {
@@ -163,7 +172,8 @@ onMounted(async () => {
 // --- MÉTODOS PARA MODAIS ---
 
 const openCreateModal = () => {
-  currentItem.value = null;
+  // ✅ ALTERAÇÃO 4: Garante que o formulário está limpo ao abrir o modal de criação
+  currentItem.value = getInitialFormData();
   isModalOpen.value = true;
 };
 
@@ -173,7 +183,7 @@ const openEditModal = (projeto) => {
 };
 
 const openDeleteModal = (projeto) => {
-  projectToDelete.value = projeto; // Guarda o projeto a ser excluído
+  projectToDelete.value = projeto; 
   isDeleteModalOpen.value = true;
 };
 
@@ -181,21 +191,25 @@ const openDeleteModal = (projeto) => {
 const handleSave = async (formData) => {
   isModalLoading.value = true;
   
-  if (!formData.id_projeto) {
-      formData.id_responsavel = userId;
-      formData.id_situacao = 1;
-  }
+  // A lógica para adicionar o id_responsavel e id_situacao foi movida para dentro da verificação de "criação"
+  const isCreating = !formData.id_projeto;
 
   try {
-    if (formData.id_projeto) {
+    if (isCreating) {
+      // Cria um novo payload para não modificar o formData diretamente
+      const payload = {
+        ...formData,
+        id_responsavel: userId,
+        id_situacao: 1,
+      };
+      const { data } = await api.post('/projetos', payload);
+      todosProjetos.value.push(data);
+      notificationStore.showSuccess('Projeto criado com sucesso!');
+    } else {
       const { data } = await api.put(`/projetos/${formData.id_projeto}`, formData);
       const index = todosProjetos.value.findIndex(p => p.id_projeto === data.id_projeto);
       if (index !== -1) todosProjetos.value.splice(index, 1, data);
       notificationStore.showSuccess('Projeto alterado com sucesso!');
-    } else {
-      const { data } = await api.post('/projetos', formData);
-      todosProjetos.value.push(data);
-      notificationStore.showSuccess('Projeto criado com sucesso!');
     }
     isModalOpen.value = false;
   } catch (error) {
@@ -213,7 +227,6 @@ const handleDelete = async () => {
   try {
     await api.delete(`/projetos/${projectToDelete.value.id_projeto}`);
     
-    // Remove o projeto da lista local para atualizar a UI
     const index = todosProjetos.value.findIndex(p => p.id_projeto === projectToDelete.value.id_projeto);
     if (index !== -1) {
       todosProjetos.value.splice(index, 1);
@@ -221,7 +234,7 @@ const handleDelete = async () => {
     
     notificationStore.showSuccess('Projeto excluído com sucesso!');
     isDeleteModalOpen.value = false;
-    projectToDelete.value = null; // Limpa a referência
+    projectToDelete.value = null; 
 
   } catch (err) {
     console.error("Erro ao excluir o projeto:", err);
