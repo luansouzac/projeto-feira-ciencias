@@ -93,7 +93,7 @@ const abrirModalNovoProjeto = () => {
 };
 
 const gerenciarProjeto = (id) => {
-  router.push(`/projetos/${id}`); // Exemplo de rota
+  router.push(`/gerenciar-projeto/${id}`); // Exemplo de rota
 };
 </script>
 
