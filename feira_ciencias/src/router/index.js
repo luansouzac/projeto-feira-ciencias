@@ -31,6 +31,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/projetos/orientados/:id',
+      name: 'project-avaliacao',
+      component: () => import('../views/OrientadorProjectView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/projetos',
       name: 'projetos',
       component: () => import('../views/ProjectsView.vue'),
