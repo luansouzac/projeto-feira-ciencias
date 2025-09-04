@@ -26,14 +26,9 @@ onMounted(async () => {
   carregando.value = true;
   erro.value = null;
   try {
-    // Busca os detalhes do projeto
     const projetoResponse = await api.get(`/projetos/${projetoId}`);
     projeto.value = projetoResponse.data;
-
-    // TODO: Substituir pela chamada real da API para buscar membros
-    // Ex: const membrosResponse = await api.get(`/projetos/${projetoId}/membros`);
-    // membros.value = membrosResponse.data;
-    membros.value = mockMembros; // Usando dados mocados por enquanto
+    membros.value = mockMembros; 
 
   } catch (err) {
     console.error("Erro ao buscar dados do projeto:", err);
@@ -64,18 +59,14 @@ const progressoInscricoes = computed(() => {
 // --- FUNÇÕES DE INTERAÇÃO ---
 const salvarAlteracoes = () => {
     console.log("Salvando alterações...", projeto.value);
-    // Lógica para chamar a API e salvar os dados do formulário
 };
 
 const arquivarProjeto = () => {
     console.log("Arquivando projeto...", projeto.value.id_projeto);
-    // Lógica para a chamada de API de arquivamento
 };
 
 const removerMembro = (membro) => {
-    console.log("Removendo membro...", membro);
-    // Lógica para a chamada de API de remoção de membro
-};
+    console.log("Removendo membro...", membro);};
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';

@@ -18,7 +18,7 @@ use App\Http\Controllers\Api\DiscussaoEquipeController;
 use App\Http\Controllers\Api\AvaliacaoAprendizagemController;
 use App\Http\Controllers\Api\EventoController;
 use App\Http\Controllers\Api\AvaliacaoController;
-
+use App\Http\Controllers\Api\EquipeController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -51,10 +51,12 @@ Route::middleware(['auth:sanctum', 'permission:exibir projeto'])->group(function
     Route::get('/projetos/{id}', [ProjetoController::class, 'show']);
     Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
 });
+Route::apiResource('membro_equipes', MembroEquipeController::class);
+Route::apiResource('equipes', EquipeController::class);
 
 //Exibir Equipe e Crud Equipe
 Route::middleware(['auth:sanctum', 'permission:crud equipe'])->group(function () {
-    Route::apiResource('membro_equipes', MembroEquipeController::class);
+    
 });
 
 Route::middleware(['auth:sanctum', 'permission:exibir equipe'])->group(function () {
