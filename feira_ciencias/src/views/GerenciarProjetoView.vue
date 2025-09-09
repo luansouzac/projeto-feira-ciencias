@@ -1,19 +1,23 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import api from '../assets/plugins/axios.js'; // Ajuste o caminho se necessário
+import api from '../assets/plugins/axios.js';
+import { useNotificationStore } from '@/stores/notification';
 
 const route = useRoute();
 const router = useRouter();
+const notificationStore = useNotificationStore();
 
 // --- ESTADOS DO COMPONENTE ---
 const projeto = ref(null);
+const evento = ref(null); // Novo estado para guardar os dados do evento
 const membros = ref([]);
 const carregando = ref(true);
 const erro = ref(null);
 const activeTab = ref('geral');
+const isSaving = ref(false); // Estado de carregamento para o botão de salvar
 
-// --- DADOS MOCADOS (para simulação) ---
+// --- DADOS MOCADOS (para simulação de membros) ---
 const mockMembros = [
   { id_usuario: 101, nome: 'Ana Clara Souza', email: 'ana.souza@email.com', data_inscricao: '2025-08-15' },
   { id_usuario: 102, nome: 'Bruno Carvalho', email: 'bruno.c@email.com', data_inscricao: '2025-08-16' },
@@ -26,9 +30,20 @@ onMounted(async () => {
   carregando.value = true;
   erro.value = null;
   try {
+    // 1. Busca os detalhes do projeto
     const projetoResponse = await api.get(`/projetos/${projetoId}`);
     projeto.value = projetoResponse.data;
-    membros.value = mockMembros; 
+
+    // 2. Se o projeto tem um evento associado, busca os detalhes do evento
+    if (projeto.value && projeto.value.id_evento) {
+        const eventoResponse = await api.get(`/eventos/${projeto.value.id_evento}`);
+        evento.value = eventoResponse.data;
+    }
+
+    // TODO: Substituir pela chamada real da API para buscar membros da equipe
+    // Ex: const membrosResponse = await api.get(`/projetos/${projetoId}/membros`);
+    // membros.value = membrosResponse.data;
+    membros.value = mockMembros;
 
   } catch (err) {
     console.error("Erro ao buscar dados do projeto:", err);
@@ -43,7 +58,8 @@ onMounted(async () => {
 const statusMap = {
   1: { text: 'Em Análise', color: 'orange-darken-2' },
   2: { text: 'Aprovado', color: 'green-darken-2' },
-  // Adicione outros status conforme necessário
+  5: { text: 'Em Desenvolvimento', color: 'blue-darken-2' },
+  6: { text: 'Concluído', color: 'purple-darken-2' },
 };
 
 const projetoStatus = computed(() => {
@@ -52,21 +68,43 @@ const projetoStatus = computed(() => {
 });
 
 const progressoInscricoes = computed(() => {
-    if (!projeto.value || !projeto.value.max_membros) return 0;
-    return (membros.value.length / projeto.value.max_membros) * 100;
+    // Usa o max_pessoas do evento como fonte da verdade
+    if (!evento.value || !evento.value.max_pessoas) return 0;
+    return (membros.value.length / evento.value.max_pessoas) * 100;
 });
 
 // --- FUNÇÕES DE INTERAÇÃO ---
-const salvarAlteracoes = () => {
-    console.log("Salvando alterações...", projeto.value);
+const salvarAlteracoes = async () => {
+    isSaving.value = true;
+    notificationStore.showInfo('Salvando alterações...');
+    try {
+        const payload = {
+            titulo: projeto.value.titulo,
+            problema: projeto.value.problema,
+            relevancia: projeto.value.relevancia,
+            // O campo de inscrições abertas seria um PATCH em outra rota, talvez
+            // Ex: await api.patch(`/projetos/${projeto.value.id_projeto}/status`, { inscricoes_abertas: projeto.value.inscricoes_abertas });
+        };
+        const response = await api.put(`/projetos/${projeto.value.id_projeto}`, payload);
+        projeto.value = response.data; // Atualiza o estado local com os dados salvos
+        notificationStore.showSuccess('Projeto atualizado com sucesso!');
+    } catch (err) {
+        console.error('Erro ao salvar o projeto:', err);
+        notificationStore.showError('Não foi possível salvar as alterações.');
+    } finally {
+        isSaving.value = false;
+    }
 };
 
 const arquivarProjeto = () => {
     console.log("Arquivando projeto...", projeto.value.id_projeto);
+    // Lógica para a chamada de API de arquivamento
 };
 
 const removerMembro = (membro) => {
-    console.log("Removendo membro...", membro);};
+    console.log("Removendo membro...", membro);
+    // Lógica para a chamada de API de remoção de membro
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -127,7 +165,7 @@ const formatDate = (dateString) => {
                             <v-col cols="12" md="4">
                                 <v-card variant="tonal" color="blue-grey">
                                     <v-card-text>
-                                        <div class="text-h3 font-weight-bold">{{ membros.length }} / {{ projeto.max_membros }}</div>
+                                        <div class="text-h3 font-weight-bold">{{ membros.length }} / {{ evento?.max_pessoas || projeto.max_membros }}</div>
                                         <div class="text-subtitle-1">Inscrições</div>
                                         <v-progress-linear :model-value="progressoInscricoes" color="light-blue" height="6" rounded class="mt-2"></v-progress-linear>
                                     </v-card-text>
@@ -177,13 +215,25 @@ const formatDate = (dateString) => {
                         <h3 class="text-h6 mb-6">Configurações Gerais</h3>
                         <v-text-field v-model="projeto.titulo" label="Título do Projeto" variant="outlined" class="mb-4"></v-text-field>
                         <v-textarea v-model="projeto.problema" label="Descrição do Problema" variant="outlined" rows="3" class="mb-4"></v-textarea>
-                        <v-text-field type="number" v-model.number="projeto.max_membros" label="Número Máximo de Alunos" variant="outlined" class="mb-4" style="max-width: 250px;"></v-text-field>
-                        <v-switch v-model="projeto.inscricoes_abertas" label="Permitir novas inscrições" color="green-darken-3"></v-switch>
+                        
+                        <v-text-field
+                            :model-value="evento?.max_pessoas"
+                            label="Número Máximo de Alunos"
+                            variant="outlined"
+                            class="mb-4"
+                            style="max-width: 350px;"
+                            disabled
+                            readonly
+                            :hint="`Limite definido pelo evento: ${evento?.nome}`"
+                            persistent-hint
+                        ></v-text-field>
+
+                        <v-switch v-model="projeto.inscricoes_abertas" label="Permitir novas inscrições" color="green-darken-3" class="mt-4"></v-switch>
                         
                         <v-divider class="my-6"></v-divider>
                         
                         <div class="d-flex justify-end">
-                            <v-btn size="large" color="green-darken-3" @click="salvarAlteracoes">Salvar Alterações</v-btn>
+                            <v-btn size="large" color="green-darken-3" @click="salvarAlteracoes" :loading="isSaving">Salvar Alterações</v-btn>
                         </div>
 
                          <v-divider class="my-8"></v-divider>
@@ -206,3 +256,4 @@ const formatDate = (dateString) => {
 
   </v-container>
 </template>
+

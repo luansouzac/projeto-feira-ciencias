@@ -21,7 +21,6 @@ const filtroStatus = ref('Todos');
 const viewMode = ref('grid');
 const avaliadores = ref([]);
 let userId = null;
-// IDs de tipo de usuário (inspirado na navbar): 1=Admin, 2=Aluno, 3=Avaliador, 4=Orientador
 const userType = ref(null);
 
 // --- ESTADOS DO MODAL ---
@@ -65,7 +64,6 @@ onMounted(async () => {
 
     if (projetosResult.status === 'fulfilled') {
       let dadosProjetos = projetosResult.value.data;
-      // Se for aluno (tipo 2), filtra para ver apenas projetos públicos
       if (userType.value === 2) {
         dadosProjetos = dadosProjetos.filter(p => p.id_situacao > 1);
       }
@@ -92,7 +90,7 @@ onMounted(async () => {
   }
 });
 
-// --- CONFIGURAÇÃO DO MODAL (visível apenas para professores/admins) ---
+// --- CONFIGURAÇÃO DO MODAL ---
 const modalConfig = computed(() => ({
   title: 'Cadastrar Novo Projeto',
   fields: [
@@ -108,7 +106,7 @@ const modalConfig = computed(() => ({
 // --- FUNÇÕES DE TRANSFORMAÇÃO E VISUALIZAÇÃO ---
 const transformarProjeto = (apiProjeto) => {
   const inscritos = apiProjeto.membros_count || 0;
-  const maxAlunos = apiProjeto.max_membros || 5;
+  const maxAlunos = apiProjeto.evento?.max_pessoas || apiProjeto.max_membros || 5;
   let status = 'Em Análise';
   let validado = false;
 
@@ -126,8 +124,7 @@ const transformarProjeto = (apiProjeto) => {
     validado,
     inscritos,
     maxAlunos,
-    // A API precisaria retornar se o aluno logado já está inscrito neste projeto
-    alunoInscrito: false,
+    alunoInscrito: apiProjeto.equipe?.membro_equipe?.some(m => m.id_usuario === userId) || false,
   };
 };
 
@@ -138,10 +135,7 @@ const statusMap = {
 };
 
 const statusOptions = computed(() => {
-    // Alunos (tipo 2) não veem a opção "Em Análise"
-    if (userType.value === 2) {
-        return ['Todos', 'Vagas Abertas', 'Lotado'];
-    }
+    if (userType.value === 2) return ['Todos', 'Vagas Abertas', 'Lotado'];
     return ['Todos', 'Vagas Abertas', 'Lotado', 'Em Análise'];
 });
 
@@ -195,15 +189,22 @@ const verDetalhes = (id) => {
 const inscreverNoProjeto = async (projeto) => {
   notificationStore.showInfo(`Enviando inscrição para "${projeto.titulo}"...`);
   try {
-    // TODO: Implementar chamada real da API
-    // await api.post(`/projetos/${projeto.id}/inscrever`, { id_usuario: userId });
-    await new Promise(res => setTimeout(res, 1000)); // Simulação
+    // Ação agora chama a rota dedicada no backend
+    await api.post(`/projetos/${projeto.id}/inscrever`);
     
     notificationStore.showSuccess('Inscrição realizada com sucesso!');
-    projeto.alunoInscrito = true; // Atualiza a UI para refletir a inscrição
+    
+    // Atualiza a UI para refletir a inscrição imediatamente
+    projeto.alunoInscrito = true;
+    projeto.inscritos++;
+    if (projeto.inscritos >= projeto.maxAlunos) {
+        projeto.status = 'Lotado';
+    }
+
   } catch (err) {
     console.error("Erro ao inscrever no projeto:", err);
-    notificationStore.showError('Não foi possível realizar a inscrição.');
+    const mensagemErro = err.response?.data?.erro || 'Não foi possível realizar a inscrição.';
+    notificationStore.showError(mensagemErro);
   }
 };
 </script>
@@ -402,4 +403,3 @@ const inscreverNoProjeto = async (projeto) => {
   color: #424242;
 }
 </style>
-
