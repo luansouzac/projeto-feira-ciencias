@@ -31,13 +31,31 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/projetos/orientados/:id',
+      name: 'project-avaliacao',
+      component: () => import('../views/OrientadorProjectView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/banco-projetos',
+      name: 'banco-projects',
+      component: () => import('../views/BancoProjetosView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/gerenciar-projeto/:id',
+      name: 'gerenciar-projeto',
+      component: () => import('../views/GerenciarProjetoView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/projetos',
       name: 'projetos',
       component: () => import('../views/ProjectsView.vue'),
       meta: { requiresAuth: true },
     },
     {
-      path: '/projetos/aprovados',
+      path: '/aprovados',
       name: 'projetos-aprovados',
       component: () => import('../views/ApprovedProjectsView.vue'),
       meta: { requiresAuth: true },

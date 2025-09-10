@@ -29,7 +29,8 @@ const props = defineProps({
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  max-width: 350px;
+  width: 350px;
+  font-size: 48px !important;
 }
 
 .dashboard-card:hover {

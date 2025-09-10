@@ -18,7 +18,7 @@ use App\Http\Controllers\Api\DiscussaoEquipeController;
 use App\Http\Controllers\Api\AvaliacaoAprendizagemController;
 use App\Http\Controllers\Api\EventoController;
 use App\Http\Controllers\Api\AvaliacaoController;
-
+use App\Http\Controllers\Api\EquipeController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -39,23 +39,29 @@ Route::middleware(['auth:sanctum', 'permission:exibir usuario'])->group(function
     Route::get('/usuarios/{id}/projetos/avaliacao', [ProjetoController::class, 'projetosAvaliacao']);
 });
 
-
-//Exibir Projeto e Crud Projeto
-Route::middleware(['auth:sanctum', 'permission:crud projeto'])->group(function () {
-    Route::apiResource('projetos', ProjetoController::class);
-    Route::patch('projetos/{id_projeto}/situacao', [ProjetoController::class, 'updateSituacao']);
-});
-
+// Rotas de LEITURA (acessíveis por quem pode 'exibir projeto')
 Route::middleware(['auth:sanctum', 'permission:exibir projeto'])->group(function () {
     Route::get('/projetos', [ProjetoController::class, 'index']);
     Route::get('/projetos/{id}', [ProjetoController::class, 'show']);
     Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
 });
 
+// Rotas de ESCRITA (acessíveis por quem pode 'crud projeto')
+Route::middleware(['auth:sanctum', 'permission:crud projeto'])->group(function () {
+    Route::post('/projetos', [ProjetoController::class, 'store']);
+    Route::put('/projetos/{projeto}', [ProjetoController::class, 'update']);
+    Route::patch('/projetos/{projeto}', [ProjetoController::class, 'update']);
+    Route::delete('/projetos/{projeto}', [ProjetoController::class, 'destroy']);
+    Route::patch('/projetos/{id_projeto}/situacao', [ProjetoController::class, 'updateSituacao']);
+});
+
 //Exibir Equipe e Crud Equipe
 Route::middleware(['auth:sanctum', 'permission:crud equipe'])->group(function () {
-    Route::apiResource('membro_equipes', MembroEquipeController::class);
+
 });
+    Route::apiResource('membro_equipes', MembroEquipeController::class);
+Route::apiResource('equipes', EquipeController::class);
+Route::post('/projetos/{id}/inscrever', [ProjetoController::class, 'inscrever']);
 
 Route::middleware(['auth:sanctum', 'permission:exibir equipe'])->group(function () {
     Route::get('/membro_equipes', [MembroEquipeController::class, 'index']);
