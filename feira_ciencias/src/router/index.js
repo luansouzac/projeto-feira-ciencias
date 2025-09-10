@@ -55,7 +55,7 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/projetos/aprovados',
+      path: '/aprovados',
       name: 'projetos-aprovados',
       component: () => import('../views/ApprovedProjectsView.vue'),
       meta: { requiresAuth: true },
