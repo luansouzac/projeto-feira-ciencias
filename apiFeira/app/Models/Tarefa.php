@@ -42,4 +42,8 @@ class Tarefa extends Model
     {
         return $this->hasMany(RegistroTarefa::class, 'id_tarefa', 'id_tarefa');
     }
+    public function feedbacks()
+    {
+        return $this->hasMany(TarefaFeedback::class, 'id_tarefa', 'id_tarefa');
+    }
 }
