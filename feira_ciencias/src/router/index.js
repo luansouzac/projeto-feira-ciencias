@@ -21,21 +21,38 @@ const router = createRouter({
     {
       path: '/registrar',
       name: 'registrar',
-
       component: () => import('../views/RegisterView.vue'),
     },
+    // --- ROTAS DE PROJETOS REORDENADAS ---
+    // Rotas mais específicas (estáticas) vêm primeiro.
     {
-      path: '/projetos/:id',
-      name: 'project-details',
-      component: () => import('../views/ProjectDetails.vue'),
+      path: '/projetos',
+      name: 'projetos',
+      component: () => import('../views/ProjectsView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      // A rota '/aprovados' foi alterada para '/projetos/aprovados' para melhor estrutura.
+      path: '/projetos/aprovados',
+      name: 'projetos-aprovados',
+      component: () => import('../views/ApprovedProjectsView.vue'),
+      meta: { requiresAuth: true },
+    },
+    // Rotas dinâmicas mais específicas vêm a seguir.
     {
       path: '/projetos/orientados/:id',
       name: 'project-avaliacao',
       component: () => import('../views/OrientadorProjectView.vue'),
       meta: { requiresAuth: true },
     },
+    // A rota mais genérica '/projetos/:id' vem por último no grupo de projetos.
+    {
+      path: '/projetos/:id',
+      name: 'project-details',
+      component: () => import('../views/ProjectDetails.vue'),
+      meta: { requiresAuth: true },
+    },
+    // --- FIM DA REORDENAÇÃO ---
     {
       path: '/banco-projetos',
       name: 'banco-projects',
@@ -46,18 +63,6 @@ const router = createRouter({
       path: '/gerenciar-projeto/:id',
       name: 'gerenciar-projeto',
       component: () => import('../views/GerenciarProjetoView.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/projetos',
-      name: 'projetos',
-      component: () => import('../views/ProjectsView.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/aprovados',
-      name: 'projetos-aprovados',
-      component: () => import('../views/ApprovedProjectsView.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -89,8 +94,8 @@ router.beforeEach((to, from, next) => {
   if (isAuthenticated) {
     const userData = JSON.parse(userDataString)
 
-    if (userData.user && userData.user.tipo_usuario) {
-      userTypeId = userData.user.tipo_usuario.id_tipo_usuario
+    if (userData.user && userData.user.id_tipo_usuario) { // Corrigido para pegar o ID diretamente
+      userTypeId = userData.user.id_tipo_usuario
     }
   }
 
