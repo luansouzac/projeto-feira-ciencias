@@ -77,6 +77,15 @@ const router = createRouter({
         requiredTypeId: [1, 3, 4],
       },
     },
+    {
+      path: '/projetos/orientados',
+      name: 'orientados',
+      component: () => import('../views/ProjetosOrientados.vue'),
+      meta: {
+        requiresAuth: true,
+        requiredTypeId: [1, 3, 4],
+      },
+    }
   ],
 })
 
