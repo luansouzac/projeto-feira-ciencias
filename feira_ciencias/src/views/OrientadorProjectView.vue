@@ -27,7 +27,13 @@ const novoFeedback = ref('');
 const isTaskModalOpen = ref(false);
 const isTaskModalLoading = ref(false);
 const currentTask = ref(null);
-const taskFormData = ref({ descricao: '', detalhe: '' });
+const taskFormData = ref({
+  descricao: '',
+  detalhe: '',
+  data_inicio_prevista: null,
+  data_fim_prevista: null,
+  data_conclusao: null
+});
 
 // --- LÓGICA DE BUSCA DE DADOS ---
 onMounted(async () => {
@@ -153,7 +159,13 @@ const submeterFeedback = async () => {
 
 const openCreateTaskModal = () => {
   currentTask.value = null;
-  taskFormData.value = { descricao: '', detalhe: '' };
+  taskFormData.value = {
+    descricao: '',
+    detalhe: '',
+    data_inicio_prevista: null,
+    data_fim_prevista: null,
+    data_conclusao: null
+  };
   isTaskModalOpen.value = true;
 };
 
@@ -169,7 +181,7 @@ const handleSaveTask = async () => {
     if (currentTask.value) {
       const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, taskFormData.value);
       const index = tarefas.value.findIndex(t => t.id_tarefa === data.id_tarefa);
-      if (index !== -1) tarefas.value[index] = data;
+      if (index !== -1) tarefas.value[index] = { ...tarefas.value[index], ...data };
       notificationStore.showSuccess('Tarefa atualizada com sucesso!');
     } else {
       const payload = {
@@ -190,9 +202,21 @@ const handleSaveTask = async () => {
   }
 };
 
+// --- FUNÇÕES DE FORMATAÇÃO DE DATA ---
 const formatDate = (dateString) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+const formatDateSimple = (dateString) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() + userTimezoneOffset).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 };
 </script>
 
@@ -225,7 +249,7 @@ const formatDate = (dateString) => {
       <v-card>
         <v-tabs v-model="activeTab" bg-color="green-darken-3" color="white" grow>
           <v-tab value="kanban"><v-icon start>mdi-view-dashboard-outline</v-icon>Quadro de Tarefas</v-tab>
-          <v-tab value="detalhes"><v-icon start>mdi-text-box-search-outline</v-icon>Detalhes do projeto</v-tab>
+          <v-tab value="detalhes"><v-icon start>mdi-text-box-search-outline</v-icon>Detalhes da Proposta</v-tab>
         </v-tabs>
 
         <v-window v-model="activeTab">
@@ -262,9 +286,28 @@ const formatDate = (dateString) => {
                       draggable="true"
                       @dragstart="handleDragStart($event, tarefa)"
                       >
-                      <v-card-text class="pb-0">
+                      <v-card-text class="pb-2">
                         <p class="font-weight-medium text-grey-darken-4">{{ tarefa.descricao }}</p>
                         <p v-if="tarefa.detalhe" class="text-caption font-weight-regular text-grey-darken-1 mt-1">{{ tarefa.detalhe }}</p>
+
+                        <div v-if="tarefa.data_inicio_prevista || tarefa.data_fim_prevista || tarefa.data_conclusao" class="mt-3 d-flex flex-wrap ga-2">
+                          <v-chip v-if="tarefa.data_inicio_prevista" size="x-small" color="blue-grey" variant="tonal">
+                            <v-icon start icon="mdi-calendar-arrow-right"></v-icon>
+                            {{ formatDateSimple(tarefa.data_inicio_prevista) }}
+                            <v-tooltip activator="parent" location="top">Início Previsto</v-tooltip>
+                          </v-chip>
+                          <v-chip v-if="tarefa.data_fim_prevista" size="x-small" color="blue-grey" variant="tonal">
+                            <v-icon start icon="mdi-calendar-arrow-left"></v-icon>
+                            {{ formatDateSimple(tarefa.data_fim_prevista) }}
+                            <v-tooltip activator="parent" location="top">Fim Previsto</v-tooltip>
+                          </v-chip>
+                           <v-chip v-if="tarefa.data_conclusao" size="x-small" color="green" variant="tonal">
+                            <v-icon start icon="mdi-calendar-check"></v-icon>
+                            {{ formatDateSimple(tarefa.data_conclusao) }}
+                            <v-tooltip activator="parent" location="top">Data de Conclusão</v-tooltip>
+                          </v-chip>
+                        </div>
+
                       </v-card-text>
                       <v-card-actions>
                         <v-chip v-if="tarefa.feedbacks && tarefa.feedbacks.length > 0" size="x-small" prepend-icon="mdi-comment-text-multiple-outline" color="blue-grey" variant="tonal">
@@ -304,7 +347,7 @@ const formatDate = (dateString) => {
       </v-card>
     </div>
 
-    <v-dialog v-model="isTaskModalOpen" persistent max-width="600px">
+    <v-dialog v-model="isTaskModalOpen" persistent max-width="700px">
       <v-card>
         <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
           {{ taskModalTitle }}
@@ -327,6 +370,33 @@ const formatDate = (dateString) => {
               rows="3"
               class="mt-4"
             ></v-textarea>
+            
+            <v-row class="mt-2">
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="taskFormData.data_inicio_prevista"
+                  label="Início Previsto"
+                  type="date"
+                  variant="outlined"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                 <v-text-field
+                  v-model="taskFormData.data_fim_prevista"
+                  label="Fim Previsto"
+                  type="date"
+                  variant="outlined"
+                ></v-text-field>
+              </v-col>
+            </v-row>
+            <v-text-field
+                v-model="taskFormData.data_conclusao"
+                label="Data de Conclusão"
+                type="date"
+                variant="outlined"
+                class="mt-2"
+            ></v-text-field>
+
           </v-form>
         </v-card-text>
         <v-card-actions class="pa-4">
