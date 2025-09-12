@@ -21,19 +21,19 @@ const allNavLinks = [
     title: "Projetos", 
     to: "/projetos/inscritos", 
     icon: "mdi-folder-account-outline",
-    meta: { requiredTypeId: [1, 2, 4] } // Só admin(1), aluno(2) e orientador(4) podem ver
-  },
-  {
-    title: "Eventos",
-    to: "/eventos",
-    icon: "mdi-chart-bar",
-    meta: { requiredTypeId: [1, 3, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+    meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
   },
   {
     title: "Avaliações",
     to: "/avaliacoes",
     icon: "mdi-star-outline",
-    meta: { requiredTypeId: [1, 3, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+    meta: { requiredTypeId: [1, 3] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+  },
+  {
+    title: "Eventos",
+    to: "/eventos",
+    icon: "mdi-chart-bar",
+    meta: { requiredTypeId: [1, 3] } // Só admin(1), avaliador(3) e orientador(4) podem ver
   },
 ];
 
