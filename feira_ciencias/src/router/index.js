@@ -21,19 +21,30 @@ const router = createRouter({
     {
       path: '/registrar',
       name: 'registrar',
-
       component: () => import('../views/RegisterView.vue'),
     },
     {
-      path: '/projetos/:id',
-      name: 'project-details',
-      component: () => import('../views/ProjectDetails.vue'),
+      path: '/projetos',
+      name: 'projetos',
+      component: () => import('../views/ProjectsView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/projetos/aprovados',
+      name: 'projetos-aprovados',
+      component: () => import('../views/ApprovedProjectsView.vue'),
       meta: { requiresAuth: true },
     },
     {
       path: '/projetos/orientados/:id',
       name: 'project-avaliacao',
       component: () => import('../views/OrientadorProjectView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/projetos/:id',
+      name: 'project-details',
+      component: () => import('../views/ProjectDetails.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -46,18 +57,6 @@ const router = createRouter({
       path: '/gerenciar-projeto/:id',
       name: 'gerenciar-projeto',
       component: () => import('../views/GerenciarProjetoView.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/projetos',
-      name: 'projetos',
-      component: () => import('../views/ProjectsView.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/aprovados',
-      name: 'projetos-aprovados',
-      component: () => import('../views/ApprovedProjectsView.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -78,6 +77,15 @@ const router = createRouter({
         requiredTypeId: [1, 3, 4],
       },
     },
+    {
+      path: '/projetos/orientados',
+      name: 'orientados',
+      component: () => import('../views/ProjetosOrientados.vue'),
+      meta: {
+        requiresAuth: true,
+        requiredTypeId: [1, 3, 4],
+      },
+    }
   ],
 })
 
@@ -89,8 +97,8 @@ router.beforeEach((to, from, next) => {
   if (isAuthenticated) {
     const userData = JSON.parse(userDataString)
 
-    if (userData.user && userData.user.tipo_usuario) {
-      userTypeId = userData.user.tipo_usuario.id_tipo_usuario
+    if (userData.user && userData.user.id_tipo_usuario) { 
+      userTypeId = userData.user.id_tipo_usuario
     }
   }
 

@@ -153,7 +153,7 @@ const confirmarAvaliacao = async () => {
 
 // --- FUNÇÕES DE NAVEGAÇÃO DO CARD DE ORIENTADOS ---
 function goToOrientadosManagement() {
-  router.push('/projetos/orientados/1'); // Rota para a nova tela de gerenciamento
+  router.push('/projetos/orientados'); // Rota para a nova tela de gerenciamento
 }
 
 function handleOrientadosCardClick() {

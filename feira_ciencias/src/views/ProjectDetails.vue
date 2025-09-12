@@ -1,13 +1,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import api from '../assets/plugins/axios.js'; // Ajuste o caminho para o seu arquivo de config do Axios
-import CrudModal from '@/components/CrudModal.vue'; // 1. Importe o seu modal de CRUD
+import api from '../assets/plugins/axios.js';
+import CrudModal from '@/components/CrudModal.vue';
 import { useEventoStore } from '@/stores/eventoStore';
 
 const route = useRoute();
 const router = useRouter();
-
 const eventoStore = useEventoStore();
 
 // --- Estado do Componente ---
@@ -16,16 +15,23 @@ const tasks = ref([]);
 const avaliacoes = ref([]);
 const loading = ref(true);
 const error = ref(null);
-const activeTab = ref(null);
+const activeTab = ref('detalhes');
 
-//mapa dos estatus dos projetos
+// --- ESTADOS PARA O MODAL DE FEEDBACK DA TAREFA ---
+const isTaskFeedbackModalOpen = ref(false);
+const selectedTaskForFeedback = ref(null);
+const isFeedbackLoading = ref(false);
+const feedbackError = ref(null);
 
+
+// --- Mapas de Status ---
 const statusMap = {
   1: { text: 'Em Elaboração', color: 'white-darken-2', icon: 'mdi-pencil-ruler' },
   2: { text: 'Aprovado', color: 'green-darken-2', icon: 'mdi-check-decagram' },
   3: { text: 'Reprovado', color: 'red-darken-2', icon: 'mdi-close-octagon' },
   4: { text: 'Com Ressalvas', color: 'orange-darken-2', icon: 'mdi-alert-circle-outline' },
 };
+const projectStatus = computed(() => statusMap[project.value?.id_situacao] || {});
 
 const avaliacaoStatusMap = {
   2: { text: 'Aprovado', color: 'green', icon: 'mdi-check-circle' },
@@ -33,59 +39,86 @@ const avaliacaoStatusMap = {
   4: { text: 'Reprovado com Ressalvas', color: 'orange', icon: 'mdi-alert-circle' },
 };
 
-// --- Config kanban
+// --- Config Kanban ---
 const kanbanColumns = [
   { title: 'A Fazer', status: 1, color: 'grey' },
   { title: 'Em Andamento', status: 2, color: 'blue' },
   { title: 'Concluído', status: 3, color: 'green' },
 ];
 
-// --- Estado para o Modal de Tarefas ---
+// --- COMPUTED PARA JUNTAR TODOS OS FEEDBACKS (AVALIAÇÃO + TAREFAS) ---
+const combinedFeedbacks = computed(() => {
+  // Mapeia os feedbacks da avaliação do projeto
+  const evaluationFeedbacks = (avaliacoes.value || []).map(ava => ({
+    id: `ava-${ava.id_projeto_avaliacao}`,
+    date: new Date(ava.created_at),
+    type: 'Avaliação do Projeto',
+    title: avaliacaoStatusMap[ava.id_situacao]?.text || 'Avaliação',
+    feedbackText: ava.feedback || 'Nenhum comentário adicional.',
+    author: ava.avaliador?.nome || 'Avaliador desconhecido',
+    color: avaliacaoStatusMap[ava.id_situacao]?.color || 'grey',
+    icon: avaliacaoStatusMap[ava.id_situacao]?.icon || 'mdi-comment-question-outline'
+  }));
 
-const isTaskModalOpen = ref(false);
-const isTaskModalLoading = ref(false);
-const currentTask = ref(null);
+  // Mapeia os feedbacks de todas as tarefas
+  const taskFeedbacks = (tasks.value || [])
+    .flatMap(task =>
+      (task.feedbacks || []).map(fb => ({
+        id: `task-${fb.id_feedback}`,
+        date: new Date(fb.created_at),
+        type: 'Feedback de Tarefa',
+        title: `Na tarefa: "${task.descricao}"`,
+        feedbackText: fb.feedback,
+        author: fb.usuario?.nome || 'Usuário desconhecido',
+        color: 'blue-darken-1', // Cor padrão para feedback de tarefa
+        icon: 'mdi-comment-processing-outline'
+      }))
+    );
 
-const taskModalConfig = {
-  title: computed(() => (currentTask.value ? 'Editar Tarefa' : 'Nova Tarefa')),
-  fields: [
-    { key: 'descricao', label: 'Título da Tarefa', type: 'text', rules: [v => !!v || 'O título é obrigatório'] },
-    { key: 'detalhe', label: 'Descrição (Opcional)', type: 'textarea' },
-  ],
-};
-
-const event = computed(() => {
-  if (project.value && project.value.id_evento) {
-    return eventoStore.getEventoById(project.value.id_evento);
-  }
-  return null;
+  // Combina os dois arrays e ordena pela data mais recente
+  return [...evaluationFeedbacks, ...taskFeedbacks]
+    .sort((a, b) => b.date - a.date);
 });
 
-// A computed para o status do projeto também continua igual.
-const projectStatus = computed(() => statusMap[project.value?.id_situacao] || {});
-
-
-// --- Configuração para o Modal de Tarefas ---
-
+// --- Lógica de busca de dados (onMounted) ---
 onMounted(async () => {
   const projectId = route.params.id;
   try {
-    const promises = [
+    // 1. Busca os dados primários
+    const [projectResponse, tasksResponse, avaliacoesResponse] = await Promise.all([
       api.get(`/projetos/${projectId}`),
-      api.get(`/projetos/${projectId}/tarefas`),
+      api.get(`/projetos/${projectId}/tarefas`), 
       api.get(`/projetos/${projectId}/avaliacoes`),
-    ];
-
-    if (eventoStore.eventos.length === 0) {
-      console.log("Store de eventos vazia. Buscando eventos...");
-      promises.push(eventoStore.fetchEventos());
-    }
-
-    const [projectResponse, tasksResponse, avaliacoesResponse] = await Promise.all(promises);
+    ]);
 
     project.value = projectResponse.data;
-    tasks.value = tasksResponse.data;
+    const initialTasks = tasksResponse.data;
     avaliacoes.value = avaliacoesResponse.data;
+
+    // 2. CORREÇÃO: Se existirem tarefas, busca os feedbacks de cada uma
+    if (initialTasks && initialTasks.length > 0) {
+      const feedbackPromises = initialTasks.map(task =>
+        api.get(`/tarefas/${task.id_tarefa}/feedbacks`).catch(err => {
+          console.warn(`Não foi possível buscar feedbacks para a tarefa ${task.id_tarefa}:`, err);
+          return { data: [] }; // Retorna um array vazio em caso de erro para não quebrar a lógica
+        })
+      );
+      
+      const feedbackResponses = await Promise.all(feedbackPromises);
+      
+      // Associa os feedbacks encontrados de volta a cada tarefa
+      initialTasks.forEach((task, index) => {
+        task.feedbacks = feedbackResponses[index].data;
+      });
+    }
+
+    // 3. Atribui as tarefas já com os feedbacks ao estado do componente
+    tasks.value = initialTasks;
+
+    // Busca eventos da store se necessário
+    if (project.value.id_evento && !eventoStore.getEventoById(project.value.id_evento)) {
+      await eventoStore.fetchEventos();
+    }
 
   } catch (err) {
     console.error("Erro ao buscar detalhes do projeto:", err);
@@ -95,17 +128,48 @@ onMounted(async () => {
   }
 });
 
-// --- Funções para o Modal de Tarefas ---
-const openCreateTaskModal = () => {
-  currentTask.value = null;
-  isTaskModalOpen.value = true;
+// --- FUNÇÃO PARA ABRIR O MODAL DE FEEDBACKS DA TAREFA (Já correta) ---
+const openTaskFeedbackModal = async (task) => {
+  selectedTaskForFeedback.value = { ...task, feedbacks: [] };
+  isTaskFeedbackModalOpen.value = true;
+  isFeedbackLoading.value = true;
+  feedbackError.value = null;
+
+  try {
+    // Rota correta para buscar feedbacks de uma tarefa específica
+    const url = `/tarefas/${task.id_tarefa}/feedbacks`;
+    const { data } = await api.get(url);
+    if (selectedTaskForFeedback.value) {
+      selectedTaskForFeedback.value.feedbacks = data;
+    }
+  } catch (err) {
+    console.error("Erro ao buscar feedbacks da tarefa:", err);
+    feedbackError.value = "Não foi possível carregar os feedbacks. Tente novamente.";
+  } finally {
+    isFeedbackLoading.value = false;
+  }
 };
 
+
+// --- Funções para o Modal de TAREFAS (Criar/Editar) ---
+const isTaskModalOpen = ref(false);
+const isTaskModalLoading = ref(false);
+const currentTask = ref(null);
+const taskModalConfig = {
+  title: computed(() => (currentTask.value?.id_tarefa ? 'Editar Tarefa' : 'Nova Tarefa')),
+  fields: [
+    { key: 'descricao', label: 'Título da Tarefa', type: 'text', rules: [v => !!v || 'O título é obrigatório'] },
+    { key: 'detalhe', label: 'Descrição (Opcional)', type: 'textarea' },
+  ],
+};
+const openCreateTaskModal = () => {
+  currentTask.value = { descricao: '', detalhe: '' };
+  isTaskModalOpen.value = true;
+};
 const openEditTaskModal = (task) => {
   currentTask.value = { ...task };
   isTaskModalOpen.value = true;
 };
-
 const handleSaveTask = async (formData) => {
   isTaskModalLoading.value = true;
   try {
@@ -116,9 +180,8 @@ const handleSaveTask = async (formData) => {
     } else {
       const payload = {
         id_projeto: project.value.id_projeto,
-        id_situacao: 1,
-        detalhe: formData.detalhe,
-        descricao: formData.descricao,
+        id_situacao: 1, // 'A Fazer'
+        ...formData,
       };
       const { data } = await api.post('/tarefas', payload);
       tasks.value.push(data);
@@ -136,86 +199,29 @@ const handleDragStart = (event, task) => {
   event.dataTransfer.setData('text/plain', task.id_tarefa);
   event.dataTransfer.dropEffect = 'move';
 };
-
 const handleDrop = async (event, newStatus) => {
   const taskId = event.dataTransfer.getData('text/plain');
-  const taskIndex = tasks.value.findIndex(t => t.id_tarefa == taskId);
-
-  if (taskIndex === -1) return;
-
-  const task = tasks.value[taskIndex];
-
+  const task = tasks.value.find(t => t.id_tarefa == taskId);
   if (task && task.id_situacao !== newStatus) {
-
-    const originalTask = { ...task };
-
-    const updatedTask = { ...task, id_situacao: newStatus };
-
-    tasks.value.splice(taskIndex, 1, updatedTask);
-
+    const originalStatus = task.id_situacao;
+    task.id_situacao = newStatus; // Otimista
     try {
       await api.put(`/tarefas/${taskId}`, { id_situacao: newStatus });
     } catch (err) {
-      console.error("Falha ao atualizar o status da tarefa:", err);
-      tasks.value.splice(taskIndex, 1, originalTask);
+      task.id_situacao = originalStatus; // Reverte
     }
   }
 };
-
 const filterTasksByStatus = (status) => {
-  return tasks.value.filter(task => (task.status === status || task.id_situacao === status));
+  return tasks.value.filter(task => task.id_situacao === status);
 };
 
-// --- Funções para o modal generico ---
-const isEditModalOpen = ref(false);
-const isDeleteModalOpen = ref(false);
-const isModalLoading = ref(false);
-
-const modalConfig = {
-  title: 'Editar Projeto',
-  fields: [
-    { key: 'titulo', label: 'Título do Projeto', type: 'text', rules: [v => !!v || 'O título é obrigatório'] },
-    { key: 'problema', label: 'Problema a ser Resolvido', type: 'textarea', rules: [v => !!v || 'A descrição do problema é obrigatória'] },
-    { key: 'relevancia', label: 'Relevância e Justificativa', type: 'textarea', rules: [v => !!v || 'A relevância é obrigatória'] },
-  ],
-};
-
-const openEditModal = () => {
-  isEditModalOpen.value = true;
-};
-
-const openDeleteModal = () => {
-  isDeleteModalOpen.value = true;
-};
-
-const handleUpdate = async (formData) => {
-  isModalLoading.value = true;
-  try {
-    const { data } = await api.put(`/projetos/${project.value.id_projeto}`, formData);
-    project.value = data;
-    isEditModalOpen.value = false;
-  } catch (err) {
-    console.error("Erro ao atualizar o projeto:", err);
-  } finally {
-    isModalLoading.value = false;
-  }
-};
-
-const handleDelete = async () => {
-  isModalLoading.value = true;
-  try {
-    await api.delete(`/projetos/${project.value.id_projeto}`);
-    isDeleteModalOpen.value = false; // Fecha o modal
-    router.push({ name: 'projetos' }); // Redireciona para a home, pois o projeto não existe mais
-  } catch (err) {
-    console.error("Erro ao excluir o projeto:", err);
-  } finally {
-    isModalLoading.value = false;
-  }
-};
+// --- Funções para formatação de data ---
 const formatDate = (dateString) => {
-  if (!dateString) return 'Não definida';
-  return new Date(dateString).toLocaleDateString('pt-BR');
+  if (!dateString) return 'Data indefinida';
+  return new Date(dateString).toLocaleDateString('pt-BR', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
 };
 </script>
 
@@ -232,16 +238,13 @@ const formatDate = (dateString) => {
     <v-alert v-else-if="error" type="error" variant="tonal">{{ error }}</v-alert>
 
     <div v-else-if="project">
+      <!-- CABEÇALHO DO PROJETO -->
       <v-card theme="dark" class="mb-8 bg-green-darken-4">
         <v-card-item class="pa-4 pa-sm-6">
           <div class="d-flex flex-wrap justify-space-between align-center">
             <div>
               <p class="text-overline">Projeto</p>
               <h1 class="text-h4 font-weight-bold">{{ project.titulo }}</h1>
-              <div v-if="event" class="d-flex align-center mt-2 opacity-75">
-                <v-icon size="small" start icon="mdi-calendar-star"></v-icon>
-                <span class="text-subtitle-1">{{ event.nome }}</span>
-              </div>
             </div>
             <v-chip :color="projectStatus.color" :prepend-icon="projectStatus.icon" variant="tonal" label>
               {{ projectStatus.text }}
@@ -250,67 +253,49 @@ const formatDate = (dateString) => {
         </v-card-item>
       </v-card>
 
-      <v-card theme="dark" color="green-darken-4">
-        <v-tabs v-model="activeTab" color="white" grow>
-          <v-tab value="detalhes">
-            <v-icon start>mdi-text-box-search-outline</v-icon>
-            Detalhes
-          </v-tab>
-          <v-tab value="feedback">
-            <v-icon start>mdi-comment-quote-outline</v-icon>
-            Feedback
-          </v-tab>
-          <v-tab value="equipe">
-            <v-icon start>mdi-account-group-outline</v-icon>
-            Equipe
-          </v-tab>
-          <v-tab value="tarefas" :disabled="project.id_situacao !== 2">
-            <v-icon start>mdi-view-dashboard-outline</v-icon>
-            Tarefas
-          </v-tab>
+      <!-- ABAS DE NAVEGAÇÃO -->
+      <v-card>
+        <v-tabs v-model="activeTab" bg-color="green-darken-3" color="white" grow>
+          <v-tab value="detalhes"><v-icon start>mdi-text-box-search-outline</v-icon> Detalhes</v-tab>
+          <v-tab value="feedback"><v-icon start>mdi-comment-quote-outline</v-icon> Histórico de Feedbacks</v-tab>
+          <v-tab value="equipe"><v-icon start>mdi-account-group-outline</v-icon> Equipe</v-tab>
+          <v-tab value="tarefas" :disabled="project.id_situacao !== 2"><v-icon start>mdi-view-dashboard-outline</v-icon> Tarefas</v-tab>
         </v-tabs>
 
         <v-window v-model="activeTab">
-          <!-- ABA 1: DETALHES DO PROJETO -->
+          <!-- ABA 1: DETALHES -->
           <v-window-item value="detalhes">
-            <v-card-text class="pa-4 pa-md-6">
-              <v-list lines="two" bg-color="transparent">
-                <v-list-item prepend-icon="mdi-lightbulb-on-outline" title="Problema a ser Resolvido" :subtitle="project.problema" class="mb-4"></v-list-item>
-                <v-list-item prepend-icon="mdi-bullseye-arrow" title="Relevância e Justificativa" :subtitle="project.relevancia" class="mb-4"></v-list-item>
-                <v-list-item prepend-icon="mdi-account-tie" title="Orientador(a)" :subtitle="project.orientador?.nome || 'Não definido'"></v-list-item>
-                <v-list-item prepend-icon="mdi-account-tie-outline" title="Coorientador(a)" :subtitle="project.coorientador?.nome || 'Não definido'"></v-list-item>
-              </v-list>
+             <v-card-text class="pa-4 pa-md-6">
+                <v-list lines="two" bg-color="transparent">
+                    <v-list-item prepend-icon="mdi-lightbulb-on-outline" title="Problema a ser Resolvido" :subtitle="project.problema" class="mb-4"></v-list-item>
+                    <v-list-item prepend-icon="mdi-bullseye-arrow" title="Relevância e Justificativa" :subtitle="project.relevancia" class="mb-4"></v-list-item>
+                </v-list>
             </v-card-text>
-            <v-divider></v-divider>
-            <v-card-actions class="pa-3">
-              <v-spacer></v-spacer>
-              <v-btn variant="tonal" color="white" @click="openEditModal">Editar Proposta</v-btn>
-              <v-btn color="red-lighten-2" variant="text" @click="openDeleteModal">Excluir</v-btn>
-            </v-card-actions>
           </v-window-item>
 
-          <!-- ABA 2: FEEDBACK DE AVALIAÇÕES -->
+          <!-- ABA 2: FEEDBACK CONSOLIDADO (MODIFICADO) -->
           <v-window-item value="feedback">
             <v-card-text class="pa-4 pa-md-6">
-              <div v-if="!avaliacoes || avaliacoes.length === 0" class="text-center pa-8">
-                <v-icon size="48" class="mb-4">mdi-comment-question-outline</v-icon>
-                <p>Nenhum feedback de avaliação foi registrado.</p>
+              <div v-if="combinedFeedbacks.length === 0" class="text-center pa-8 text-grey-darken-1">
+                <v-icon size="48" class="mb-4">mdi-comment-processing-outline</v-icon>
+                <p>Nenhum feedback foi registrado para este projeto ainda.</p>
               </div>
               <v-timeline v-else side="end" align="start">
                 <v-timeline-item
-                  v-for="avaliacao in avaliacoes"
-                  :key="avaliacao.id_projeto_avaliacao"
-                  :dot-color="avaliacaoStatusMap[avaliacao.id_situacao]?.color || 'grey-lighten-1'"
-                  :icon="avaliacaoStatusMap[avaliacao.id_situacao]?.icon"
+                  v-for="fb in combinedFeedbacks"
+                  :key="fb.id"
+                  :dot-color="fb.color"
+                  :icon="fb.icon"
+                  size="small"
                 >
                   <template v-slot:opposite>
-                    <span class="text-caption">{{ formatDate(avaliacao.created_at) }}</span>
+                      <div class="text-caption text-grey-darken-1">{{ formatDate(fb.date) }}</div>
                   </template>
-                  <div>
-                    <div class="text-h6">{{ avaliacaoStatusMap[avaliacao.id_situacao]?.text || 'Avaliação' }}</div>
-                    <p class="text-body-2 mt-2 font-italic">"{{ avaliacao.feedback || 'Nenhum comentário adicional.' }}"</p>
+                  <div class="feedback-item">
+                    <div class="font-weight-bold">{{ fb.title }}</div>
+                    <p class="text-body-2 mt-2 font-italic">"{{ fb.feedbackText }}"</p>
                     <div class="text-caption opacity-75 mt-3">
-                      Por: {{ avaliacao.avaliador?.nome || 'Avaliador desconhecido' }}
+                      Por: {{ fb.author }}
                     </div>
                   </div>
                 </v-timeline-item>
@@ -320,21 +305,21 @@ const formatDate = (dateString) => {
 
           <!-- ABA 3: EQUIPE -->
           <v-window-item value="equipe">
-            <v-card-text class="text-center pa-8">
+            <v-card-text class="text-center pa-8 text-grey-darken-1">
               <v-icon size="48" class="mb-4">mdi-account-group-outline</v-icon>
               <p>A funcionalidade de Equipe será implementada aqui.</p>
             </v-card-text>
           </v-window-item>
-
+          
           <!-- ABA 4: TAREFAS (Kanban) -->
           <v-window-item value="tarefas">
             <v-card-title class="d-flex justify-space-between align-center">
-              <span>Tarefas do projeto</span>
+              <span>Quadro de Tarefas</span>
               <v-btn color="green" variant="flat" @click="openCreateTaskModal" prepend-icon="mdi-plus">
                 Nova Tarefa
               </v-btn>
             </v-card-title>
-            <v-card-text>
+            <v-card-text class="bg-grey-lighten-4">
               <v-row>
                 <v-col v-for="column in kanbanColumns" :key="column.status" cols="12" md="4" @dragover.prevent @drop="handleDrop($event, column.status)">
                   <div class="pa-4 rounded-lg fill-height" :class="`bg-${column.color}-lighten-5`">
@@ -343,9 +328,6 @@ const formatDate = (dateString) => {
                       <span class="font-weight-bold text-grey-darken-3">{{ column.title }}</span>
                       <v-chip size="small" :color="column.color" class="ml-2">{{ filterTasksByStatus(column.status).length }}</v-chip>
                     </div>
-                    <div v-if="filterTasksByStatus(column.status).length === 0" class="text-center text-grey-darken-1 pa-4">Nenhuma tarefa aqui.</div>
-                    
-                    <!-- ✅ CORREÇÃO: Adicionado theme="light" para o card da tarefa -->
                     <v-card 
                       v-for="task in filterTasksByStatus(column.status)" 
                       :key="task.id_tarefa" 
@@ -355,13 +337,17 @@ const formatDate = (dateString) => {
                       draggable="true" 
                       @dragstart="handleDragStart($event, task)"
                     >
-                      <v-card-text class="font-weight-medium text-grey-darken-4">
+                      <v-card-text class="font-weight-medium text-grey-darken-4 pb-1">
                         {{ task.descricao }}
                         <p v-if="task.detalhe" class="text-caption font-weight-regular text-grey-darken-1 mt-1">{{ task.detalhe }}</p>
                       </v-card-text>
                       <v-card-actions class="pa-1">
-                        <v-spacer></v-spacer>
-                        <v-btn icon="mdi-pencil" variant="text" size="x-small" @click="openEditTaskModal(task)"></v-btn>
+                          <v-chip v-if="task.feedbacks && task.feedbacks.length > 0" size="x-small" prepend-icon="mdi-comment-text-outline" class="ml-2">
+                              {{ task.feedbacks.length }}
+                          </v-chip>
+                          <v-spacer></v-spacer>
+                          <v-btn color="primary" variant="text" size="small" @click="openTaskFeedbackModal(task)">Feedbacks</v-btn>
+                          <v-btn icon="mdi-pencil" variant="text" size="x-small" @click="openEditTaskModal(task)"></v-btn>
                       </v-card-actions>
                     </v-card>
                   </div>
@@ -373,21 +359,57 @@ const formatDate = (dateString) => {
       </v-card>
     </div>
 
-    <!-- MODAIS (sem alterações) -->
-    <CrudModal v-model="isTaskModalOpen" :title="taskModalConfig.title" :fields="taskModalConfig.fields" :item="currentTask" :loading="isModalLoading" @save="handleSaveTask" />
-    <CrudModal v-model="isEditModalOpen" :title="modalConfig.title" :fields="modalConfig.fields" :item="project" :loading="isModalLoading" @save="handleUpdate" />
-    <v-dialog v-model="isDeleteModalOpen" max-width="450">
-      <v-card prepend-icon="mdi-alert-circle-outline" title="Confirmar Exclusão">
-        <v-card-text>
-          Você tem certeza que deseja excluir o projeto <strong>{{ project?.titulo }}</strong>? Esta ação não pode ser desfeita.
+    <!-- MODAL DE CRIAR/EDITAR TAREFA -->
+    <CrudModal v-model="isTaskModalOpen" :title="taskModalConfig.title" :fields="taskModalConfig.fields" :item="currentTask" :loading="isTaskModalLoading" @save="handleSaveTask" />
+    
+    <!-- MODAL PARA EXIBIR FEEDBACKS DE UMA TAREFA -->
+    <v-dialog v-model="isTaskFeedbackModalOpen" max-width="700px" persistent>
+      <v-card>
+        <v-card-title class="text-h5 bg-green-darken-3 text-white">
+          <v-icon start>mdi-comment-multiple-outline</v-icon>
+          Feedbacks da Tarefa
+        </v-card-title>
+        <v-card-subtitle class="bg-green-darken-3 text-white pb-2">
+          "{{ selectedTaskForFeedback?.descricao }}"
+        </v-card-subtitle>
+        <v-card-text class="pt-6">
+          <div v-if="isFeedbackLoading" class="text-center py-8">
+            <v-progress-circular indeterminate color="green-darken-2"></v-progress-circular>
+            <p class="mt-3 text-grey-darken-1">Buscando feedbacks...</p>
+          </div>
+          <v-alert v-else-if="feedbackError" type="error" variant="tonal">
+            {{ feedbackError }}
+          </v-alert>
+          
+          <div v-else>
+            <div v-if="!selectedTaskForFeedback?.feedbacks || selectedTaskForFeedback.feedbacks.length === 0" class="text-center pa-8 text-grey-darken-1">
+              <v-icon size="48" class="mb-4">mdi-comment-remove-outline</v-icon>
+              <p>Nenhum feedback registrado para esta tarefa específica.</p>
+            </div>
+            <v-timeline v-else side="end" align="start" density="compact">
+              <v-timeline-item
+                v-for="fb in selectedTaskForFeedback.feedbacks"
+                :key="fb.id_feedback"
+                dot-color="green-darken-1"
+                size="small"
+              >
+                <div class="feedback-item">
+                  <p class="text-body-1 font-italic">"{{ fb.feedback }}"</p>
+                  <div class="text-caption text-grey-darken-1 mt-2">
+                    - {{ fb.usuario?.nome || 'Usuário' }} em {{ formatDate(fb.created_at) }}
+                  </div>
+                </div>
+              </v-timeline-item>
+            </v-timeline>
+          </div>
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn @click="isDeleteModalOpen = false" :disabled="isModalLoading">Cancelar</v-btn>
-          <v-btn color="red-darken-2" variant="flat" @click="handleDelete" :loading="isModalLoading">Excluir</v-btn>
+          <v-btn color="grey-darken-1" variant="text" @click="isTaskFeedbackModalOpen = false">Fechar</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+
   </v-container>
 </template>
 
@@ -402,8 +424,9 @@ const formatDate = (dateString) => {
 .task-card:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
-.text-wrap {
-  white-space: normal !important;
+.feedback-item {
+  border-left: 3px solid #E0E0E0;
+  padding-left: 16px;
 }
 </style>
 

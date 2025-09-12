@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\AvaliacaoAprendizagemController;
 use App\Http\Controllers\Api\EventoController;
 use App\Http\Controllers\Api\AvaliacaoController;
 use App\Http\Controllers\Api\EquipeController;
+use App\Http\Controllers\Api\TarefaFeedbackController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -139,6 +140,15 @@ Route::middleware(['auth:sanctum', 'permission:exibir comentario planejamento'])
     Route::get('/comentarios_planejamentos/{id}', [ComentarioPlanejamentoController::class, 'show']);
 });
 
+Route::middleware(['auth:sanctum', 'permission:crud comentario desenvolvimento'])->group(function () {
+    Route::get('/tarefas/{tarefa}/feedbacks', [TarefaFeedbackController::class, 'index']);
+    Route::post('/tarefas/{tarefa}/feedbacks', [TarefaFeedbackController::class, 'store']);
+    Route::get('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'show']);
+    Route::put('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'update']);
+    Route::delete('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'destroy']);
+
+});
+   
 //Exibir Comentários avaliacao projeto e Crud avaliacao projeto
 Route::middleware(['auth:sanctum', 'permission:crud avaliacao projeto'])->group(function () {
     Route::apiResource('projeto_avaliacoes', AvaliacaoController::class);
