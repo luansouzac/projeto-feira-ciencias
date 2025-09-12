@@ -68,9 +68,9 @@ function goToProjectDetails(id) {
     </v-btn>
     <v-row class="mb-6">
       <v-col>
-        <h1 class="text-h4 font-weight-bold text-grey-darken-4">Galeria de Projetos</h1>
+        <h1 class="text-h4 font-weight-bold text-grey-darken-4">Galeria de Projetos Inscritos</h1>
         <p class="text-subtitle-1 text-grey-darken-1">
-          Explore os projetos que foram aprovados e se destacaram.
+          Explore os projetos você está inscrito.
         </p>
       </v-col>
     </v-row>

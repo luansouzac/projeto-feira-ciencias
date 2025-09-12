@@ -30,8 +30,8 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/projetos/aprovados',
-      name: 'projetos-aprovados',
+      path: '/projetos/inscritos',
+      name: 'projetos-inscritos',
       component: () => import('../views/ApprovedProjectsView.vue'),
       meta: { requiresAuth: true },
     },

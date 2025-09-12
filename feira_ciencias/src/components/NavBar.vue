@@ -12,16 +12,16 @@ const tipoUsuario = ref(null);
 
 const allNavLinks = [
   { title: "Home", to: "/home", icon: "mdi-view-dashboard-outline" },
-  { 
-    title: "Submeter Projetos", 
-    to: "/projetos", 
-    icon: "mdi-folder-account-outline",
-    meta: { requiredTypeId: [1, 2, 4] } // Só admin(1), aluno(2) e orientador(4) podem ver
-  },
   {
     title: "Banco de Projetos",
     to: "/banco-projetos",
     icon: "mdi-database",
+  },
+  { 
+    title: "Projetos", 
+    to: "/projetos/inscritos", 
+    icon: "mdi-folder-account-outline",
+    meta: { requiredTypeId: [1, 2, 4] } // Só admin(1), aluno(2) e orientador(4) podem ver
   },
   {
     title: "Eventos",

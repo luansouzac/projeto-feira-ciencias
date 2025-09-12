@@ -199,4 +199,4 @@ const handleLogin = async () => {
   opacity: 1 !important;
   font-size: 10px !important; /* Tamanho da fonte das labels */
 }
-</style>
+</style>=

@@ -146,9 +146,13 @@ Route::middleware(['auth:sanctum', 'permission:crud comentario desenvolvimento']
     Route::get('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'show']);
     Route::put('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'update']);
     Route::delete('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'destroy']);
-
 });
    
+
+Route::middleware(['auth:sanctum', 'permission:exibir feedback tarefas'])->group(function () {
+    Route::get('/tarefas/{tarefa}/feedbacks', [TarefaFeedbackController::class, 'index']);
+    Route::get('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'show']);
+});
 //Exibir Comentários avaliacao projeto e Crud avaliacao projeto
 Route::middleware(['auth:sanctum', 'permission:crud avaliacao projeto'])->group(function () {
     Route::apiResource('projeto_avaliacoes', AvaliacaoController::class);

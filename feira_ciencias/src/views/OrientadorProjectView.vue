@@ -16,10 +16,24 @@ const tarefas = ref([]);
 
 // --- ESTADOS DO COMPONENTE ---
 const activeTab = ref('kanban');
+
+// Estados do Modal de Feedback (Análise)
 const isFeedbackModalOpen = ref(false);
-const isModalLoading = ref(false);
+const isFeedbackModalLoading = ref(false);
 const tarefaSelecionada = ref(null);
 const novoFeedback = ref('');
+
+// --- ESTADOS PARA O MODAL DE CRIAR/EDITAR TAREFA ---
+const isTaskModalOpen = ref(false);
+const isTaskModalLoading = ref(false);
+const currentTask = ref(null);
+const taskFormData = ref({
+  descricao: '',
+  detalhe: '',
+  data_inicio_prevista: null,
+  data_fim_prevista: null,
+  data_conclusao: null
+});
 
 // --- LÓGICA DE BUSCA DE DADOS ---
 onMounted(async () => {
@@ -29,18 +43,28 @@ onMounted(async () => {
     carregando.value = false;
     return;
   }
-
   try {
-    // Busca os dados do projeto e das tarefas em paralelo
     const [projetoResponse, tarefasResponse] = await Promise.all([
       api.get(`/projetos/${projetoId}`),
       api.get(`/projetos/${projetoId}/tarefas`)
     ]);
 
     projeto.value = projetoResponse.data;
-    // Assume-se que a API de tarefas retorna os feedbacks associados
-    tarefas.value = tarefasResponse.data;
+    const initialTasks = tarefasResponse.data;
 
+    if (initialTasks && initialTasks.length > 0) {
+      const feedbackPromises = initialTasks.map(tarefa =>
+        api.get(`/tarefas/${tarefa.id_tarefa}/feedbacks`).catch(err => {
+          console.warn(`Não foi possível buscar feedbacks para a tarefa ${tarefa.id_tarefa}:`, err);
+          return { data: [] };
+        })
+      );
+      const feedbackResponses = await Promise.all(feedbackPromises);
+      initialTasks.forEach((tarefa, index) => {
+        tarefa.feedbacks = feedbackResponses[index].data;
+      });
+    }
+    tarefas.value = initialTasks;
   } catch (err) {
     console.error("Erro ao buscar dados do projeto:", err);
     erro.value = "Não foi possível carregar os dados do projeto. Tente novamente.";
@@ -49,15 +73,10 @@ onMounted(async () => {
   }
 });
 
-
 // --- CONFIGURAÇÕES E COMPUTEDS ---
 const statusMap = {
   1: { text: 'Em Análise', color: 'orange-darken-2', icon: 'mdi-file-search-outline' },
   2: { text: 'Aprovado', color: 'green-darken-2', icon: 'mdi-check-decagram-outline' },
-  3: { text: 'Reprovado', color: 'red-darken-2', icon: 'mdi-close-octagon' },
-  4: { text: 'Com Ressalvas', color: 'orange-darken-3', icon: 'mdi-alert-circle-outline' },
-  5: { text: 'Em Desenvolvimento', color: 'blue-darken-2', icon: 'mdi-progress-wrench' },
-  6: { text: 'Concluído', color: 'purple-darken-2', icon: 'mdi-trophy' },
 };
 
 const kanbanColumns = [
@@ -71,9 +90,38 @@ const projetoStatus = computed(() => {
     return statusMap[projeto.value.id_situacao] || { text: 'Desconhecido', color: 'grey' };
 });
 
+const taskModalTitle = computed(() => {
+  return currentTask.value ? 'Editar Tarefa' : 'Nova Tarefa';
+});
+
 const filterTasksByStatus = (status) => tarefas.value.filter(task => task.id_situacao === status);
 
-// --- FUNÇÕES DE AÇÃO ---
+// --- FUNÇÕES DE DRAG AND DROP ---
+const handleDragStart = (event, tarefa) => {
+  event.dataTransfer.clearData();
+  event.dataTransfer.setData('text/plain', tarefa.id_tarefa);
+  event.dataTransfer.dropEffect = 'move';
+};
+
+const handleDrop = async (event, newStatus) => {
+  const tarefaId = event.dataTransfer.getData('text/plain');
+  const tarefa = tarefas.value.find(t => t.id_tarefa == tarefaId);
+
+  if (tarefa && tarefa.id_situacao !== newStatus) {
+    const originalStatus = tarefa.id_situacao;
+    tarefa.id_situacao = newStatus;
+    try {
+      await api.put(`/tarefas/${tarefaId}`, { id_situacao: newStatus });
+      notificationStore.showSuccess('Status da tarefa atualizado!');
+    } catch (err) {
+      tarefa.id_situacao = originalStatus;
+      notificationStore.showError('Não foi possível atualizar o status da tarefa.');
+      console.error("Erro ao mover tarefa:", err);
+    }
+  }
+};
+
+// --- FUNÇÕES PARA MODAIS ---
 const openFeedbackModal = (tarefa) => {
   tarefaSelecionada.value = tarefa;
   novoFeedback.value = '';
@@ -82,42 +130,93 @@ const openFeedbackModal = (tarefa) => {
 
 const closeFeedbackModal = () => {
   isFeedbackModalOpen.value = false;
-  setTimeout(() => {
-    tarefaSelecionada.value = null;
-  }, 300);
+  setTimeout(() => { tarefaSelecionada.value = null; }, 300);
 };
 
 const submeterFeedback = async () => {
   if (!novoFeedback.value.trim()) {
-    notificationStore.showNotification({ message: 'O feedback não pode estar vazio.', type: 'warning' });
+    notificationStore.showWarning('O feedback não pode estar vazio.');
     return;
   }
-
-  isModalLoading.value = true;
+  isFeedbackModalLoading.value = true;
   try {
     const response = await api.post(`/tarefas/${tarefaSelecionada.value.id_tarefa}/feedbacks`, {
       feedback: novoFeedback.value,
     });
-    
-    // Adiciona o novo feedback à lista da tarefa na UI
     if (!tarefaSelecionada.value.feedbacks) {
         tarefaSelecionada.value.feedbacks = [];
     }
     tarefaSelecionada.value.feedbacks.push(response.data);
-
     notificationStore.showSuccess('Feedback enviado com sucesso!');
     closeFeedbackModal();
   } catch (err) {
     console.error("Erro ao submeter feedback:", err);
     notificationStore.showError('Não foi possível enviar o feedback.');
   } finally {
-    isModalLoading.value = false;
+    isFeedbackModalLoading.value = false;
   }
 };
 
+const openCreateTaskModal = () => {
+  currentTask.value = null;
+  taskFormData.value = {
+    descricao: '',
+    detalhe: '',
+    data_inicio_prevista: null,
+    data_fim_prevista: null,
+    data_conclusao: null
+  };
+  isTaskModalOpen.value = true;
+};
+
+const openEditTaskModal = (tarefa) => {
+  currentTask.value = tarefa;
+  taskFormData.value = { ...tarefa };
+  isTaskModalOpen.value = true;
+};
+
+const handleSaveTask = async () => {
+  isTaskModalLoading.value = true;
+  try {
+    if (currentTask.value) {
+      const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, taskFormData.value);
+      const index = tarefas.value.findIndex(t => t.id_tarefa === data.id_tarefa);
+      if (index !== -1) tarefas.value[index] = { ...tarefas.value[index], ...data };
+      notificationStore.showSuccess('Tarefa atualizada com sucesso!');
+    } else {
+      const payload = {
+        id_projeto: projeto.value.id_projeto,
+        id_situacao: 1,
+        ...taskFormData.value,
+      };
+      const { data } = await api.post('/tarefas', payload);
+      tarefas.value.push(data);
+      notificationStore.showSuccess('Tarefa criada com sucesso!');
+    }
+    isTaskModalOpen.value = false;
+  } catch (err) {
+    console.error("Erro ao salvar a tarefa:", err);
+    notificationStore.showError('Não foi possível salvar a tarefa.');
+  } finally {
+    isTaskModalLoading.value = false;
+  }
+};
+
+// --- FUNÇÕES DE FORMATAÇÃO DE DATA ---
 const formatDate = (dateString) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+const formatDateSimple = (dateString) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() + userTimezoneOffset).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 };
 </script>
 
@@ -127,28 +226,18 @@ const formatDate = (dateString) => {
       Voltar
     </v-btn>
 
-    <!-- ESTADO DE CARREGAMENTO -->
     <div v-if="carregando" class="text-center py-16">
       <v-progress-circular indeterminate color="green-darken-3" size="64"></v-progress-circular>
-      <p class="mt-4 text-grey-darken-1">Carregando dados do projeto...</p>
     </div>
-
-    <!-- ESTADO DE ERRO -->
     <v-alert v-else-if="erro" type="error" variant="tonal" prominent>{{ erro }}</v-alert>
 
-    <!-- CONTEÚDO DA PÁGINA -->
     <div v-else-if="projeto">
-      <!-- CABEÇALHO DO PROJETO -->
       <v-card theme="dark" class="mb-8 bg-green-darken-4">
         <v-card-item class="pa-4 pa-sm-6">
           <div class="d-flex flex-wrap justify-space-between align-center">
             <div>
               <p class="text-overline">Gerenciamento do Projeto</p>
               <h1 class="text-h4 font-weight-bold">{{ projeto.titulo }}</h1>
-              <div class="d-flex align-center mt-2 opacity-75">
-                <v-icon size="small" start icon="mdi-account-school"></v-icon>
-                <span class="text-subtitle-1">Responsável: {{ projeto.responsavel?.nome || 'Não definido' }}</span>
-              </div>
             </div>
             <v-chip :color="projetoStatus.color" :prepend-icon="projetoStatus.icon" variant="tonal" label>
               {{ projetoStatus.text }}
@@ -157,25 +246,30 @@ const formatDate = (dateString) => {
         </v-card-item>
       </v-card>
 
-      <!-- ABAS DE NAVEGAÇÃO -->
       <v-card>
         <v-tabs v-model="activeTab" bg-color="green-darken-3" color="white" grow>
-          <v-tab value="kanban">
-            <v-icon start>mdi-view-dashboard-outline</v-icon>
-            Quadro de Tarefas
-          </v-tab>
-          <v-tab value="detalhes">
-            <v-icon start>mdi-text-box-search-outline</v-icon>
-            Detalhes da Proposta
-          </v-tab>
+          <v-tab value="kanban"><v-icon start>mdi-view-dashboard-outline</v-icon>Quadro de Tarefas</v-tab>
+          <v-tab value="detalhes"><v-icon start>mdi-text-box-search-outline</v-icon>Detalhes da Proposta</v-tab>
         </v-tabs>
 
         <v-window v-model="activeTab">
-          <!-- ABA 1: QUADRO KANBAN -->
           <v-window-item value="kanban">
+            <v-card-title class="d-flex justify-space-between align-center">
+              <span>Andamento</span>
+              <v-btn color="green" variant="flat" @click="openCreateTaskModal" prepend-icon="mdi-plus">
+                Nova Tarefa
+              </v-btn>
+            </v-card-title>
             <v-card-text class="bg-grey-lighten-4 pa-4 pa-md-6">
               <v-row>
-                <v-col v-for="column in kanbanColumns" :key="column.status" cols="12" md="4">
+                <v-col
+                  v-for="column in kanbanColumns"
+                  :key="column.status"
+                  cols="12"
+                  md="4"
+                  @dragover.prevent
+                  @drop="handleDrop($event, column.status)"
+                >
                   <div class="pa-4 rounded-lg fill-height" :class="`bg-${column.color}-lighten-5`">
                     <div class="d-flex align-center mb-4">
                       <v-icon :color="column.color" class="mr-2">mdi-circle-medium</v-icon>
@@ -183,19 +277,47 @@ const formatDate = (dateString) => {
                       <v-chip size="small" :color="column.color" class="ml-2">{{ filterTasksByStatus(column.status).length }}</v-chip>
                     </div>
                     
-                    <v-card v-for="tarefa in filterTasksByStatus(column.status)" :key="tarefa.id_tarefa" class="mb-3 task-card" theme="light" variant="flat">
-                      <v-card-text class="pb-0">
+                    <v-card
+                      v-for="tarefa in filterTasksByStatus(column.status)"
+                      :key="tarefa.id_tarefa"
+                      class="mb-3 task-card"
+                      theme="light"
+                      variant="flat"
+                      draggable="true"
+                      @dragstart="handleDragStart($event, tarefa)"
+                      >
+                      <v-card-text class="pb-2">
                         <p class="font-weight-medium text-grey-darken-4">{{ tarefa.descricao }}</p>
                         <p v-if="tarefa.detalhe" class="text-caption font-weight-regular text-grey-darken-1 mt-1">{{ tarefa.detalhe }}</p>
+
+                        <div v-if="tarefa.data_inicio_prevista || tarefa.data_fim_prevista || tarefa.data_conclusao" class="mt-3 d-flex flex-wrap ga-2">
+                          <v-chip v-if="tarefa.data_inicio_prevista" size="x-small" color="blue-grey" variant="tonal">
+                            <v-icon start icon="mdi-calendar-arrow-right"></v-icon>
+                            {{ formatDateSimple(tarefa.data_inicio_prevista) }}
+                            <v-tooltip activator="parent" location="top">Início Previsto</v-tooltip>
+                          </v-chip>
+                          <v-chip v-if="tarefa.data_fim_prevista" size="x-small" color="blue-grey" variant="tonal">
+                            <v-icon start icon="mdi-calendar-arrow-left"></v-icon>
+                            {{ formatDateSimple(tarefa.data_fim_prevista) }}
+                            <v-tooltip activator="parent" location="top">Fim Previsto</v-tooltip>
+                          </v-chip>
+                           <v-chip v-if="tarefa.data_conclusao" size="x-small" color="green" variant="tonal">
+                            <v-icon start icon="mdi-calendar-check"></v-icon>
+                            {{ formatDateSimple(tarefa.data_conclusao) }}
+                            <v-tooltip activator="parent" location="top">Data de Conclusão</v-tooltip>
+                          </v-chip>
+                        </div>
+
                       </v-card-text>
                       <v-card-actions>
-                        <v-chip v-if="tarefa.feedbacks && tarefa.feedbacks.length > 0" size="small" prepend-icon="mdi-comment-text-multiple-outline" color="blue-grey" variant="tonal">
-                          {{ tarefa.feedbacks.length }} Feedback(s)
+                        <v-chip v-if="tarefa.feedbacks && tarefa.feedbacks.length > 0" size="x-small" prepend-icon="mdi-comment-text-multiple-outline" color="blue-grey" variant="tonal">
+                          {{ tarefa.feedbacks.length }}
                         </v-chip>
                         <v-spacer></v-spacer>
-                        <v-btn color="green-darken-2" variant="text" @click="openFeedbackModal(tarefa)">
+                        <v-btn color="grey-darken-3" variant="text" size="small" @click.stop="openFeedbackModal(tarefa)">
                           Analisar
                         </v-btn>
+                        <v-btn icon="mdi-pencil" variant="text" size="x-small" @click.stop="openEditTaskModal(tarefa)"></v-btn>
                       </v-card-actions>
                     </v-card>
                   </div>
@@ -204,32 +326,99 @@ const formatDate = (dateString) => {
             </v-card-text>
           </v-window-item>
 
-          <!-- ABA 2: DETALHES -->
           <v-window-item value="detalhes">
             <v-card-text class="pa-4 pa-md-6">
-              <v-list lines="two" bg-color="transparent">
-                <v-list-item prepend-icon="mdi-lightbulb-on-outline" title="Problema a ser Resolvido" :subtitle="projeto.problema"></v-list-item>
-                <v-list-item prepend-icon="mdi-bullseye-arrow" title="Relevância do Projeto" :subtitle="projeto.relevancia" class="mt-4"></v-list-item>
-              </v-list>
+                <v-list lines="two" bg-color="transparent">
+                  <v-list-item
+                    prepend-icon="mdi-lightbulb-on-outline"
+                    title="Problema a ser Resolvido"
+                    :subtitle="projeto.problema || 'Não informado'"
+                  ></v-list-item>
+                  <v-list-item
+                    class="mt-4"
+                    prepend-icon="mdi-bullseye-arrow"
+                    title="Relevância e Justificativa"
+                    :subtitle="projeto.relevancia || 'Não informado'"
+                  ></v-list-item>
+                </v-list>
             </v-card-text>
           </v-window-item>
         </v-window>
       </v-card>
     </div>
 
-    <!-- MODAL DE FEEDBACK -->
+    <v-dialog v-model="isTaskModalOpen" persistent max-width="700px">
+      <v-card>
+        <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
+          {{ taskModalTitle }}
+          <v-spacer></v-spacer>
+          <v-btn icon="mdi-close" variant="text" @click="isTaskModalOpen = false"></v-btn>
+        </v-card-title>
+        <v-card-text class="pt-6">
+          <v-form>
+            <v-text-field
+              v-model="taskFormData.descricao"
+              label="Título da Tarefa"
+              variant="outlined"
+              :rules="[v => !!v || 'O título é obrigatório']"
+              autofocus
+            ></v-text-field>
+            <v-textarea
+              v-model="taskFormData.detalhe"
+              label="Descrição Detalhada (Opcional)"
+              variant="outlined"
+              rows="3"
+              class="mt-4"
+            ></v-textarea>
+            
+            <v-row class="mt-2">
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="taskFormData.data_inicio_prevista"
+                  label="Início Previsto"
+                  type="date"
+                  variant="outlined"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                 <v-text-field
+                  v-model="taskFormData.data_fim_prevista"
+                  label="Fim Previsto"
+                  type="date"
+                  variant="outlined"
+                ></v-text-field>
+              </v-col>
+            </v-row>
+            <v-text-field
+                v-model="taskFormData.data_conclusao"
+                label="Data de Conclusão"
+                type="date"
+                variant="outlined"
+                class="mt-2"
+            ></v-text-field>
+
+          </v-form>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn color="grey-darken-1" variant="text" @click="isTaskModalOpen = false" :disabled="isTaskModalLoading">Cancelar</v-btn>
+          <v-btn color="green-darken-2" variant="flat" @click="handleSaveTask" :loading="isTaskModalLoading">Salvar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-dialog v-model="isFeedbackModalOpen" persistent max-width="700px">
       <v-card>
-        <v-card-title class="text-h5 bg-green-darken-3 text-white">
+        <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
           <v-icon start>mdi-comment-edit-outline</v-icon>
           Analisar Tarefa
+          <v-spacer></v-spacer>
+          <v-btn icon="mdi-close" variant="text" @click="closeFeedbackModal"></v-btn>
         </v-card-title>
         <v-card-text class="pt-6">
           <p class="font-weight-bold text-h6 text-grey-darken-4">{{ tarefaSelecionada?.descricao }}</p>
           <p class="text-body-2 text-grey-darken-2 mt-1">{{ tarefaSelecionada?.detalhe }}</p>
-          
           <v-divider class="my-6"></v-divider>
-
           <h3 class="text-h6 font-weight-medium mb-4 text-grey-darken-3">Histórico de Feedbacks</h3>
           <div v-if="!tarefaSelecionada?.feedbacks || tarefaSelecionada?.feedbacks.length === 0" class="text-center text-grey-darken-1 pa-4">
             <p>Nenhum feedback registrado para esta tarefa ainda.</p>
@@ -244,9 +433,7 @@ const formatDate = (dateString) => {
               </div>
             </v-timeline-item>
           </v-timeline>
-
           <v-divider class="my-6"></v-divider>
-          
           <h3 class="text-h6 font-weight-medium mb-4 text-grey-darken-3">Adicionar Novo Feedback</h3>
           <v-textarea
             v-model="novoFeedback"
@@ -254,13 +441,12 @@ const formatDate = (dateString) => {
             placeholder="Descreva os pontos positivos, áreas para melhoria, ou próximos passos..."
             rows="4"
             variant="outlined"
-            autofocus
           ></v-textarea>
         </v-card-text>
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn color="grey-darken-1" variant="text" @click="closeFeedbackModal" :disabled="isModalLoading">Cancelar</v-btn>
-          <v-btn :color="`green-darken-2`" variant="flat" @click="submeterFeedback" :loading="isModalLoading">
+          <v-btn color="grey-darken-1" variant="text" @click="closeFeedbackModal" :disabled="isFeedbackModalLoading">Cancelar</v-btn>
+          <v-btn :color="`green-darken-2`" variant="flat" @click="submeterFeedback" :loading="isFeedbackModalLoading">
             Enviar Feedback
           </v-btn>
         </v-card-actions>
@@ -274,17 +460,15 @@ const formatDate = (dateString) => {
   min-height: 400px;
 }
 .task-card {
+  cursor: move;
   transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
 .task-card:hover {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
 }
-.text-wrap {
-  white-space: normal !important;
-}
 .feedback-item {
-  border-left: 3px solid #E0E0E0; /* cinza claro */
+  border-left: 3px solid #E0E0E0;
   padding-left: 16px;
 }
 </style>
