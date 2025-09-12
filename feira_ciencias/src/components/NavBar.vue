@@ -16,7 +16,7 @@ const allNavLinks = [
     title: "Submeter Projetos", 
     to: "/projetos", 
     icon: "mdi-folder-account-outline",
-    meta: { requiredTypeId: [1, 2, 4] } // Só admin(1), aluno(2) e orientador(4) podem ver
+    meta: { requiredTypeId: [1, 4] } // Só admin(1), aluno(2) e orientador(4) podem ver
   },
   {
     title: "Banco de Projetos",

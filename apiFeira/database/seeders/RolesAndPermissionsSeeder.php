@@ -46,13 +46,14 @@ class RolesAndPermissionsSeeder extends Seeder
         $permission = Permission::create(['name' => 'crud discussao equipe']);
         $permission = Permission::create(['name' => 'exibir avaliacao projeto']);
         $permission = Permission::create(['name' => 'crud avaliacao projeto']);
+        $permission = Permission::create(['name' => 'exibir feedback tarefas']);
 
         //Limpar o cache
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
         
         //Criar Roles e Atribuir Permissões
         $role = Role::create(['name' => 'Administrador'])->givePermissionTo(Permission::all());
-        $role = Role::create(['name' => 'Aluno'])->givePermissionTo(['exibir projeto', 'crud projeto', 'crud objetivo', 'crud equipe', 'exibir usuario', 'crud tarefa', 'crud apresentacao', 'exibir evento', 'crud comentario planejamento', 'crud comentario desenvolvimento', 'crud discussao equipe', 'exibir avaliacao projeto']);
+        $role = Role::create(['name' => 'Aluno'])->givePermissionTo(['exibir feedback','exibir projeto', 'crud projeto', 'crud objetivo', 'crud equipe', 'exibir usuario', 'crud tarefa', 'crud apresentacao', 'exibir evento', 'crud comentario planejamento', 'crud comentario desenvolvimento', 'crud discussao equipe', 'exibir avaliacao projeto']);
         $role = Role::create(['name' => 'Orientador'])->givePermissionTo(['crud comentario desenvolvimento','crud projeto', 'exibir objetivo', 'exibir equipe', 'crud usuario', 'crud tarefa', 'exibir apresentacao', 'exibir evento', 'exibir avaliacao', 'crud comentario planejamento', 'crud comentario desenvolvimento', 'exibir discussao equipe', 'crud avaliacao projeto']);
         $role = Role::create(['name' => 'Avaliador'])->givePermissionTo(['crud comentario desenvolvimento','exibir projeto', 'exibir objetivo', 'exibir equipe', 'exibir usuario', 'exibir tarefa', 'exibir apresentacao', 'exibir evento', 'crud avaliacao', 'exibir avaliacao projeto']);
         
