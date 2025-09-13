@@ -24,8 +24,8 @@ const allNavLinks = [
     meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
   },
   {
-    title: "Avaliações",
-    to: "/avaliacoes",
+    title: "Projetos Orientados",
+    to: "/projetos/orientados",
     icon: "mdi-star-outline",
     meta: { requiredTypeId: [1, 3] } // Só admin(1), avaliador(3) e orientador(4) podem ver
   },

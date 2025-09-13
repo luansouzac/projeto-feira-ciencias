@@ -12,7 +12,7 @@ const projetos = ref([]);
 const carregando = ref(true);
 const erro = ref(null);
 const filtroBusca = ref('');
-const viewMode = ref('grid'); // Novo estado para controlar a visualização: 'grid' ou 'list'
+const viewMode = ref('grid');
 let userId = null;
 
 // --- OBTÉM DADOS DO USUÁRIO LOGADO ---
@@ -35,9 +35,39 @@ onMounted(async () => {
   }
 
   try {
+    // 1. Busca a lista inicial de projetos orientados
     const url = `/usuarios/${userId}/projetos/avaliacao`;
-    const { data } = await api.get(url);
-    projetos.value = data.map(transformarProjeto);
+    const { data: projetosIniciais } = await api.get(url);
+
+    if (!Array.isArray(projetosIniciais) || projetosIniciais.length === 0) {
+        projetos.value = [];
+        return; // Encerra a execução se não houver projetos
+    }
+
+    // 2. Cria uma promessa para buscar os membros de cada projeto
+    const memberFetchPromises = projetosIniciais.map(projeto =>
+        api.get(`/membros_projeto/${projeto.id_projeto}`).catch(err => {
+            console.warn(`Não foi possível buscar membros para o projeto ${projeto.id_projeto}:`, err);
+            return { data: [] }; // Retorna um array vazio em caso de erro para não quebrar o Promise.all
+        })
+    );
+
+    // 3. Executa todas as buscas de membros em paralelo
+    const membrosResponses = await Promise.all(memberFetchPromises);
+
+    // 4. Combina os dados dos projetos com os dados de seus membros
+    const projetosComMembros = projetosIniciais.map((projeto, index) => {
+        const membrosData = membrosResponses[index].data;
+        // Adiciona a lista de membros e a contagem ao objeto do projeto
+        return {
+            ...projeto,
+            membros_equipe: Array.isArray(membrosData) ? membrosData : [],
+        };
+    });
+
+    // 5. Transforma os dados combinados para o formato que a view utiliza
+    projetos.value = projetosComMembros.map(transformarProjeto);
+
   } catch (err) {
     console.error("Erro ao buscar projetos para avaliação:", err);
     erro.value = "Não foi possível carregar seus projetos. Tente novamente mais tarde.";
@@ -53,9 +83,10 @@ const transformarProjeto = (apiProjeto) => {
   return {
     id: apiProjeto.id_projeto,
     titulo: apiProjeto.titulo,
-    evento: apiProjeto.evento?.nome || 'Evento não definido',
-    area: apiProjeto.area_conhecimento || 'Área não definida',
-    membrosCount: apiProjeto.membros_count || 0,
+    // CORREÇÃO: Acessa o nome do evento através do objeto 'eventos' (no plural)
+    evento: apiProjeto.eventos?.nome || 'Evento não definido',
+    // A contagem de membros agora vem do array de membros que foi buscado dinamicamente
+    membrosCount: apiProjeto.membros_equipe?.length ?? 0,
     status: getStatusInfo(apiProjeto.id_situacao),
   };
 };
@@ -161,10 +192,7 @@ const verDetalhesDoProjeto = (projeto) => {
                 <v-card-subtitle class="mt-1">{{ projeto.evento }}</v-card-subtitle>
               </v-card-item>
               <v-card-text>
-                <div class="info-item mb-1">
-                  <v-icon start color="grey-darken-1" size="small">mdi-lightbulb-on-outline</v-icon>
-                  <span class="text-body-2">{{ projeto.area }}</span>
-                </div>
+
                 <div class="info-item">
                   <v-icon start color="grey-darken-1" size="small">mdi-account-group-outline</v-icon>
                   <span class="text-body-2"><strong>{{ projeto.membrosCount }}</strong> {{ projeto.membrosCount === 1 ? 'membro na equipe' : 'membros na equipe' }}</span>
@@ -227,3 +255,4 @@ const verDetalhesDoProjeto = (projeto) => {
   color: #424242;
 }
 </style>
+
