@@ -168,7 +168,7 @@ const openCreateModal = () => {
 const handleSave = async (formData) => {
   isModalLoading.value = true;
   try {
-    const payload = { ...formData, id_responsavel: userId, id_situacao: 1 };
+    const payload = { ...formData, id_responsavel: userId, id_situacao: 2 };
     const { data } = await api.post('/projetos', payload);
     projetos.value.unshift(transformarProjeto(data));
     notificationStore.showSuccess('Projeto cadastrado com sucesso!');

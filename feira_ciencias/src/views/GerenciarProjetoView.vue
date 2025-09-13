@@ -11,11 +11,12 @@ const notificationStore = useNotificationStore();
 // --- ESTADOS DO COMPONENTE ---
 const projeto = ref(null);
 const evento = ref(null);
-const membros = ref([]); // Agora começa como um array vazio
+const membros = ref([]);
 const carregando = ref(true);
 const erro = ref(null);
 const activeTab = ref('geral');
 const isSaving = ref(false);
+const isDeleteDialogOpen = ref(false);
 
 // --- LÓGICA DE BUSCA DE DADOS ---
 onMounted(async () => {
@@ -23,32 +24,43 @@ onMounted(async () => {
   carregando.value = true;
   erro.value = null;
   try {
-    // 1. Busca os detalhes do projeto
-    const projetoResponse = await api.get(`/projetos/${projetoId}`);
-    projeto.value = projetoResponse.data;
+    // 1. Otimização: Busca os detalhes do projeto e os membros da equipe em paralelo
+    const [projetoResponse, membrosResponse] = await Promise.all([
+        api.get(`/projetos/${projetoId}`),
+        api.get(`/membros_projeto/${projetoId}`) // Usando a rota dedicada para buscar os membros
+    ]);
 
-    // 2. Busca os detalhes do evento associado
-    if (projeto.value && projeto.value.id_evento) {
-        const eventoResponse = await api.get(`/eventos/${projeto.value.id_evento}`);
-        evento.value = eventoResponse.data;
+    // 2. Processa a resposta do projeto
+    console.log("Resposta da API para o projeto:", projetoResponse.data);
+    const dadosProjeto = projetoResponse.data.data || projetoResponse.data;
+    if (!dadosProjeto || typeof dadosProjeto !== 'object') {
+        throw new Error("A resposta da API não retornou um formato de projeto válido.");
     }
+    projeto.value = dadosProjeto;
 
-    // 3. ATUALIZAÇÃO: Extrai os membros da equipe diretamente da resposta do projeto
-    // Acessamos de forma segura com "?." para evitar erros se um projeto não tiver equipe ou membros.
-    if (projeto.value && projeto.value.equipe && projeto.value.equipe.length > 0) {
-        membros.value = projeto.value.equipe[0].membro_equipe || [];
+    // 3. Processa a resposta dos membros da equipe
+    console.log("Resposta da API para os membros:", membrosResponse.data);
+    // Trata a resposta de forma robusta, aceitando um array direto ou um objeto com uma propriedade 'data'
+    const dadosMembros = membrosResponse.data.data || membrosResponse.data;
+    // Garante que 'membros' seja sempre um array para evitar erros de renderização
+    membros.value = Array.isArray(dadosMembros) ? dadosMembros : [];
+
+    // 4. Com o projeto carregado, busca os dados do evento associado
+    if (projeto.value.id_evento) {
+        const eventoResponse = await api.get(`/eventos/${projeto.value.id_evento}`);
+        evento.value = eventoResponse.data.data || eventoResponse.data;
     }
 
   } catch (err) {
-    console.error("Erro ao buscar dados do projeto:", err);
-    erro.value = "Não foi possível carregar os detalhes do projeto.";
+    console.error("Erro detalhado ao buscar dados do projeto e da equipe:", err);
+    erro.value = "Não foi possível carregar os detalhes do projeto. Verifique o console para mais informações.";
   } finally {
     carregando.value = false;
   }
 });
 
 
-// --- CONFIGURAÇÕES E COMPUTEDS ---
+// --- CONFIGURAções E COMPUTEDS ---
 const statusMap = {
   1: { text: 'Em Análise', color: 'orange-darken-2' },
   2: { text: 'Aprovado', color: 'green-darken-2' },
@@ -63,10 +75,11 @@ const projetoStatus = computed(() => {
 
 const progressoInscricoes = computed(() => {
     if (!evento.value || !evento.value.max_pessoas) return 0;
+    // Garante que o cálculo seja feito com o número de membros buscados pela nova rota
     return (membros.value.length / evento.value.max_pessoas) * 100;
 });
 
-// --- FUNÇÕES DE INTERAÇÃO ---
+// --- FUNções DE INTERAÇÃO ---
 const salvarAlteracoes = async () => {
     isSaving.value = true;
     notificationStore.showInfo('Salvando alterações...');
@@ -75,12 +88,9 @@ const salvarAlteracoes = async () => {
             titulo: projeto.value.titulo,
             problema: projeto.value.problema,
             relevancia: projeto.value.relevancia,
-            // A situação de 'inscrições abertas' deve ser controlada pelo status do projeto (id_situacao).
-            // Por exemplo, id_situacao = 2 (Aprovado) significa inscrições abertas.
-            // A API de update deve lidar com isso.
         };
         const response = await api.put(`/projetos/${projeto.value.id_projeto}`, payload);
-        projeto.value = response.data; // Atualiza o estado local com os dados salvos
+        projeto.value = response.data;
         notificationStore.showSuccess('Projeto atualizado com sucesso!');
     } catch (err) {
         console.error('Erro ao salvar o projeto:', err);
@@ -90,20 +100,27 @@ const salvarAlteracoes = async () => {
     }
 };
 
-const arquivarProjeto = () => {
-    console.log("Arquivando projeto...", projeto.value.id_projeto);
-    // Lógica para a chamada de API de arquivamento (ex: um PATCH mudando o status)
-    notificationStore.showInfo('Funcionalidade de arquivamento ainda não implementada.');
+const deletarProjeto = async () => {
+    notificationStore.showInfo(`Apagando projeto...`);
+    try {
+        await api.delete(`/projetos/${projeto.value.id_projeto}`);
+        notificationStore.showSuccess('Projeto apagado com sucesso!');
+        isDeleteDialogOpen.value = false;
+        router.push('/banco-projetos'); // Redireciona para a lista de projetos
+    } catch (err) {
+        console.error("Erro ao apagar projeto:", err);
+        notificationStore.showError(err.response?.data?.erro || 'Não foi possível apagar o projeto.');
+        isDeleteDialogOpen.value = false;
+    }
 };
 
 const removerMembro = async (membro) => {
-    notificationStore.showInfo(`Removendo ${membro.nome}...`);
+    // CORREÇÃO: Acessa o nome do usuário dentro do objeto aninhado 'usuario'
+    notificationStore.showInfo(`Removendo ${membro.usuario.nome}...`);
     try {
         await api.delete(`/projetos/${projeto.value.id_projeto}/membros/${membro.id_usuario}`);
-        
         membros.value = membros.value.filter(m => m.id_usuario !== membro.id_usuario);
-        
-        notificationStore.showSuccess(`${membro.nome} foi removido com sucesso!`);
+        notificationStore.showSuccess(`${membro.usuario.nome} foi removido com sucesso!`);
     } catch (err) {
         console.error('Erro ao remover membro:', err);
         notificationStore.showError(err.response?.data?.erro || 'Não foi possível remover o membro.');
@@ -112,7 +129,6 @@ const removerMembro = async (membro) => {
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
-  // A data de inscrição virá do campo 'created_at' da tabela pivot 'membro_equipe'
   return new Date(dateString).toLocaleDateString('pt-BR');
 };
 
@@ -144,7 +160,7 @@ const formatDate = (dateString) => {
                 <h1 class="text-h4 font-weight-bold">{{ projeto.titulo }}</h1>
                 <div class="d-flex align-center mt-2 opacity-75">
                   <v-icon size="small" start icon="mdi-account-tie"></v-icon>
-                  <span class="text-subtitle-1">Orientador: {{ projeto.orientador?.nome || 'Você' }}</span>
+                  <span class="text-subtitle-1">Orientador: {{ projeto.orientador?.nome || 'Não definido' }}</span>
                 </div>
               </div>
               <v-chip :color="projetoStatus.color" variant="tonal" label>
@@ -192,17 +208,17 @@ const formatDate = (dateString) => {
                          <v-list lines="two">
                             <v-list-subheader>Alunos inscritos no projeto</v-list-subheader>
                              <div v-if="membros.length === 0" class="text-center text-grey py-8">
-                                 Nenhum aluno inscrito até o momento.
+                                  Nenhum aluno inscrito até o momento.
                              </div>
                             <template v-else>
-                                <v-list-item v-for="membro in membros" :key="membro.id_usuario" :title="membro.nome" :subtitle="membro.email">
+                                <v-list-item v-for="membro in membros" :key="membro.id_usuario" :title="membro.usuario.nome" :subtitle="membro.usuario.email">
                                     <template v-slot:prepend>
                                         <v-avatar color="green-darken-4">
-                                            <span class="text-h6">{{ membro.nome.charAt(0) }}</span>
+                                            <span class="text-h6">{{ membro.usuario.nome.charAt(0) }}</span>
                                         </v-avatar>
                                     </template>
                                     <template v-slot:append>
-                                        <div class="d-none d-sm-block text-caption text-grey-darken-1 mr-4">Inscrito em: {{ formatDate(membro.data_inscricao) }}</div>
+                                        <div class="d-none d-sm-block text-caption text-grey-darken-1 mr-4">Inscrito em: {{ formatDate(membro.created_at) }}</div>
                                         <v-btn color="red-lighten-1" variant="text" icon="mdi-account-remove-outline" @click="removerMembro(membro)">
                                             <v-icon></v-icon>
                                             <v-tooltip activator="parent" location="bottom">Remover Aluno</v-tooltip>
@@ -232,8 +248,6 @@ const formatDate = (dateString) => {
                             :hint="`Limite definido pelo evento: ${evento?.nome}`"
                             persistent-hint
                         ></v-text-field>
-
-                        <v-switch v-model="projeto.inscricoes_abertas" label="Permitir novas inscrições" color="green-darken-3" class="mt-4"></v-switch>
                         
                         <v-divider class="my-6"></v-divider>
                         
@@ -247,10 +261,10 @@ const formatDate = (dateString) => {
                         <v-card variant="outlined" color="red">
                             <v-card-text class="d-flex justify-space-between align-center">
                                 <div>
-                                    <div class="font-weight-bold">Arquivar este projeto</div>
-                                    <div class="text-caption">Esta ação é irreversível e irá remover o projeto da lista pública.</div>
+                                    <div class="font-weight-bold">Apagar este projeto</div>
+                                    <div class="text-caption">Esta ação é permanente e removerá o projeto do sistema.</div>
                                 </div>
-                                <v-btn color="red-darken-2" variant="flat" @click="arquivarProjeto">Arquivar</v-btn>
+                                <v-btn color="red-darken-2" variant="flat" @click="isDeleteDialogOpen = true">Apagar</v-btn>
                             </v-card-text>
                         </v-card>
                     </v-card-text>
@@ -258,6 +272,30 @@ const formatDate = (dateString) => {
             </v-window>
         </v-card>
     </div>
+
+    <!-- DIÁLOGO DE CONFIRMAÇÃO PARA APAGAR PROJETO -->
+    <v-dialog v-model="isDeleteDialogOpen" persistent max-width="500px">
+      <v-card>
+        <v-card-title class="text-h5">
+          <v-icon color="red" start>mdi-alert-circle-outline</v-icon>
+          Confirmar Exclusão
+        </v-card-title>
+        <v-card-text>
+          Você tem certeza que deseja apagar o projeto <strong>"{{ projeto?.titulo }}"</strong>?
+          <br><br>
+          Esta ação não pode ser desfeita.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey-darken-1" variant="text" @click="isDeleteDialogOpen = false">
+            Cancelar
+          </v-btn>
+          <v-btn color="red-darken-1" variant="flat" @click="deletarProjeto">
+            Apagar Projeto
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
   </v-container>
 </template>
