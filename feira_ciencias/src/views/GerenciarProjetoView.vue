@@ -10,19 +10,12 @@ const notificationStore = useNotificationStore();
 
 // --- ESTADOS DO COMPONENTE ---
 const projeto = ref(null);
-const evento = ref(null); // Novo estado para guardar os dados do evento
-const membros = ref([]);
+const evento = ref(null);
+const membros = ref([]); // Agora começa como um array vazio
 const carregando = ref(true);
 const erro = ref(null);
 const activeTab = ref('geral');
-const isSaving = ref(false); // Estado de carregamento para o botão de salvar
-
-// --- DADOS MOCADOS (para simulação de membros) ---
-const mockMembros = [
-  { id_usuario: 101, nome: 'Ana Clara Souza', email: 'ana.souza@email.com', data_inscricao: '2025-08-15' },
-  { id_usuario: 102, nome: 'Bruno Carvalho', email: 'bruno.c@email.com', data_inscricao: '2025-08-16' },
-  { id_usuario: 103, nome: 'Juliana Ferreira', email: 'juliana.f@email.com', data_inscricao: '2025-08-18' },
-];
+const isSaving = ref(false);
 
 // --- LÓGICA DE BUSCA DE DADOS ---
 onMounted(async () => {
@@ -34,16 +27,17 @@ onMounted(async () => {
     const projetoResponse = await api.get(`/projetos/${projetoId}`);
     projeto.value = projetoResponse.data;
 
-    // 2. Se o projeto tem um evento associado, busca os detalhes do evento
+    // 2. Busca os detalhes do evento associado
     if (projeto.value && projeto.value.id_evento) {
         const eventoResponse = await api.get(`/eventos/${projeto.value.id_evento}`);
         evento.value = eventoResponse.data;
     }
 
-    // TODO: Substituir pela chamada real da API para buscar membros da equipe
-    // Ex: const membrosResponse = await api.get(`/projetos/${projetoId}/membros`);
-    // membros.value = membrosResponse.data;
-    membros.value = mockMembros;
+    // 3. ATUALIZAÇÃO: Extrai os membros da equipe diretamente da resposta do projeto
+    // Acessamos de forma segura com "?." para evitar erros se um projeto não tiver equipe ou membros.
+    if (projeto.value && projeto.value.equipe && projeto.value.equipe.length > 0) {
+        membros.value = projeto.value.equipe[0].membro_equipe || [];
+    }
 
   } catch (err) {
     console.error("Erro ao buscar dados do projeto:", err);
@@ -68,7 +62,6 @@ const projetoStatus = computed(() => {
 });
 
 const progressoInscricoes = computed(() => {
-    // Usa o max_pessoas do evento como fonte da verdade
     if (!evento.value || !evento.value.max_pessoas) return 0;
     return (membros.value.length / evento.value.max_pessoas) * 100;
 });
@@ -82,8 +75,9 @@ const salvarAlteracoes = async () => {
             titulo: projeto.value.titulo,
             problema: projeto.value.problema,
             relevancia: projeto.value.relevancia,
-            // O campo de inscrições abertas seria um PATCH em outra rota, talvez
-            // Ex: await api.patch(`/projetos/${projeto.value.id_projeto}/status`, { inscricoes_abertas: projeto.value.inscricoes_abertas });
+            // A situação de 'inscrições abertas' deve ser controlada pelo status do projeto (id_situacao).
+            // Por exemplo, id_situacao = 2 (Aprovado) significa inscrições abertas.
+            // A API de update deve lidar com isso.
         };
         const response = await api.put(`/projetos/${projeto.value.id_projeto}`, payload);
         projeto.value = response.data; // Atualiza o estado local com os dados salvos
@@ -98,16 +92,27 @@ const salvarAlteracoes = async () => {
 
 const arquivarProjeto = () => {
     console.log("Arquivando projeto...", projeto.value.id_projeto);
-    // Lógica para a chamada de API de arquivamento
+    // Lógica para a chamada de API de arquivamento (ex: um PATCH mudando o status)
+    notificationStore.showInfo('Funcionalidade de arquivamento ainda não implementada.');
 };
 
-const removerMembro = (membro) => {
-    console.log("Removendo membro...", membro);
-    // Lógica para a chamada de API de remoção de membro
+const removerMembro = async (membro) => {
+    notificationStore.showInfo(`Removendo ${membro.nome}...`);
+    try {
+        await api.delete(`/projetos/${projeto.value.id_projeto}/membros/${membro.id_usuario}`);
+        
+        membros.value = membros.value.filter(m => m.id_usuario !== membro.id_usuario);
+        
+        notificationStore.showSuccess(`${membro.nome} foi removido com sucesso!`);
+    } catch (err) {
+        console.error('Erro ao remover membro:', err);
+        notificationStore.showError(err.response?.data?.erro || 'Não foi possível remover o membro.');
+    }
 };
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
+  // A data de inscrição virá do campo 'created_at' da tabela pivot 'membro_equipe'
   return new Date(dateString).toLocaleDateString('pt-BR');
 };
 
