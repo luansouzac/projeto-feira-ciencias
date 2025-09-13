@@ -168,14 +168,33 @@ const openCreateModal = () => {
 const handleSave = async (formData) => {
   isModalLoading.value = true;
   try {
-    const payload = { ...formData, id_responsavel: userId, id_situacao: 2 };
-    const { data } = await api.post('/projetos', payload);
-    projetos.value.unshift(transformarProjeto(data));
-    notificationStore.showSuccess('Projeto cadastrado com sucesso!');
+    // Passo 1: Criar o projeto
+    const payloadProjeto = { ...formData, id_responsavel: userId, id_situacao: 2 }; // Default: 'Em Análise'
+    const { data: responseData } = await api.post('/projetos', payloadProjeto);
+    const novoProjeto = responseData.data || responseData;
+
+    if (!novoProjeto || !novoProjeto.id_projeto) {
+      throw new Error('A API não retornou um projeto válido após a criação.');
+    }
+
+    // Passo 2: Criar a equipe associada ao projeto
+    const payloadEquipe = {
+      id_projeto: novoProjeto.id_projeto,
+      nome_equipe: `Equipe - ${novoProjeto.titulo}`
+    };
+    await api.post('/equipes', payloadEquipe);
+
+    // Passo 3: Atualizar a interface do usuário
+    novoProjeto.equipe = [{ membro_equipe: [] }];
+
+    projetos.value.unshift(transformarProjeto(novoProjeto));
+    notificationStore.showSuccess('Projeto e equipe cadastrados com sucesso!');
     isModalOpen.value = false;
+
   } catch (error) {
     console.error("Erro ao cadastrar o projeto:", error);
-    notificationStore.showError('Ocorreu um erro ao cadastrar o projeto.');
+    const errorMessage = error.response?.data?.message || 'Ocorreu um erro ao cadastrar o projeto.';
+    notificationStore.showError(errorMessage);
   } finally {
     isModalLoading.value = false;
   }
@@ -192,12 +211,10 @@ const verDetalhes = (id) => {
 const inscreverNoProjeto = async (projeto) => {
   notificationStore.showInfo(`Enviando inscrição para "${projeto.titulo}"...`);
   try {
-    // Ação agora chama a rota dedicada no backend
     await api.post(`/projetos/${projeto.id}/inscrever`);
     
     notificationStore.showSuccess('Inscrição realizada com sucesso!');
     
-    // Atualiza a UI para refletir a inscrição imediatamente
     projeto.alunoInscrito = true;
     projeto.inscritos++;
     if (projeto.inscritos >= projeto.maxAlunos) {
