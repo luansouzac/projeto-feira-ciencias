@@ -49,7 +49,6 @@ const kanbanColumns = [
 
 // --- COMPUTED PARA JUNTAR TODOS OS FEEDBACKS (AVALIAÇÃO + TAREFAS) ---
 const combinedFeedbacks = computed(() => {
-  // Mapeia os feedbacks da avaliação do projeto
   const evaluationFeedbacks = (avaliacoes.value || []).map(ava => ({
     id: `ava-${ava.id_projeto_avaliacao}`,
     date: new Date(ava.created_at),
@@ -61,7 +60,6 @@ const combinedFeedbacks = computed(() => {
     icon: avaliacaoStatusMap[ava.id_situacao]?.icon || 'mdi-comment-question-outline'
   }));
 
-  // Mapeia os feedbacks de todas as tarefas
   const taskFeedbacks = (tasks.value || [])
     .flatMap(task =>
       (task.feedbacks || []).map(fb => ({
@@ -71,12 +69,11 @@ const combinedFeedbacks = computed(() => {
         title: `Na tarefa: "${task.descricao}"`,
         feedbackText: fb.feedback,
         author: fb.usuario?.nome || 'Usuário desconhecido',
-        color: 'blue-darken-1', // Cor padrão para feedback de tarefa
+        color: 'blue-darken-1', 
         icon: 'mdi-comment-processing-outline'
       }))
     );
 
-  // Combina os dois arrays e ordena pela data mais recente
   return [...evaluationFeedbacks, ...taskFeedbacks]
     .sort((a, b) => b.date - a.date);
 });
@@ -98,27 +95,23 @@ onMounted(async () => {
     avaliacoes.value = avaliacoesResponse.data;
     membros.value = membrosResponse.data;
 
-    // 2. CORREÇÃO: Se existirem tarefas, busca os feedbacks de cada uma
     if (initialTasks && initialTasks.length > 0) {
       const feedbackPromises = initialTasks.map(task =>
         api.get(`/tarefas/${task.id_tarefa}/feedbacks`).catch(err => {
           console.warn(`Não foi possível buscar feedbacks para a tarefa ${task.id_tarefa}:`, err);
-          return { data: [] }; // Retorna um array vazio em caso de erro para não quebrar a lógica
+          return { data: [] };
         })
       );
       
       const feedbackResponses = await Promise.all(feedbackPromises);
       
-      // Associa os feedbacks encontrados de volta a cada tarefa
       initialTasks.forEach((task, index) => {
         task.feedbacks = feedbackResponses[index].data;
       });
     }
 
-    // 3. Atribui as tarefas já com os feedbacks ao estado do componente
     tasks.value = initialTasks;
 
-    // Busca eventos da store se necessário
     if (project.value.id_evento && !eventoStore.getEventoById(project.value.id_evento)) {
       await eventoStore.fetchEventos();
     }
@@ -131,7 +124,7 @@ onMounted(async () => {
   }
 });
 
-// --- FUNÇÃO PARA ABRIR O MODAL DE FEEDBACKS DA TAREFA (Já correta) ---
+// --- FUNÇÃO PARA ABRIR O MODAL DE FEEDBACKS DA TAREFA ---
 const openTaskFeedbackModal = async (task) => {
   selectedTaskForFeedback.value = { ...task, feedbacks: [] };
   isTaskFeedbackModalOpen.value = true;
@@ -139,7 +132,6 @@ const openTaskFeedbackModal = async (task) => {
   feedbackError.value = null;
 
   try {
-    // Rota correta para buscar feedbacks de uma tarefa específica
     const url = `/tarefas/${task.id_tarefa}/feedbacks`;
     const { data } = await api.get(url);
     if (selectedTaskForFeedback.value) {
@@ -163,10 +155,19 @@ const taskModalConfig = {
   fields: [
     { key: 'descricao', label: 'Título da Tarefa', type: 'text', rules: [v => !!v || 'O título é obrigatório'] },
     { key: 'detalhe', label: 'Descrição (Opcional)', type: 'textarea' },
+    { key: 'data_inicio_prevista', label: 'Início Previsto', type: 'date' },
+    { key: 'data_fim_prevista', label: 'Fim Previsto', type: 'date' },
+    { key: 'data_conclusao', label: 'Data de Conclusão', type: 'date' },
   ],
 };
 const openCreateTaskModal = () => {
-  currentTask.value = { descricao: '', detalhe: '' };
+  currentTask.value = { 
+    descricao: '', 
+    detalhe: '',
+    data_inicio_prevista: null,
+    data_fim_prevista: null,
+    data_conclusao: null
+  };
   isTaskModalOpen.value = true;
 };
 const openEditTaskModal = (task) => {
@@ -226,6 +227,17 @@ const formatDate = (dateString) => {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 };
+
+const formatDateSimple = (dateString) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() + userTimezoneOffset).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+};
 </script>
 
 <template>
@@ -241,7 +253,6 @@ const formatDate = (dateString) => {
     <v-alert v-else-if="error" type="error" variant="tonal">{{ error }}</v-alert>
 
     <div v-else-if="project">
-      <!-- CABEÇALHO DO PROJETO -->
       <v-card theme="dark" class="mb-8 bg-green-darken-4">
         <v-card-item class="pa-4 pa-sm-6">
           <div class="d-flex flex-wrap justify-space-between align-center">
@@ -256,7 +267,6 @@ const formatDate = (dateString) => {
         </v-card-item>
       </v-card>
 
-      <!-- ABAS DE NAVEGAÇÃO -->
       <v-card>
         <v-tabs v-model="activeTab" bg-color="green-darken-3" color="white" grow>
           <v-tab value="detalhes"><v-icon start>mdi-text-box-search-outline</v-icon> Detalhes</v-tab>
@@ -266,7 +276,6 @@ const formatDate = (dateString) => {
         </v-tabs>
 
         <v-window v-model="activeTab">
-          <!-- ABA 1: DETALHES -->
           <v-window-item value="detalhes">
              <v-card-text class="pa-4 pa-md-6">
                 <v-list lines="two" bg-color="transparent">
@@ -276,7 +285,6 @@ const formatDate = (dateString) => {
             </v-card-text>
           </v-window-item>
 
-          <!-- ABA 2: FEEDBACK CONSOLIDADO (MODIFICADO) -->
           <v-window-item value="feedback">
             <v-card-text class="pa-4 pa-md-6">
               <div v-if="combinedFeedbacks.length === 0" class="text-center pa-8 text-grey-darken-1">
@@ -306,7 +314,6 @@ const formatDate = (dateString) => {
             </v-card-text>
           </v-window-item>
 
-          <!-- ABA 3: EQUIPE -->
           <v-window-item value="equipe">
             <div v-if="membros.length === 0" class="text-center pa-8 text-grey-darken-1">
                 <v-icon size="48" class="mb-4">mdi-account-group-outline</v-icon>
@@ -319,7 +326,6 @@ const formatDate = (dateString) => {
             </v-card-text>
           </v-window-item>
           
-          <!-- ABA 4: TAREFAS (Kanban) -->
           <v-window-item value="tarefas">
             <v-card-title class="d-flex justify-space-between align-center">
               <span>Quadro de Tarefas</span>
@@ -348,10 +354,29 @@ const formatDate = (dateString) => {
                       <v-card-text class="font-weight-medium text-grey-darken-4 pb-1">
                         {{ task.descricao }}
                         <p v-if="task.detalhe" class="text-caption font-weight-regular text-grey-darken-1 mt-1">{{ task.detalhe }}</p>
+                        
+                        <div v-if="task.data_inicio_prevista || task.data_fim_prevista || task.data_conclusao" class="mt-3 d-flex flex-wrap ga-2">
+                          <v-chip v-if="task.data_inicio_prevista" size="x-small" color="blue-grey" variant="tonal">
+                            <v-icon start icon="mdi-calendar-arrow-right"></v-icon>
+                            {{ formatDateSimple(task.data_inicio_prevista) }}
+                            <v-tooltip activator="parent" location="top">Início Previsto</v-tooltip>
+                          </v-chip>
+                          <v-chip v-if="task.data_fim_prevista" size="x-small" color="blue-grey" variant="tonal">
+                            <v-icon start icon="mdi-calendar-arrow-left"></v-icon>
+                            {{ formatDateSimple(task.data_fim_prevista) }}
+                            <v-tooltip activator="parent" location="top">Fim Previsto</v-tooltip>
+                          </v-chip>
+                           <v-chip v-if="task.data_conclusao" size="x-small" color="green" variant="tonal">
+                            <v-icon start icon="mdi-calendar-check"></v-icon>
+                            {{ formatDateSimple(task.data_conclusao) }}
+                            <v-tooltip activator="parent" location="top">Data de Conclusão</v-tooltip>
+                          </v-chip>
+                        </div>
+
                       </v-card-text>
                       <v-card-actions class="pa-1">
                           <v-chip v-if="task.feedbacks && task.feedbacks.length > 0" size="x-small" prepend-icon="mdi-comment-text-outline" class="ml-2">
-                              {{ task.feedbacks.length }}
+                            {{ task.feedbacks.length }}
                           </v-chip>
                           <v-spacer></v-spacer>
                           <v-btn color="primary" variant="text" size="small" @click="openTaskFeedbackModal(task)">Feedbacks</v-btn>
@@ -367,10 +392,8 @@ const formatDate = (dateString) => {
       </v-card>
     </div>
 
-    <!-- MODAL DE CRIAR/EDITAR TAREFA -->
     <CrudModal v-model="isTaskModalOpen" :title="taskModalConfig.title" :fields="taskModalConfig.fields" :item="currentTask" :loading="isTaskModalLoading" @save="handleSaveTask" />
     
-    <!-- MODAL PARA EXIBIR FEEDBACKS DE UMA TAREFA -->
     <v-dialog v-model="isTaskFeedbackModalOpen" max-width="700px" persistent>
       <v-card>
         <v-card-title class="text-h5 bg-green-darken-3 text-white">
@@ -437,4 +460,3 @@ const formatDate = (dateString) => {
   padding-left: 16px;
 }
 </style>
-

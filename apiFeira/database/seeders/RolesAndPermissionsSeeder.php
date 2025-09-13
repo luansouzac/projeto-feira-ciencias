@@ -46,7 +46,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $permission = Permission::firstOrCreate(['name' => 'crud discussao equipe']);
         $permission = Permission::firstOrCreate(['name' => 'exibir avaliacao projeto']);
         $permission = Permission::firstOrCreate(['name' => 'crud avaliacao projeto']);
-
         //Limpar o cache
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
         
@@ -58,6 +57,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $role = Role::firstOrCreate(['name' => 'Orientador'])->givePermissionTo(Permission::all());
         #$role = Role::create(['name' => 'Avaliador'])->givePermissionTo(['crud comentario desenvolvimento','exibir projeto', 'exibir objetivo', 'exibir equipe', 'exibir usuario', 'exibir tarefa', 'exibir apresentacao', 'exibir evento', 'crud avaliacao', 'exibir avaliacao projeto']);
         $role = Role::firstOrCreate(['name' => 'Avaliador'])->givePermissionTo(Permission::all());
+
         
         //Limpar o cache
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
