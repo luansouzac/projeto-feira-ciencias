@@ -105,9 +105,10 @@ const modalConfig = computed(() => ({
 
 // --- FUNÇÕES DE TRANSFORMAÇÃO E VISUALIZAÇÃO ---
 const transformarProjeto = (apiProjeto) => {
-  console.log(apiProjeto)
-  const inscritos = apiProjeto.equipe[0].membro_equipe.length || 0;
-  const maxAlunos = apiProjeto.eventos.max_pessoas || apiProjeto.max_membros || 5;
+
+  const inscritos = apiProjeto.equipe?.[0]?.membro_equipe?.length ?? 0;
+
+  const maxAlunos = apiProjeto.eventos?.max_pessoas || apiProjeto.max_membros || 5;
   let status = 'Em Análise';
   let validado = false;
 
@@ -115,6 +116,7 @@ const transformarProjeto = (apiProjeto) => {
     validado = true;
     status = inscritos >= maxAlunos ? 'Esgotado' : 'Vagas Abertas';
   }
+  const alunoInscrito = apiProjeto.equipe?.[0]?.membro_equipe?.some(m => m.id_usuario === userId) ?? false;
 
   return {
     id: apiProjeto.id_projeto,
@@ -125,7 +127,7 @@ const transformarProjeto = (apiProjeto) => {
     validado,
     inscritos,
     maxAlunos,
-    alunoInscrito: apiProjeto.equipe?.membro_equipe?.some(m => m.id_usuario === userId) || false,
+    alunoInscrito, 
   };
 };
 
