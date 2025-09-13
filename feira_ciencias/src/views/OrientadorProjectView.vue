@@ -60,32 +60,32 @@ onMounted(async () => {
 
     projeto.value = projetoResponse.data.data || projetoResponse.data;
     membros.value = membrosResponse.data.data || membrosResponse.data || [];
-    const initialTasks = tarefasResponse.data;
+    const initialTasks = tarefasResponse.data.data || tarefasResponse.data || [];
 
     // Processa as tarefas para encontrar o responsável atual a partir do último registro
-    initialTasks.forEach(tarefa => {
-        // O nome do relacionamento no JSON pode vir em camelCase ou snake_case
-        const registros = tarefa.registro_tarefa || tarefa.registroTarefa || [];
-        if (registros.length > 0) {
-            // Assume que o último registro na lista é o mais recente e define o responsável
-            const latestRegistro = registros[registros.length - 1];
-            tarefa.id_usuario_atribuido = latestRegistro.id_responsavel;
-        }
-    });
+    if (Array.isArray(initialTasks) && initialTasks.length > 0) {
+      const taskDetailPromises = initialTasks.map(task => {
+        const registrationsPromise = api.get(`/registros_tarefas?id_tarefa=${task.id_tarefa}`).catch(() => ({ data: [] }));
+        const feedbacksPromise = api.get(`/tarefas/${task.id_tarefa}/feedbacks`).catch(() => ({ data: [] }));
+        return Promise.all([registrationsPromise, feedbacksPromise]);
+      });
 
-    if (initialTasks && initialTasks.length > 0) {
-      const feedbackPromises = initialTasks.map(tarefa =>
-        api.get(`/tarefas/${tarefa.id_tarefa}/feedbacks`).catch(err => {
-          console.warn(`Não foi possível buscar feedbacks para a tarefa ${tarefa.id_tarefa}:`, err);
-          return { data: [] };
-        })
-      );
-      const feedbackResponses = await Promise.all(feedbackPromises);
-      initialTasks.forEach((tarefa, index) => {
-        tarefa.feedbacks = feedbackResponses[index].data;
+      const allTaskDetails = await Promise.all(taskDetailPromises);
+
+      initialTasks.forEach((task, index) => {
+        const [registrationResponse, feedbackResponse] = allTaskDetails[index];
+        
+        const registrations = registrationResponse.data.data || registrationResponse.data || [];
+        if (registrations.length > 0) {
+          task.id_usuario_atribuido = registrations[registrations.length - 1].id_responsavel;
+        }
+
+        task.feedbacks = feedbackResponse.data.data || feedbackResponse.data || [];
       });
     }
+    
     tarefas.value = initialTasks;
+
   } catch (err) {
     console.error("Erro ao buscar dados do projeto:", err);
     erro.value = "Não foi possível carregar os dados do projeto. Tente novamente.";
@@ -217,10 +217,9 @@ const handleSaveTask = async () => {
     let savedTaskData;
     const { id_usuario_atribuido, ...coreTaskData } = taskFormData.value;
 
-    // Passo 1: Salva ou atualiza os dados principais da tarefa
     if (currentTask.value) {
       const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, coreTaskData);
-      savedTaskData = data;
+      savedTaskData = data.data || data;
     } else {
       const payload = {
         id_projeto: projeto.value.id_projeto,
@@ -228,10 +227,9 @@ const handleSaveTask = async () => {
         ...coreTaskData,
       };
       const { data } = await api.post('/tarefas', payload);
-      savedTaskData = data;
+      savedTaskData = data.data || data;
     }
 
-    // Passo 2: Se um usuário foi atribuído, cria um novo registro de tarefa para formalizar a atribuição
     if (id_usuario_atribuido) {
         await api.post('/registros_tarefas', {
             id_tarefa: savedTaskData.id_tarefa,
@@ -239,17 +237,16 @@ const handleSaveTask = async () => {
             descricao_atividade: `Tarefa atribuída ao responsável.`,
             resultado: null,
             data_execucao: new Date().toISOString().split('T')[0],
-            arquivo: 'null', // Enviando string vazia em vez de null
+            arquivo: 'null',
         });
     }
 
-    // Passo 3: Atualiza a interface do usuário com os novos dados
     savedTaskData.id_usuario_atribuido = id_usuario_atribuido;
     
     if (currentTask.value) {
       const index = tarefas.value.findIndex(t => t.id_tarefa === savedTaskData.id_tarefa);
       if (index !== -1) {
-        savedTaskData.feedbacks = tarefas.value[index].feedbacks; // Mantém os feedbacks já carregados
+        savedTaskData.feedbacks = tarefas.value[index].feedbacks;
         tarefas.value[index] = savedTaskData;
       }
     } else {
@@ -378,9 +375,21 @@ const formatDateSimple = (dateString) => {
                       draggable="true"
                       @dragstart="handleDragStart($event, tarefa)"
                       >
-                      <v-card-text class="pb-2">
-                        <p class="font-weight-medium text-grey-darken-4">{{ tarefa.descricao }}</p>
+                       <v-card-text class="font-weight-medium text-grey-darken-4 pb-1">
+                        {{ tarefa.descricao }}
                         <p v-if="tarefa.detalhe" class="text-caption font-weight-regular text-grey-darken-1 mt-1">{{ tarefa.detalhe }}</p>
+                         <div v-if="tarefa.data_inicio_prevista || tarefa.data_fim_prevista" class="mt-3 d-flex flex-wrap ga-2">
+                            <v-chip v-if="tarefa.data_inicio_prevista" size="x-small" color="blue-grey" variant="tonal">
+                                <v-icon start icon="mdi-calendar-arrow-right"></v-icon>
+                                {{ formatDateSimple(tarefa.data_inicio_prevista) }}
+                                <v-tooltip activator="parent" location="top">Início Previsto</v-tooltip>
+                            </v-chip>
+                            <v-chip v-if="tarefa.data_fim_prevista" size="x-small" color="blue-grey" variant="tonal">
+                                <v-icon start icon="mdi-calendar-arrow-left"></v-icon>
+                                {{ formatDateSimple(tarefa.data_fim_prevista) }}
+                                <v-tooltip activator="parent" location="top">Fim Previsto</v-tooltip>
+                            </v-chip>
+                        </div>
                       </v-card-text>
                       <v-card-actions class="pt-0 px-4 pb-2">
                         <v-chip v-if="tarefa.feedbacks && tarefa.feedbacks.length > 0" size="x-small" prepend-icon="mdi-comment-text-multiple-outline" color="blue-grey" variant="tonal" label>
@@ -589,7 +598,7 @@ const formatDateSimple = (dateString) => {
 }
 .task-card:hover {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  transform: translateY(-px);
 }
 .feedback-item {
   border-left: 3px solid #E0E0E0;
