@@ -37,6 +37,11 @@ const taskFormData = ref({
   id_usuario_atribuido: null, // Campo para associar a tarefa a um usuário
 });
 
+// --- ESTADOS PARA O MODAL DE APAGAR TAREFA ---
+const isDeleteTaskDialogOpen = ref(false);
+const taskToDelete = ref(null);
+
+
 // --- LÓGICA DE BUSCA DE DADOS ---
 onMounted(async () => {
   const projetoId = route.params.id;
@@ -56,6 +61,17 @@ onMounted(async () => {
     projeto.value = projetoResponse.data.data || projetoResponse.data;
     membros.value = membrosResponse.data.data || membrosResponse.data || [];
     const initialTasks = tarefasResponse.data;
+
+    // Processa as tarefas para encontrar o responsável atual a partir do último registro
+    initialTasks.forEach(tarefa => {
+        // O nome do relacionamento no JSON pode vir em camelCase ou snake_case
+        const registros = tarefa.registro_tarefa || tarefa.registroTarefa || [];
+        if (registros.length > 0) {
+            // Assume que o último registro na lista é o mais recente e define o responsável
+            const latestRegistro = registros[registros.length - 1];
+            tarefa.id_usuario_atribuido = latestRegistro.id_responsavel;
+        }
+    });
 
     if (initialTasks && initialTasks.length > 0) {
       const feedbackPromises = initialTasks.map(tarefa =>
@@ -130,7 +146,6 @@ const handleDrop = async (event, newStatus) => {
     const originalStatus = tarefa.id_situacao;
     tarefa.id_situacao = newStatus;
     try {
-      // No backend, o ideal é ter um endpoint PATCH para mudar apenas o status
       await api.put(`/tarefas/${tarefaId}`, { id_situacao: newStatus });
       notificationStore.showSuccess('Status da tarefa atualizado!');
     } catch (err) {
@@ -199,31 +214,77 @@ const openEditTaskModal = (tarefa) => {
 const handleSaveTask = async () => {
   isTaskModalLoading.value = true;
   try {
+    let savedTaskData;
+    const { id_usuario_atribuido, ...coreTaskData } = taskFormData.value;
+
+    // Passo 1: Salva ou atualiza os dados principais da tarefa
     if (currentTask.value) {
-      const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, taskFormData.value);
-      const index = tarefas.value.findIndex(t => t.id_tarefa === data.id_tarefa);
-      if (index !== -1) {
-        // Preserva os feedbacks que já foram carregados
-        data.feedbacks = tarefas.value[index].feedbacks;
-        tarefas.value[index] = data;
-      }
-      notificationStore.showSuccess('Tarefa atualizada com sucesso!');
+      const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, coreTaskData);
+      savedTaskData = data;
     } else {
       const payload = {
         id_projeto: projeto.value.id_projeto,
         id_situacao: 1, // 'A Fazer' por padrão
-        ...taskFormData.value,
+        ...coreTaskData,
       };
       const { data } = await api.post('/tarefas', payload);
-      tarefas.value.push(data);
-      notificationStore.showSuccess('Tarefa criada com sucesso!');
+      savedTaskData = data;
     }
+
+    // Passo 2: Se um usuário foi atribuído, cria um novo registro de tarefa para formalizar a atribuição
+    if (id_usuario_atribuido) {
+        await api.post('/registros_tarefas', {
+            id_tarefa: savedTaskData.id_tarefa,
+            id_responsavel: id_usuario_atribuido,
+            descricao_atividade: `Tarefa atribuída ao responsável.`,
+            resultado: null,
+            data_execucao: new Date().toISOString().split('T')[0],
+            arquivo: 'null', // Enviando string vazia em vez de null
+        });
+    }
+
+    // Passo 3: Atualiza a interface do usuário com os novos dados
+    savedTaskData.id_usuario_atribuido = id_usuario_atribuido;
+    
+    if (currentTask.value) {
+      const index = tarefas.value.findIndex(t => t.id_tarefa === savedTaskData.id_tarefa);
+      if (index !== -1) {
+        savedTaskData.feedbacks = tarefas.value[index].feedbacks; // Mantém os feedbacks já carregados
+        tarefas.value[index] = savedTaskData;
+      }
+    } else {
+      tarefas.value.push(savedTaskData);
+    }
+    
+    notificationStore.showSuccess('Tarefa salva com sucesso!');
     isTaskModalOpen.value = false;
+
   } catch (err) {
     console.error("Erro ao salvar a tarefa:", err);
     notificationStore.showError('Não foi possível salvar a tarefa.');
   } finally {
     isTaskModalLoading.value = false;
+  }
+};
+
+const openDeleteTaskModal = (tarefa) => {
+  taskToDelete.value = tarefa;
+  isDeleteTaskDialogOpen.value = true;
+};
+
+const confirmDeleteTask = async () => {
+  if (!taskToDelete.value) return;
+  notificationStore.showInfo('Apagando tarefa...');
+  try {
+    await api.delete(`/tarefas/${taskToDelete.value.id_tarefa}`);
+    tarefas.value = tarefas.value.filter(t => t.id_tarefa !== taskToDelete.value.id_tarefa);
+    notificationStore.showSuccess('Tarefa apagada com sucesso!');
+  } catch (err) {
+    console.error("Erro ao apagar tarefa:", err);
+    notificationStore.showError('Não foi possível apagar a tarefa.');
+  } finally {
+    isDeleteTaskDialogOpen.value = false;
+    taskToDelete.value = null;
   }
 };
 
@@ -331,6 +392,7 @@ const formatDateSimple = (dateString) => {
                         </v-chip>
                         <v-spacer></v-spacer>
                         <v-btn icon="mdi-pencil" variant="text" size="x-small" @click.stop="openEditTaskModal(tarefa)"></v-btn>
+                        <v-btn icon="mdi-delete-outline" color="red" variant="text" size="x-small" @click.stop="openDeleteTaskModal(tarefa)"></v-btn>
                          <v-btn color="grey-darken-3" variant="text" size="small" @click.stop="openFeedbackModal(tarefa)">
                            Analisar
                         </v-btn>
@@ -489,6 +551,31 @@ const formatDateSimple = (dateString) => {
         </v-card-actions>
       </v-card>
     </v-dialog>
+    
+    <!-- DIÁLOGO DE CONFIRMAÇÃO PARA APAGAR TAREFA -->
+    <v-dialog v-model="isDeleteTaskDialogOpen" persistent max-width="500px">
+      <v-card>
+        <v-card-title class="text-h5">
+          <v-icon color="red" start>mdi-alert-circle-outline</v-icon>
+          Confirmar Exclusão
+        </v-card-title>
+        <v-card-text>
+          Você tem certeza que deseja apagar a tarefa <strong>"{{ taskToDelete?.descricao }}"</strong>?
+          <br><br>
+          Esta ação não pode ser desfeita.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey-darken-1" variant="text" @click="isDeleteTaskDialogOpen = false">
+            Cancelar
+          </v-btn>
+          <v-btn color="red-darken-1" variant="flat" @click="confirmDeleteTask">
+            Apagar Tarefa
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
   </v-container>
 </template>
 
