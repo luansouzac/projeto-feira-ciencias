@@ -25,6 +25,9 @@ export const useNotificationStore = defineStore('notification', {
     showSuccess(message) {
       this.show(message, 'success'); 
     },
+    showInfo(message) {
+      this.show(message, 'success'); 
+    },
     hide() {
       this.visible = false;
     },
