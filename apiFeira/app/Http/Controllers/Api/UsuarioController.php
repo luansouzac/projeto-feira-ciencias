@@ -17,13 +17,14 @@ class UsuarioController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Usuario::with('tipoUsuarios');
+        
+        $query = Usuario::with('tipoUsuario');
 
-         if ($request->has('id_tipo_usuario')) {
+        if ($request->has('id_tipo_usuario')) {
             $query->where('id_tipo_usuario', $request->input('id_tipo_usuario'));
         }
-        // Retorna todos os usuários existentes com status HTTP 200 OK.
-        return response()->json(Usuario::with('tipoUsuario')->get(), 200);
+
+        return response()->json($query->get(), 200);
     }
 
     /**
