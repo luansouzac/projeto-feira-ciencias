@@ -13,6 +13,7 @@ const carregando = ref(true);
 const erro = ref(null);
 const projeto = ref(null);
 const tarefas = ref([]);
+const membros = ref([]); // Estado para armazenar os membros da equipe
 
 // --- ESTADOS DO COMPONENTE ---
 const activeTab = ref('kanban');
@@ -32,7 +33,8 @@ const taskFormData = ref({
   detalhe: '',
   data_inicio_prevista: null,
   data_fim_prevista: null,
-  data_conclusao: null
+  data_conclusao: null,
+  id_usuario_atribuido: null, // Campo para associar a tarefa a um usuário
 });
 
 // --- LÓGICA DE BUSCA DE DADOS ---
@@ -44,12 +46,15 @@ onMounted(async () => {
     return;
   }
   try {
-    const [projetoResponse, tarefasResponse] = await Promise.all([
+    // Busca todos os dados necessários em paralelo para otimizar o carregamento
+    const [projetoResponse, tarefasResponse, membrosResponse] = await Promise.all([
       api.get(`/projetos/${projetoId}`),
-      api.get(`/projetos/${projetoId}/tarefas`)
+      api.get(`/projetos/${projetoId}/tarefas`),
+      api.get(`/membros_projeto/${projetoId}`) // Busca os membros da equipe
     ]);
 
-    projeto.value = projetoResponse.data;
+    projeto.value = projetoResponse.data.data || projetoResponse.data;
+    membros.value = membrosResponse.data.data || membrosResponse.data || [];
     const initialTasks = tarefasResponse.data;
 
     if (initialTasks && initialTasks.length > 0) {
@@ -96,10 +101,24 @@ const taskModalTitle = computed(() => {
 
 const filterTasksByStatus = (status) => tarefas.value.filter(task => task.id_situacao === status);
 
+// --- FUNÇÕES DE NAVEGAÇÃO E AUXILIARES ---
+const goToProjectSettings = () => {
+    if (projeto.value) {
+        router.push(`/gerenciar-projeto/${projeto.value.id_projeto}`);
+    }
+};
+
+const getMemberName = (userId) => {
+    if (!userId || !membros.value || membros.value.length === 0) return 'Não atribuído';
+    const membro = membros.value.find(m => m.id_usuario === userId);
+    return membro ? membro.usuario.nome : 'Não atribuído';
+};
+
+
 // --- FUNÇÕES DE DRAG AND DROP ---
 const handleDragStart = (event, tarefa) => {
   event.dataTransfer.clearData();
-  event.dataTransfer.setData('text/plain', tarefa.id_tarefa);
+  event.dataTransfer.setData('text/plain', String(tarefa.id_tarefa));
   event.dataTransfer.dropEffect = 'move';
 };
 
@@ -111,6 +130,7 @@ const handleDrop = async (event, newStatus) => {
     const originalStatus = tarefa.id_situacao;
     tarefa.id_situacao = newStatus;
     try {
+      // No backend, o ideal é ter um endpoint PATCH para mudar apenas o status
       await api.put(`/tarefas/${tarefaId}`, { id_situacao: newStatus });
       notificationStore.showSuccess('Status da tarefa atualizado!');
     } catch (err) {
@@ -164,7 +184,8 @@ const openCreateTaskModal = () => {
     detalhe: '',
     data_inicio_prevista: null,
     data_fim_prevista: null,
-    data_conclusao: null
+    data_conclusao: null,
+    id_usuario_atribuido: null,
   };
   isTaskModalOpen.value = true;
 };
@@ -181,12 +202,16 @@ const handleSaveTask = async () => {
     if (currentTask.value) {
       const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, taskFormData.value);
       const index = tarefas.value.findIndex(t => t.id_tarefa === data.id_tarefa);
-      if (index !== -1) tarefas.value[index] = { ...tarefas.value[index], ...data };
+      if (index !== -1) {
+        // Preserva os feedbacks que já foram carregados
+        data.feedbacks = tarefas.value[index].feedbacks;
+        tarefas.value[index] = data;
+      }
       notificationStore.showSuccess('Tarefa atualizada com sucesso!');
     } else {
       const payload = {
         id_projeto: projeto.value.id_projeto,
-        id_situacao: 1,
+        id_situacao: 1, // 'A Fazer' por padrão
         ...taskFormData.value,
       };
       const { data } = await api.post('/tarefas', payload);
@@ -212,11 +237,7 @@ const formatDateSimple = (dateString) => {
   if (!dateString) return null;
   const date = new Date(dateString);
   const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() + userTimezoneOffset).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  return new Date(date.getTime() - userTimezoneOffset).toISOString().split('T')[0];
 };
 </script>
 
@@ -234,21 +255,31 @@ const formatDateSimple = (dateString) => {
     <div v-else-if="projeto">
       <v-card theme="dark" class="mb-8 bg-green-darken-4">
         <v-card-item class="pa-4 pa-sm-6">
-          <div class="d-flex flex-wrap justify-space-between align-center">
-            <div>
-              <p class="text-overline">Gerenciamento do Projeto</p>
-              <h1 class="text-h4 font-weight-bold">{{ projeto.titulo }}</h1>
-            </div>
-            <v-chip :color="projetoStatus.color" :prepend-icon="projetoStatus.icon" variant="tonal" label>
-              {{ projetoStatus.text }}
-            </v-chip>
-          </div>
+            <v-row align="center" justify="space-between">
+                <v-col cols="12" md="auto">
+                    <p class="text-overline">Acompanhamento de Tarefas</p>
+                    <h1 class="text-h4 font-weight-bold">{{ projeto.titulo }}</h1>
+                </v-col>
+                <v-col cols="12" md="4" class="mt-4 mt-md-0 text-md-right">
+                    <v-btn
+                        size="large"
+                        color="white"
+                        variant="outlined"
+                        prepend-icon="mdi-cog-outline"
+                        @click="goToProjectSettings"
+                        block
+                    >
+                        Configurar Projeto
+                    </v-btn>
+                </v-col>
+            </v-row>
         </v-card-item>
       </v-card>
 
       <v-card>
         <v-tabs v-model="activeTab" bg-color="green-darken-3" color="white" grow>
           <v-tab value="kanban"><v-icon start>mdi-view-dashboard-outline</v-icon>Quadro de Tarefas</v-tab>
+          <v-tab value="membros"><v-icon start>mdi-account-group-outline</v-icon>Equipe</v-tab>
           <v-tab value="detalhes"><v-icon start>mdi-text-box-search-outline</v-icon>Detalhes da Proposta</v-tab>
         </v-tabs>
 
@@ -289,41 +320,42 @@ const formatDateSimple = (dateString) => {
                       <v-card-text class="pb-2">
                         <p class="font-weight-medium text-grey-darken-4">{{ tarefa.descricao }}</p>
                         <p v-if="tarefa.detalhe" class="text-caption font-weight-regular text-grey-darken-1 mt-1">{{ tarefa.detalhe }}</p>
-
-                        <div v-if="tarefa.data_inicio_prevista || tarefa.data_fim_prevista || tarefa.data_conclusao" class="mt-3 d-flex flex-wrap ga-2">
-                          <v-chip v-if="tarefa.data_inicio_prevista" size="x-small" color="blue-grey" variant="tonal">
-                            <v-icon start icon="mdi-calendar-arrow-right"></v-icon>
-                            {{ formatDateSimple(tarefa.data_inicio_prevista) }}
-                            <v-tooltip activator="parent" location="top">Início Previsto</v-tooltip>
-                          </v-chip>
-                          <v-chip v-if="tarefa.data_fim_prevista" size="x-small" color="blue-grey" variant="tonal">
-                            <v-icon start icon="mdi-calendar-arrow-left"></v-icon>
-                            {{ formatDateSimple(tarefa.data_fim_prevista) }}
-                            <v-tooltip activator="parent" location="top">Fim Previsto</v-tooltip>
-                          </v-chip>
-                           <v-chip v-if="tarefa.data_conclusao" size="x-small" color="green" variant="tonal">
-                            <v-icon start icon="mdi-calendar-check"></v-icon>
-                            {{ formatDateSimple(tarefa.data_conclusao) }}
-                            <v-tooltip activator="parent" location="top">Data de Conclusão</v-tooltip>
-                          </v-chip>
-                        </div>
-
                       </v-card-text>
-                      <v-card-actions>
-                        <v-chip v-if="tarefa.feedbacks && tarefa.feedbacks.length > 0" size="x-small" prepend-icon="mdi-comment-text-multiple-outline" color="blue-grey" variant="tonal">
+                      <v-card-actions class="pt-0 px-4 pb-2">
+                        <v-chip v-if="tarefa.feedbacks && tarefa.feedbacks.length > 0" size="x-small" prepend-icon="mdi-comment-text-multiple-outline" color="blue-grey" variant="tonal" label>
                           {{ tarefa.feedbacks.length }}
                         </v-chip>
+                        <v-chip v-if="tarefa.id_usuario_atribuido" size="small" class="ml-2" color="green" variant="tonal" label>
+                            <v-icon start icon="mdi-account-outline"></v-icon>
+                            {{ getMemberName(tarefa.id_usuario_atribuido) }}
+                        </v-chip>
                         <v-spacer></v-spacer>
-                        <v-btn color="grey-darken-3" variant="text" size="small" @click.stop="openFeedbackModal(tarefa)">
-                          Analisar
-                        </v-btn>
                         <v-btn icon="mdi-pencil" variant="text" size="x-small" @click.stop="openEditTaskModal(tarefa)"></v-btn>
+                         <v-btn color="grey-darken-3" variant="text" size="small" @click.stop="openFeedbackModal(tarefa)">
+                           Analisar
+                        </v-btn>
                       </v-card-actions>
                     </v-card>
                   </div>
                 </v-col>
               </v-row>
             </v-card-text>
+          </v-window-item>
+
+          <v-window-item value="membros">
+              <v-card-text class="pa-0">
+                  <v-list lines="two" v-if="membros.length > 0">
+                      <v-list-subheader>Membros da Equipe</v-list-subheader>
+                      <v-list-item v-for="membro in membros" :key="membro.id_usuario" :title="membro.usuario.nome" :subtitle="membro.usuario.email">
+                          <template v-slot:prepend>
+                              <v-avatar color="green-darken-4">
+                                  <span class="text-h6">{{ membro.usuario.nome.charAt(0) }}</span>
+                              </v-avatar>
+                          </template>
+                      </v-list-item>
+                  </v-list>
+                  <v-alert v-else type="info" variant="tonal" class="ma-4">Nenhum membro na equipe deste projeto.</v-alert>
+              </v-card-text>
           </v-window-item>
 
           <v-window-item value="detalhes">
@@ -347,6 +379,7 @@ const formatDateSimple = (dateString) => {
       </v-card>
     </div>
 
+    <!-- MODAL CRIAR/EDITAR TAREFA -->
     <v-dialog v-model="isTaskModalOpen" persistent max-width="700px">
       <v-card>
         <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
@@ -371,6 +404,17 @@ const formatDateSimple = (dateString) => {
               class="mt-4"
             ></v-textarea>
             
+            <v-select
+                v-model="taskFormData.id_usuario_atribuido"
+                :items="membros"
+                item-title="usuario.nome"
+                item-value="id_usuario"
+                label="Atribuir a (Opcional)"
+                variant="outlined"
+                class="mt-4"
+                clearable
+            ></v-select>
+
             <v-row class="mt-2">
               <v-col cols="12" md="6">
                 <v-text-field
@@ -389,14 +433,6 @@ const formatDateSimple = (dateString) => {
                 ></v-text-field>
               </v-col>
             </v-row>
-            <v-text-field
-                v-model="taskFormData.data_conclusao"
-                label="Data de Conclusão"
-                type="date"
-                variant="outlined"
-                class="mt-2"
-            ></v-text-field>
-
           </v-form>
         </v-card-text>
         <v-card-actions class="pa-4">
@@ -407,6 +443,7 @@ const formatDateSimple = (dateString) => {
       </v-card>
     </v-dialog>
 
+    <!-- MODAL DE FEEDBACK -->
     <v-dialog v-model="isFeedbackModalOpen" persistent max-width="700px">
       <v-card>
         <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
@@ -472,3 +509,4 @@ const formatDateSimple = (dateString) => {
   padding-left: 16px;
 }
 </style>
+
