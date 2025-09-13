@@ -2,12 +2,13 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../assets/plugins/axios.js';
-import CrudModal from '@/components/CrudModal.vue';
+import { useNotificationStore } from '@/stores/notification';
 import { useEventoStore } from '@/stores/eventoStore';
 
 const route = useRoute();
 const router = useRouter();
 const eventoStore = useEventoStore();
+const notificationStore = useNotificationStore();
 
 // --- Estado do Componente ---
 const project = ref(null);
@@ -23,6 +24,23 @@ const isTaskFeedbackModalOpen = ref(false);
 const selectedTaskForFeedback = ref(null);
 const isFeedbackLoading = ref(false);
 const feedbackError = ref(null);
+
+// --- ESTADOS PARA O MODAL DE CRIAR/EDITAR TAREFA ---
+const isTaskModalOpen = ref(false);
+const isTaskModalLoading = ref(false);
+const currentTask = ref(null);
+const taskFormData = ref({
+  descricao: '',
+  detalhe: '',
+  data_inicio_prevista: null,
+  data_fim_prevista: null,
+  data_conclusao: null,
+  id_usuario_atribuido: null,
+});
+
+// --- ESTADOS PARA O MODAL DE APAGAR TAREFA ---
+const isDeleteTaskDialogOpen = ref(false);
+const taskToDelete = ref(null);
 
 
 // --- Mapas de Status ---
@@ -46,6 +64,10 @@ const kanbanColumns = [
   { title: 'Em Andamento', status: 2, color: 'blue' },
   { title: 'Concluído', status: 3, color: 'green' },
 ];
+
+const taskModalTitle = computed(() => {
+  return currentTask.value ? 'Editar Tarefa' : 'Nova Tarefa';
+});
 
 // --- COMPUTED PARA JUNTAR TODOS OS FEEDBACKS (AVALIAÇÃO + TAREFAS) ---
 const combinedFeedbacks = computed(() => {
@@ -81,8 +103,9 @@ const combinedFeedbacks = computed(() => {
 // --- Lógica de busca de dados (onMounted) ---
 onMounted(async () => {
   const projectId = route.params.id;
+  loading.value = true;
+  error.value = null;
   try {
-    // 1. Busca os dados primários
     const [projectResponse, tasksResponse, avaliacoesResponse, membrosResponse] = await Promise.all([
       api.get(`/projetos/${projectId}`),
       api.get(`/projetos/${projectId}/tarefas`), 
@@ -90,31 +113,37 @@ onMounted(async () => {
       api.get(`/membros_projeto/${projectId}`),
     ]);
 
-    project.value = projectResponse.data;
-    const initialTasks = tasksResponse.data;
-    avaliacoes.value = avaliacoesResponse.data;
-    membros.value = membrosResponse.data;
+    project.value = projectResponse.data.data || projectResponse.data;
+    const initialTasks = tasksResponse.data.data || tasksResponse.data || [];
+    avaliacoes.value = avaliacoesResponse.data.data || avaliacoesResponse.data || [];
+    membros.value = membrosResponse.data.data || membrosResponse.data || [];
+    
+    if (Array.isArray(initialTasks) && initialTasks.length > 0) {
+      // Para cada tarefa, busca seus detalhes (registros de atribuição e feedbacks) em paralelo
+      const taskDetailPromises = initialTasks.map(task => {
+        const registrationsPromise = api.get(`/registros_tarefas?id_tarefa=${task.id_tarefa}`).catch(() => ({ data: [] }));
+        const feedbacksPromise = api.get(`/tarefas/${task.id_tarefa}/feedbacks`).catch(() => ({ data: [] }));
+        return Promise.all([registrationsPromise, feedbacksPromise]);
+      });
 
-    if (initialTasks && initialTasks.length > 0) {
-      const feedbackPromises = initialTasks.map(task =>
-        api.get(`/tarefas/${task.id_tarefa}/feedbacks`).catch(err => {
-          console.warn(`Não foi possível buscar feedbacks para a tarefa ${task.id_tarefa}:`, err);
-          return { data: [] };
-        })
-      );
-      
-      const feedbackResponses = await Promise.all(feedbackPromises);
-      
+      const allTaskDetails = await Promise.all(taskDetailPromises);
+
+      // Associa os detalhes buscados de volta a cada tarefa
       initialTasks.forEach((task, index) => {
-        task.feedbacks = feedbackResponses[index].data;
+        const [registrationResponse, feedbackResponse] = allTaskDetails[index];
+        
+        // Processa os registros para encontrar o responsável
+        const registrations = registrationResponse.data.data || registrationResponse.data || [];
+        if (registrations.length > 0) {
+          task.id_usuario_atribuido = registrations[registrations.length - 1].id_responsavel;
+        }
+
+        // Associa os feedbacks
+        task.feedbacks = feedbackResponse.data.data || feedbackResponse.data || [];
       });
     }
 
     tasks.value = initialTasks;
-
-    if (project.value.id_evento && !eventoStore.getEventoById(project.value.id_evento)) {
-      await eventoStore.fetchEventos();
-    }
 
   } catch (err) {
     console.error("Erro ao buscar detalhes do projeto:", err);
@@ -124,7 +153,15 @@ onMounted(async () => {
   }
 });
 
-// --- FUNÇÃO PARA ABRIR O MODAL DE FEEDBACKS DA TAREFA ---
+// --- FUNÇÕES DE NAVEGAÇÃO E AUXILIARES ---
+const getMemberName = (userId) => {
+    if (!userId || !membros.value || membros.value.length === 0) return 'Não atribuído';
+    const membro = membros.value.find(m => m.id_usuario === userId);
+    return membro ? membro.usuario.nome : 'Não atribuído';
+};
+
+
+// --- FUNÇÕES PARA MODAIS ---
 const openTaskFeedbackModal = async (task) => {
   selectedTaskForFeedback.value = { ...task, feedbacks: [] };
   isTaskFeedbackModalOpen.value = true;
@@ -145,56 +182,90 @@ const openTaskFeedbackModal = async (task) => {
   }
 };
 
-
-// --- Funções para o Modal de TAREFAS (Criar/Editar) ---
-const isTaskModalOpen = ref(false);
-const isTaskModalLoading = ref(false);
-const currentTask = ref(null);
-const taskModalConfig = {
-  title: computed(() => (currentTask.value?.id_tarefa ? 'Editar Tarefa' : 'Nova Tarefa')),
-  fields: [
-    { key: 'descricao', label: 'Título da Tarefa', type: 'text', rules: [v => !!v || 'O título é obrigatório'] },
-    { key: 'detalhe', label: 'Descrição (Opcional)', type: 'textarea' },
-    { key: 'data_inicio_prevista', label: 'Início Previsto', type: 'date' },
-    { key: 'data_fim_prevista', label: 'Fim Previsto', type: 'date' },
-    { key: 'data_conclusao', label: 'Data de Conclusão', type: 'date' },
-  ],
-};
 const openCreateTaskModal = () => {
-  currentTask.value = { 
+  currentTask.value = null;
+  taskFormData.value = { 
     descricao: '', 
     detalhe: '',
     data_inicio_prevista: null,
     data_fim_prevista: null,
-    data_conclusao: null
+    data_conclusao: null,
+    id_usuario_atribuido: null,
   };
   isTaskModalOpen.value = true;
 };
 const openEditTaskModal = (task) => {
-  currentTask.value = { ...task };
+  currentTask.value = task;
+  taskFormData.value = { ...task };
   isTaskModalOpen.value = true;
 };
-const handleSaveTask = async (formData) => {
+const handleSaveTask = async () => {
   isTaskModalLoading.value = true;
   try {
-    if (formData.id_tarefa) {
-      const { data } = await api.put(`/tarefas/${formData.id_tarefa}`, formData);
-      const index = tasks.value.findIndex(t => t.id_tarefa === data.id_tarefa);
-      if (index !== -1) tasks.value[index] = data;
+    let savedTaskData;
+    const { id_usuario_atribuido, ...coreTaskData } = taskFormData.value;
+
+    if (currentTask.value) {
+      const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, coreTaskData);
+      savedTaskData = data;
     } else {
       const payload = {
         id_projeto: project.value.id_projeto,
         id_situacao: 1, // 'A Fazer'
-        ...formData,
+        ...coreTaskData,
       };
       const { data } = await api.post('/tarefas', payload);
-      tasks.value.push(data);
+      savedTaskData = data;
     }
+
+    if (id_usuario_atribuido) {
+        await api.post('/registros_tarefas', {
+            id_tarefa: savedTaskData.id_tarefa,
+            id_responsavel: id_usuario_atribuido,
+            descricao_atividade: `Tarefa atribuída ao responsável.`,
+            resultado: null,
+            data_execucao: new Date().toISOString().split('T')[0],
+            arquivo: 'null',
+        });
+    }
+
+    savedTaskData.id_usuario_atribuido = id_usuario_atribuido;
+    
+    if (currentTask.value) {
+      const index = tasks.value.findIndex(t => t.id_tarefa === savedTaskData.id_tarefa);
+      if (index !== -1) tasks.value[index] = { ...tasks.value[index], ...savedTaskData };
+    } else {
+      tasks.value.push(savedTaskData);
+    }
+
+    notificationStore.showSuccess('Tarefa salva com sucesso!');
     isTaskModalOpen.value = false;
   } catch (err) {
     console.error("Erro ao salvar a tarefa:", err);
+    notificationStore.showError('Não foi possível salvar a tarefa.');
   } finally {
     isTaskModalLoading.value = false;
+  }
+};
+
+const openDeleteTaskModal = (task) => {
+  taskToDelete.value = task;
+  isDeleteTaskDialogOpen.value = true;
+};
+
+const confirmDeleteTask = async () => {
+  if (!taskToDelete.value) return;
+  notificationStore.showInfo('Apagando tarefa...');
+  try {
+    await api.delete(`/tarefas/${taskToDelete.value.id_tarefa}`);
+    tasks.value = tasks.value.filter(t => t.id_tarefa !== taskToDelete.value.id_tarefa);
+    notificationStore.showSuccess('Tarefa apagada com sucesso!');
+  } catch (err) {
+    console.error("Erro ao apagar tarefa:", err);
+    notificationStore.showError('Não foi possível apagar a tarefa.');
+  } finally {
+    isDeleteTaskDialogOpen.value = false;
+    taskToDelete.value = null;
   }
 };
 
@@ -232,11 +303,7 @@ const formatDateSimple = (dateString) => {
   if (!dateString) return null;
   const date = new Date(dateString);
   const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() + userTimezoneOffset).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  return new Date(date.getTime() - userTimezoneOffset).toISOString().split('T')[0];
 };
 </script>
 
@@ -319,10 +386,17 @@ const formatDateSimple = (dateString) => {
                 <v-icon size="48" class="mb-4">mdi-account-group-outline</v-icon>
                 <p>Nenhum membro foi registrado para este projeto ainda.</p>
               </div>
-            <v-card-text v-else v-for="user in membros" class="text-center pa-8 text-grey-darken-1">
-              <v-icon size="48" class="mb-4">mdi-account-group-outline</v-icon>
-              <p>{{user.usuario.nome}}</p>
-              <p>{{user.usuario.email}}</p>
+            <v-card-text v-else class="pa-0">
+               <v-list lines="two">
+                  <v-list-subheader>Membros da Equipe</v-list-subheader>
+                  <v-list-item v-for="membro in membros" :key="membro.id_usuario" :title="membro.usuario.nome" :subtitle="membro.usuario.email">
+                      <template v-slot:prepend>
+                          <v-avatar color="green-darken-4">
+                              <span class="text-h6">{{ membro.usuario.nome.charAt(0) }}</span>
+                          </v-avatar>
+                      </template>
+                  </v-list-item>
+              </v-list>
             </v-card-text>
           </v-window-item>
           
@@ -354,33 +428,28 @@ const formatDateSimple = (dateString) => {
                       <v-card-text class="font-weight-medium text-grey-darken-4 pb-1">
                         {{ task.descricao }}
                         <p v-if="task.detalhe" class="text-caption font-weight-regular text-grey-darken-1 mt-1">{{ task.detalhe }}</p>
-                        
-                        <div v-if="task.data_inicio_prevista || task.data_fim_prevista || task.data_conclusao" class="mt-3 d-flex flex-wrap ga-2">
-                          <v-chip v-if="task.data_inicio_prevista" size="x-small" color="blue-grey" variant="tonal">
-                            <v-icon start icon="mdi-calendar-arrow-right"></v-icon>
-                            {{ formatDateSimple(task.data_inicio_prevista) }}
-                            <v-tooltip activator="parent" location="top">Início Previsto</v-tooltip>
-                          </v-chip>
-                          <v-chip v-if="task.data_fim_prevista" size="x-small" color="blue-grey" variant="tonal">
-                            <v-icon start icon="mdi-calendar-arrow-left"></v-icon>
-                            {{ formatDateSimple(task.data_fim_prevista) }}
-                            <v-tooltip activator="parent" location="top">Fim Previsto</v-tooltip>
-                          </v-chip>
-                           <v-chip v-if="task.data_conclusao" size="x-small" color="green" variant="tonal">
-                            <v-icon start icon="mdi-calendar-check"></v-icon>
-                            {{ formatDateSimple(task.data_conclusao) }}
-                            <v-tooltip activator="parent" location="top">Data de Conclusão</v-tooltip>
-                          </v-chip>
+                         <div v-if="task.data_inicio_prevista || task.data_fim_prevista" class="mt-3 d-flex flex-wrap ga-2">
+                            <v-chip v-if="task.data_inicio_prevista" size="x-small" color="blue-grey" variant="tonal">
+                                <v-icon start icon="mdi-calendar-arrow-right"></v-icon>
+                                {{ formatDateSimple(task.data_inicio_prevista) }}
+                                <v-tooltip activator="parent" location="top">Início Previsto</v-tooltip>
+                            </v-chip>
+                            <v-chip v-if="task.data_fim_prevista" size="x-small" color="blue-grey" variant="tonal">
+                                <v-icon start icon="mdi-calendar-arrow-left"></v-icon>
+                                {{ formatDateSimple(task.data_fim_prevista) }}
+                                <v-tooltip activator="parent" location="top">Fim Previsto</v-tooltip>
+                            </v-chip>
                         </div>
-
                       </v-card-text>
-                      <v-card-actions class="pa-1">
-                          <v-chip v-if="task.feedbacks && task.feedbacks.length > 0" size="x-small" prepend-icon="mdi-comment-text-outline" class="ml-2">
-                            {{ task.feedbacks.length }}
-                          </v-chip>
-                          <v-spacer></v-spacer>
-                          <v-btn color="primary" variant="text" size="small" @click="openTaskFeedbackModal(task)">Feedbacks</v-btn>
-                          <v-btn icon="mdi-pencil" variant="text" size="x-small" @click="openEditTaskModal(task)"></v-btn>
+                      <v-card-actions class="pt-0 px-4 pb-2">
+                        <v-chip v-if="task.id_usuario_atribuido" size="small" color="green" variant="tonal" label>
+                            <v-icon start icon="mdi-account-outline"></v-icon>
+                            {{ getMemberName(task.id_usuario_atribuido) }}
+                        </v-chip>
+                        <v-spacer></v-spacer>
+                        <v-btn color="primary" variant="text" size="small" @click.stop="openTaskFeedbackModal(task)">Feedbacks</v-btn>
+                        <v-btn icon="mdi-pencil" variant="text" size="x-small" @click.stop="openEditTaskModal(task)"></v-btn>
+                        <v-btn icon="mdi-delete-outline" color="red" variant="text" size="x-small" @click.stop="openDeleteTaskModal(task)"></v-btn>
                       </v-card-actions>
                     </v-card>
                   </div>
@@ -392,7 +461,69 @@ const formatDateSimple = (dateString) => {
       </v-card>
     </div>
 
-    <CrudModal v-model="isTaskModalOpen" :title="taskModalConfig.title" :fields="taskModalConfig.fields" :item="currentTask" :loading="isTaskModalLoading" @save="handleSaveTask" />
+    <!-- MODAL CRIAR/EDITAR TAREFA -->
+    <v-dialog v-model="isTaskModalOpen" persistent max-width="700px">
+      <v-card>
+        <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
+          {{ taskModalTitle }}
+          <v-spacer></v-spacer>
+          <v-btn icon="mdi-close" variant="text" @click="isTaskModalOpen = false"></v-btn>
+        </v-card-title>
+        <v-card-text class="pt-6">
+          <v-form>
+            <v-text-field
+              v-model="taskFormData.descricao"
+              label="Título da Tarefa"
+              variant="outlined"
+              :rules="[v => !!v || 'O título é obrigatório']"
+              autofocus
+            ></v-text-field>
+            <v-textarea
+              v-model="taskFormData.detalhe"
+              label="Descrição Detalhada (Opcional)"
+              variant="outlined"
+              rows="3"
+              class="mt-4"
+            ></v-textarea>
+
+             <v-select
+                v-model="taskFormData.id_usuario_atribuido"
+                :items="membros"
+                item-title="usuario.nome"
+                item-value="id_usuario"
+                label="Atribuir a (Opcional)"
+                variant="outlined"
+                class="mt-4"
+                clearable
+            ></v-select>
+            
+            <v-row class="mt-2">
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="taskFormData.data_inicio_prevista"
+                  label="Início Previsto"
+                  type="date"
+                  variant="outlined"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                 <v-text-field
+                  v-model="taskFormData.data_fim_prevista"
+                  label="Fim Previsto"
+                  type="date"
+                  variant="outlined"
+                ></v-text-field>
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-spacer></v-spacer>
+          <v-btn color="grey-darken-1" variant="text" @click="isTaskModalOpen = false" :disabled="isTaskModalLoading">Cancelar</v-btn>
+          <v-btn color="green-darken-2" variant="flat" @click="handleSaveTask" :loading="isTaskModalLoading">Salvar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     
     <v-dialog v-model="isTaskFeedbackModalOpen" max-width="700px" persistent>
       <v-card>
@@ -441,6 +572,30 @@ const formatDateSimple = (dateString) => {
       </v-card>
     </v-dialog>
 
+    <!-- DIÁLOGO DE CONFIRMAÇÃO PARA APAGAR TAREFA -->
+    <v-dialog v-model="isDeleteTaskDialogOpen" persistent max-width="500px">
+      <v-card>
+        <v-card-title class="text-h5">
+          <v-icon color="red" start>mdi-alert-circle-outline</v-icon>
+          Confirmar Exclusão
+        </v-card-title>
+        <v-card-text>
+          Você tem certeza que deseja apagar a tarefa <strong>"{{ taskToDelete?.descricao }}"</strong>?
+          <br><br>
+          Esta ação não pode ser desfeita.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey-darken-1" variant="text" @click="isDeleteTaskDialogOpen = false">
+            Cancelar
+          </v-btn>
+          <v-btn color="red-darken-1" variant="flat" @click="confirmDeleteTask">
+            Apagar Tarefa
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
   </v-container>
 </template>
 
@@ -460,3 +615,4 @@ const formatDateSimple = (dateString) => {
   padding-left: 16px;
 }
 </style>
+

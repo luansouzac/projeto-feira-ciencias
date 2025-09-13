@@ -13,7 +13,13 @@ class RegistroTarefaController extends Controller
      */
     public function index()
     {
-        return response()->json(RegistroTarefa::all(), 200);
+        $query = RegistroTarefa::with('responsavel');
+
+        if (request()->has('id_tarefa')) {
+            $query->where('id_tarefa', request()->input('id_tarefa'));
+        }
+
+        return response()->json($query->get(), 200);
     }
 
     /**
