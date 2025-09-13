@@ -99,7 +99,7 @@ class ProjetoController extends Controller
     {
         // Usamos findOrFail para garantir que o projeto exista, senão retorna 404.
         // Carregamos o evento relacionado para verificar o número máximo de pessoas.
-        $projeto = Projeto::with('evento')->findOrFail($id);
+        $projeto = Projeto::with('eventos')->findOrFail($id);
         
         $usuario = $request->user();
 
@@ -129,7 +129,7 @@ class ProjetoController extends Controller
         $membro = MembroEquipe::create([
             'id_equipe' => $equipe->id_equipe,
             'id_usuario' => $usuario->id_usuario,
-            'id_funcao' => 1, // Assumindo que '1' é o ID para a função de 'Membro'
+            'id_funcao' => 2, // Assumindo que '2' é o ID para a função de 'Membro'
         ]);
 
         return response()->json([
