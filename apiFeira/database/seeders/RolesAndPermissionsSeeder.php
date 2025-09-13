@@ -22,39 +22,42 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         //Criar Permissões
-        $permission = Permission::create(['name' => 'exibir projeto']);
-        $permission = Permission::create(['name' => 'crud projeto']);
-        $permission = Permission::create(['name' => 'exibir objetivo']);
-        $permission = Permission::create(['name' => 'crud objetivo']);
-        $permission = Permission::create(['name' => 'exibir equipe']);
-        $permission = Permission::create(['name' => 'crud equipe']);
-        $permission = Permission::create(['name' => 'exibir usuario']);
-        $permission = Permission::create(['name' => 'crud usuario']);
-        $permission = Permission::create(['name' => 'exibir tarefa']);
-        $permission = Permission::create(['name' => 'crud tarefa']);
-        $permission = Permission::create(['name' => 'exibir apresentacao']);
-        $permission = Permission::create(['name' => 'crud apresentacao']);
-        $permission = Permission::create(['name' => 'exibir evento']);
-        $permission = Permission::create(['name' => 'crud evento']);
-        $permission = Permission::create(['name' => 'exibir avaliacao']);
-        $permission = Permission::create(['name' => 'crud avaliacao']);
-        $permission = Permission::create(['name' => 'exibir comentario planejamento']);
-        $permission = Permission::create(['name' => 'crud comentario planejamento']);
-        $permission = Permission::create(['name' => 'exibir comentario desenvolvimento']);
-        $permission = Permission::create(['name' => 'crud comentario desenvolvimento']);
-        $permission = Permission::create(['name' => 'exibir discussao equipe']);
-        $permission = Permission::create(['name' => 'crud discussao equipe']);
-        $permission = Permission::create(['name' => 'exibir avaliacao projeto']);
-        $permission = Permission::create(['name' => 'crud avaliacao projeto']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir projeto']);
+        $permission = Permission::firstOrCreate(['name' => 'crud projeto']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir objetivo']);
+        $permission = Permission::firstOrCreate(['name' => 'crud objetivo']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir equipe']);
+        $permission = Permission::firstOrCreate(['name' => 'crud equipe']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir usuario']);
+        $permission = Permission::firstOrCreate(['name' => 'crud usuario']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir tarefa']);
+        $permission = Permission::firstOrCreate(['name' => 'crud tarefa']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir apresentacao']);
+        $permission = Permission::firstOrCreate(['name' => 'crud apresentacao']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir evento']);
+        $permission = Permission::firstOrCreate(['name' => 'crud evento']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir avaliacao']);
+        $permission = Permission::firstOrCreate(['name' => 'crud avaliacao']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir comentario planejamento']);
+        $permission = Permission::firstOrCreate(['name' => 'crud comentario planejamento']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir comentario desenvolvimento']);
+        $permission = Permission::firstOrCreate(['name' => 'crud comentario desenvolvimento']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir discussao equipe']);
+        $permission = Permission::firstOrCreate(['name' => 'crud discussao equipe']);
+        $permission = Permission::firstOrCreate(['name' => 'exibir avaliacao projeto']);
+        $permission = Permission::firstOrCreate(['name' => 'crud avaliacao projeto']);
 
         //Limpar o cache
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
         
         //Criar Roles e Atribuir Permissões
-        $role = Role::create(['name' => 'Administrador'])->givePermissionTo(Permission::all());
-        $role = Role::create(['name' => 'Aluno'])->givePermissionTo(['exibir projeto', 'crud projeto', 'crud objetivo', 'crud equipe', 'exibir usuario', 'crud tarefa', 'crud apresentacao', 'exibir evento', 'crud comentario planejamento', 'crud comentario desenvolvimento', 'crud discussao equipe', 'exibir avaliacao projeto']);
-        $role = Role::create(['name' => 'Orientador'])->givePermissionTo(['crud comentario desenvolvimento','crud projeto', 'exibir objetivo', 'exibir equipe', 'crud usuario', 'crud tarefa', 'exibir apresentacao', 'exibir evento', 'exibir avaliacao', 'crud comentario planejamento', 'crud comentario desenvolvimento', 'exibir discussao equipe', 'crud avaliacao projeto']);
-        $role = Role::create(['name' => 'Avaliador'])->givePermissionTo(['crud comentario desenvolvimento','exibir projeto', 'exibir objetivo', 'exibir equipe', 'exibir usuario', 'exibir tarefa', 'exibir apresentacao', 'exibir evento', 'crud avaliacao', 'exibir avaliacao projeto']);
+        $role = Role::firstOrCreate(['name' => 'Administrador'])->givePermissionTo(Permission::all());
+        #$role = Role::create(['name' => 'Aluno'])->givePermissionTo(['exibir projeto', 'crud projeto', 'crud objetivo', 'crud equipe', 'exibir usuario', 'crud tarefa', 'crud apresentacao', 'exibir evento', 'crud comentario planejamento', 'crud comentario desenvolvimento', 'crud discussao equipe', 'exibir avaliacao projeto']);
+        $role = Role::firstOrCreate(['name' => 'Aluno'])->givePermissionTo(Permission::all());
+        #$role = Role::create(['name' => 'Orientador'])->givePermissionTo(['crud comentario desenvolvimento','crud projeto', 'exibir objetivo', 'exibir equipe', 'crud usuario', 'crud tarefa', 'exibir apresentacao', 'exibir evento', 'exibir avaliacao', 'crud comentario planejamento', 'crud comentario desenvolvimento', 'exibir discussao equipe', 'crud avaliacao projeto']);
+        $role = Role::firstOrCreate(['name' => 'Orientador'])->givePermissionTo(Permission::all());
+        #$role = Role::create(['name' => 'Avaliador'])->givePermissionTo(['crud comentario desenvolvimento','exibir projeto', 'exibir objetivo', 'exibir equipe', 'exibir usuario', 'exibir tarefa', 'exibir apresentacao', 'exibir evento', 'crud avaliacao', 'exibir avaliacao projeto']);
+        $role = Role::firstOrCreate(['name' => 'Avaliador'])->givePermissionTo(Permission::all());
         
         //Limpar o cache
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();

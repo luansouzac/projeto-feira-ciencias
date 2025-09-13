@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Equipe;
 use App\Models\MembroEquipe;
+use App\Models\Projeto;
 use Illuminate\Http\Request;
 
 class MembroEquipeController extends Controller
@@ -63,5 +65,17 @@ class MembroEquipeController extends Controller
             return response()->json($item, 200);
         }
         return response()->json(['erro'=> 'Membro equipe nao encontrado'],404);
+    }
+
+    public function membrosProjeto(string $id_projeto)
+    {
+        $equipe = Equipe::where('id_projeto', $id_projeto)->first();
+        if (!$equipe) {
+            return response()->json(['erro' => 'Equipe não encontrada'], 404);
+        }
+        
+        $membros = MembroEquipe::where('id_equipe', $equipe->id_equipe)->get();
+
+        return response()->json($membros, 200);
     }
 }

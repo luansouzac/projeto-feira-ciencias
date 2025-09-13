@@ -58,15 +58,16 @@ Route::middleware(['auth:sanctum', 'permission:crud projeto'])->group(function (
 
 //Exibir Equipe e Crud Equipe
 Route::middleware(['auth:sanctum', 'permission:crud equipe'])->group(function () {
-
-});
+    Route::get('/membros_projeto/{id}', [MembroEquipeController::class, 'membrosProjeto']);
     Route::apiResource('membro_equipes', MembroEquipeController::class);
-Route::apiResource('equipes', EquipeController::class);
-Route::post('/projetos/{id}/inscrever', [ProjetoController::class, 'inscrever']);
+    Route::apiResource('equipes', EquipeController::class);
+    Route::post('/projetos/{id}/inscrever', [ProjetoController::class, 'inscrever']);
+});
 
 Route::middleware(['auth:sanctum', 'permission:exibir equipe'])->group(function () {
     Route::get('/membro_equipes', [MembroEquipeController::class, 'index']);
     Route::get('/membro_equipes/{id}', [MembroEquipeController::class, 'show']);
+    Route::get('/membros_projeto/{id}', [MembroEquipeController::class, 'membrosProjeto']);
 });
 
 //Exibir Objetivo e Crud Objetivo
@@ -88,6 +89,7 @@ Route::middleware(['auth:sanctum', 'permission:crud tarefa'])->group(function ()
     Route::apiResource('atribuicao_tarefas', AtribuicaoTarefaController::class);
     Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
     Route::apiResource('registros_tarefas', RegistroTarefaController::class);
+    Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
 });
 
 Route::middleware(['auth:sanctum', 'permission:exibir tarefa'])->group(function () {
