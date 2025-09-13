@@ -68,13 +68,13 @@ class ProjetoController extends Controller
                     $query->whereIn('id_tipo_usuario', ['1','3']);
                 }),
             ],
-            'id_coorientador' => [
-                'required',
-                'integer',
-                Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
-                    $query->whereIn('id_tipo_usuario', ['1','3']);
-                }),
-            ],
+            // 'id_coorientador' => [
+            //     'required',
+            //     'integer',
+            //     Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
+            //         $query->whereIn('id_tipo_usuario', ['1','3']);
+            //     }),
+            // ],
         ]);
 
         if ($validator->fails()) {
@@ -205,13 +205,13 @@ class ProjetoController extends Controller
                     $query->whereIn('id_tipo_usuario', ['3']);
                 }),
             ],
-            'id_coorientador' => [
-                'required',
-                'integer',
-                Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
-                    $query->whereIn('id_tipo_usuario', ['3']);
-                }),
-            ],
+            // 'id_coorientador' => [
+            //     'required',
+            //     'integer',
+            //     Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
+            //         $query->whereIn('id_tipo_usuario', ['3']);
+            //     }),
+            // ],
         ]);
 
         if ($validator->fails()) {
