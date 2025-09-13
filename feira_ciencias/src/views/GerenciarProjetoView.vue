@@ -88,13 +88,26 @@ const salvarAlteracoes = async () => {
             titulo: projeto.value.titulo,
             problema: projeto.value.problema,
             relevancia: projeto.value.relevancia,
+            // CORREÇÃO: Adicionando os campos obrigatórios exigidos pela API na atualização
+            id_responsavel: projeto.value.id_responsavel,
+            id_situacao: projeto.value.id_situacao,
+            id_evento: projeto.value.id_evento,
+            id_orientador: projeto.value.id_orientador,
         };
         const response = await api.put(`/projetos/${projeto.value.id_projeto}`, payload);
-        projeto.value = response.data;
+        projeto.value = response.data.data || response.data; // A resposta de um PUT/POST também pode estar aninhada
         notificationStore.showSuccess('Projeto atualizado com sucesso!');
     } catch (err) {
         console.error('Erro ao salvar o projeto:', err);
-        notificationStore.showError('Não foi possível salvar as alterações.');
+        // Melhora a exibição de erros de validação vindos do backend
+        let errorMessage = 'Não foi possível salvar as alterações.';
+        if (err.response?.data?.errors) {
+            const firstErrorKey = Object.keys(err.response.data.errors)[0];
+            errorMessage = err.response.data.errors[firstErrorKey][0];
+        } else if (err.response?.data?.erro) {
+            errorMessage = err.response.data.erro;
+        }
+        notificationStore.showError(errorMessage);
     } finally {
         isSaving.value = false;
     }
