@@ -204,6 +204,8 @@ const handleSave = async (formData) => {
       };
       const { data } = await api.post('/projetos', payload);
       todosProjetos.value.push(data);
+      //Adicionar a equipe assim que o projeto for armazenado
+      const { dataEquipe } = await api.post('/equipes', {"id_projeto":data.id_projeto});
       notificationStore.showSuccess('Projeto criado com sucesso!');
     } else {
       const { data } = await api.put(`/projetos/${formData.id_projeto}`, formData);
