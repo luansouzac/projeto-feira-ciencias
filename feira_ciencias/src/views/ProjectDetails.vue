@@ -13,6 +13,7 @@ const eventoStore = useEventoStore();
 const project = ref(null);
 const tasks = ref([]);
 const avaliacoes = ref([]);
+const membros = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const activeTab = ref('detalhes');
@@ -85,15 +86,17 @@ onMounted(async () => {
   const projectId = route.params.id;
   try {
     // 1. Busca os dados primários
-    const [projectResponse, tasksResponse, avaliacoesResponse] = await Promise.all([
+    const [projectResponse, tasksResponse, avaliacoesResponse, membrosResponse] = await Promise.all([
       api.get(`/projetos/${projectId}`),
       api.get(`/projetos/${projectId}/tarefas`), 
       api.get(`/projetos/${projectId}/avaliacoes`),
+      api.get(`/membros_projeto/${projectId}`),
     ]);
 
     project.value = projectResponse.data;
     const initialTasks = tasksResponse.data;
     avaliacoes.value = avaliacoesResponse.data;
+    membros.value = membrosResponse.data;
 
     // 2. CORREÇÃO: Se existirem tarefas, busca os feedbacks de cada uma
     if (initialTasks && initialTasks.length > 0) {
@@ -305,9 +308,14 @@ const formatDate = (dateString) => {
 
           <!-- ABA 3: EQUIPE -->
           <v-window-item value="equipe">
-            <v-card-text class="text-center pa-8 text-grey-darken-1">
+            <div v-if="membros.length === 0" class="text-center pa-8 text-grey-darken-1">
+                <v-icon size="48" class="mb-4">mdi-account-group-outline</v-icon>
+                <p>Nenhum membro foi registrado para este projeto ainda.</p>
+              </div>
+            <v-card-text v-else v-for="user in membros" class="text-center pa-8 text-grey-darken-1">
               <v-icon size="48" class="mb-4">mdi-account-group-outline</v-icon>
-              <p>A funcionalidade de Equipe será implementada aqui.</p>
+              <p>{{user.usuario.nome}}</p>
+              <p>{{user.usuario.email}}</p>
             </v-card-text>
           </v-window-item>
           

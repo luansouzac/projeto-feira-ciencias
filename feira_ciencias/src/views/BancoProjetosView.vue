@@ -105,14 +105,15 @@ const modalConfig = computed(() => ({
 
 // --- FUNÇÕES DE TRANSFORMAÇÃO E VISUALIZAÇÃO ---
 const transformarProjeto = (apiProjeto) => {
-  const inscritos = apiProjeto.membros_count || 0;
-  const maxAlunos = apiProjeto.evento?.max_pessoas || apiProjeto.max_membros || 5;
+  console.log(apiProjeto)
+  const inscritos = apiProjeto.equipe[0].membro_equipe.length || 0;
+  const maxAlunos = apiProjeto.eventos.max_pessoas || apiProjeto.max_membros || 5;
   let status = 'Em Análise';
   let validado = false;
 
   if (apiProjeto.id_situacao > 1) {
     validado = true;
-    status = inscritos >= maxAlunos ? 'Lotado' : 'Vagas Abertas';
+    status = inscritos >= maxAlunos ? 'Esgotado' : 'Vagas Abertas';
   }
 
   return {
@@ -130,13 +131,13 @@ const transformarProjeto = (apiProjeto) => {
 
 const statusMap = {
   'Vagas Abertas': { color: 'green-darken-2' },
-  'Lotado': { color: 'red-darken-2' },
+  'Esgotado': { color: 'red-darken-2' },
   'Em Análise': { color: 'orange-darken-2' },
 };
 
 const statusOptions = computed(() => {
-    if (userType.value === 2) return ['Todos', 'Vagas Abertas', 'Lotado'];
-    return ['Todos', 'Vagas Abertas', 'Lotado', 'Em Análise'];
+    if (userType.value === 2) return ['Todos', 'Vagas Abertas', 'Esgotado'];
+    return ['Todos', 'Vagas Abertas', 'Esgotado', 'Em Análise'];
 });
 
 const projetosFiltrados = computed(() => {
@@ -198,7 +199,7 @@ const inscreverNoProjeto = async (projeto) => {
     projeto.alunoInscrito = true;
     projeto.inscritos++;
     if (projeto.inscritos >= projeto.maxAlunos) {
-        projeto.status = 'Lotado';
+        projeto.status = 'Esgotado';
     }
 
   } catch (err) {
@@ -326,7 +327,7 @@ const inscreverNoProjeto = async (projeto) => {
                   <template v-else>
                     <v-btn variant="text" @click="verDetalhes(projeto.id)">Ver Detalhes</v-btn>
                     <v-spacer></v-spacer>
-                    <v-btn :disabled="projeto.status === 'Lotado' || projeto.alunoInscrito" color="green-darken-3" variant="flat" @click="inscreverNoProjeto(projeto)">
+                    <v-btn :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="flat" @click="inscreverNoProjeto(projeto)">
                       {{ projeto.alunoInscrito ? 'Inscrito' : 'Inscrever-se' }}
                     </v-btn>
                   </template>
@@ -367,7 +368,7 @@ const inscreverNoProjeto = async (projeto) => {
                    </div>
                    <div v-else>
                      <v-btn size="small" variant="text" @click="verDetalhes(projeto.id)" class="mr-1">Detalhes</v-btn>
-                     <v-btn size="small" :disabled="projeto.status === 'Lotado' || projeto.alunoInscrito" color="green-darken-3" variant="tonal" @click="inscreverNoProjeto(projeto)">
+                     <v-btn size="small" :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="tonal" @click="inscreverNoProjeto(projeto)">
                        {{ projeto.alunoInscrito ? 'Inscrito' : 'Inscrever-se' }}
                      </v-btn>
                    </div>

@@ -74,7 +74,7 @@ class MembroEquipeController extends Controller
             return response()->json(['erro' => 'Equipe não encontrada'], 404);
         }
         
-        $membros = MembroEquipe::where('id_equipe', $equipe->id_equipe)->get();
+        $membros = MembroEquipe::with('usuario')->where('id_equipe', $equipe->id_equipe)->get();
 
         return response()->json($membros, 200);
     }
