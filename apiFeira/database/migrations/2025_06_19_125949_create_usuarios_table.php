@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('email', 100);
             $table->string('senha_hash', 255);
             $table->unsignedBigInteger('id_tipo_usuario');
+            $table->string('id_matricula', 100);
             $table->foreign('id_tipo_usuario')->references('id_tipo_usuario')->on('tipo_usuarios')->onDelete('no action');
             $table->timestamps();
         });

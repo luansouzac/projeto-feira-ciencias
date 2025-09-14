@@ -18,7 +18,7 @@ class Usuario extends Authenticatable
 
     protected $primaryKey = 'id_usuario';
 
-    protected $fillable = ['nome', 'email', 'senha_hash', 'data_cadastro','id_tipo_usuario'];
+    protected $fillable = ['nome', 'email', 'senha_hash', 'data_cadastro','id_tipo_usuario', 'id_matricula'];
 
     public $timestamps = false;
 

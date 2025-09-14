@@ -15,6 +15,7 @@ class UserAuthController extends Controller
             'email' => 'required|string|email|unique:usuarios,email',
             'password' => 'required|min:6',
             'id_tipo_usuario' => 'required|integer|exists:tipo_usuarios,id_tipo_usuario',
+            'id_matricula' => 'required|string|max:100',
         ]);
 
         $user = Usuario::create([
@@ -22,6 +23,7 @@ class UserAuthController extends Controller
             'email' => $registerUserData['email'],
             'senha_hash' => Hash::make($registerUserData['password']),
             'id_tipo_usuario' => $registerUserData['id_tipo_usuario'],
+            'id_matricula' => $registerUserData['id_matricula'],    
         ]);
 
         return response()->json([

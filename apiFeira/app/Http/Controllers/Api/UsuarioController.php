@@ -43,6 +43,7 @@ class UsuarioController extends Controller
             'senha_hash' => 'required|string|min:6', // Senha mínima de 6 caracteres.
             // O id_tipo_usuario deve existir na tabela 'tipo_usuario' (nome da tabela no banco de dados).
             'id_tipo_usuario' => 'required|integer|exists:tipo_usuarios,id_tipo_usuario',
+            'id_matricula' => 'required|string|max:100',
         ]);
 
         // Se a validação falhar, retorna os erros com status HTTP 422 Unprocessable Entity.
@@ -107,6 +108,7 @@ class UsuarioController extends Controller
             'senha_hash' => 'sometimes|string|min:6',
             // O id_tipo_usuario deve existir na tabela 'tipo_usuario'.
             'id_tipo_usuario' => 'sometimes|integer|exists:tipo_usuario,id_tipo_usuario',
+            'id_matricula' => 'sometimes|string|max:100',
         ]);
 
         // Se a validação falhar, retorna os erros com status HTTP 422 Unprocessable Entity.

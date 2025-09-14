@@ -32,6 +32,7 @@ const handleRegister = async () => {
             email: form.value.email,
             password: form.value.password,
             id_tipo_usuario: form.value.id_tipo_usuario,
+            id_matricula: form.value.matricula,
         })
 
         successMessage.value = 'Usuário cadastrado com sucesso!'
@@ -83,6 +84,9 @@ const handleRegister = async () => {
                         prepend-inner-icon="mdi-lock-outline" :type="showPassword ? 'text' : 'password'"
                         :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
                         @click:append-inner="showPassword = !showPassword" required class="mb-4" />
+
+                    <v-text-field v-model="form.matricula" label="Matrícula" variant="outlined"
+                        prepend-inner-icon="mdi-numeric" required class="mb-4" />
 
                     <v-select v-model="form.id_tipo_usuario" :items="tiposUsuario" item-title="label" item-value="value"
                         label="Tipo de Usuário" variant="outlined" prepend-inner-icon="mdi-account-cog-outline" required
