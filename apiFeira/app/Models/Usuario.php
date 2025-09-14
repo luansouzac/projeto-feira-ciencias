@@ -18,7 +18,7 @@ class Usuario extends Authenticatable
 
     protected $primaryKey = 'id_usuario';
 
-    protected $fillable = ['nome', 'email', 'senha_hash', 'data_cadastro','id_tipo_usuario', 'id_matricula'];
+    protected $fillable = ['nome', 'email', 'senha_hash', 'data_cadastro','id_tipo_usuario', 'id_matricula', 'cpf', 'telefone', 'instituicao', 'curso'];
 
     public $timestamps = false;
 
@@ -71,7 +71,7 @@ class Usuario extends Authenticatable
     {
         return $this->hasMany(ComentarioDesenvolvimento::class, 'id_orientador', 'id_usuario');
     }
-    
+
     public function avaliacaoAprendizagem()
     {
         return $this->hasMany(avaliacaoAprendizagem::class, 'id_avaliador', 'id_usuario');
@@ -97,7 +97,7 @@ class Usuario extends Authenticatable
     public function hasRole($roles, string $guard = null): bool
     {
         // Verifica se o tipoUsuario existe e se ele tem a role
-        if ($this->tipoUsuario && $this->tipoUsuario->hasRole($roles, $guard)) {
+        if (this.tipoUsuario && this.tipoUsuario.hasRole($roles, $guard)) {
             return true;
         }
 
@@ -129,7 +129,7 @@ class Usuario extends Authenticatable
         $roleNames = collect();
 
         // Pega os nomes das roles diretas do próprio usuário (se houver alguma)
-        $userDirectRoleNames = $this->roles->pluck('name'); 
+        $userDirectRoleNames = $this->roles->pluck('name');
         $roleNames = $roleNames->merge($userDirectRoleNames);
 
 
