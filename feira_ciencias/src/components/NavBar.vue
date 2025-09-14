@@ -115,7 +115,7 @@ function logout () {
           </v-btn>
         </template>
         <v-list density="compact">
-          <v-list-item link>
+          <v-list-item link to="/profile">
             <template v-slot:prepend>
               <v-icon>mdi-account-circle-outline</v-icon>
             </template>

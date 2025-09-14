@@ -23,7 +23,7 @@ class UserAuthController extends Controller
             'email' => $registerUserData['email'],
             'senha_hash' => Hash::make($registerUserData['password']),
             'id_tipo_usuario' => $registerUserData['id_tipo_usuario'],
-            'id_matricula' => $registerUserData['id_matricula'],    
+            'id_matricula' => $registerUserData['id_matricula'],
         ]);
 
         return response()->json([
@@ -54,12 +54,51 @@ class UserAuthController extends Controller
         ]);
     }
 
-    // public function logout()
-    // {
-    //     auth()->user()->tokens()->delete();
+    public function show($id)
+    {
+        $user = Usuario::find($id);
+        if (!$user) {
+            return response()->json(["message" => "Usuário não encontrado"], 404);
+        }
+        return response()->json(["user" => $user]);
+    }
 
-    //     return response()->json([
-    //         "message" => "logged out"
-    //     ]);
-    // }
+    public function update(Request $request, $id)
+    {
+        $user = Usuario::find($id);
+        if (!$user) {
+            return response()->json(["message" => "Usuário não encontrado"], 404);
+        }
+
+        $validatedData = $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|string|email|unique:usuarios,email,' . $id . ',id_usuario',
+            'cpf' => 'required|string|max:14|unique:usuarios,cpf,' . $id . ',id_usuario',
+            'telefone' => 'required|string|max:20',
+            'instituicao' => 'required|string|max:255',
+            'curso' => 'required|string|max:255',
+            'id_tipo_usuario' => 'required|integer|exists:tipo_usuarios,id_tipo_usuario',
+            'id_matricula' => 'required|string|max:100',
+        ]);
+
+        $user->nome = $validatedData['name'];
+        $user->email = $validatedData['email'];
+        $user->cpf = $validatedData['cpf'];
+        $user->telefone = $validatedData['telefone'];
+        $user->instituicao = $validatedData['instituicao'];
+        $user->curso = $validatedData['curso'];
+        $user->id_tipo_usuario = $validatedData['id_tipo_usuario'];
+        $user->id_matricula = $validatedData['id_matricula'];
+        $user->save();
+
+        return response()->json(["message" => "Perfil atualizado com sucesso!", "user" => $user]);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json([
+            "message" => "logged out"
+        ]);
+    }
 }

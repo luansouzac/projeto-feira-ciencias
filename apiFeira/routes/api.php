@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\ProjetoController;
 use App\Http\Controllers\Api\MembroEquipeController;
 use App\Http\Controllers\Api\QuestaoPesquisaController;
 use App\Http\Controllers\Api\ObjetivoProjetoController;
-use App\Http\Controllers\Api\TarefaController;   
+use App\Http\Controllers\Api\TarefaController;
 use App\Http\Controllers\Api\AtribuicaoTarefaController;
 use App\Http\Controllers\Api\ComentarioPlanejamentoController;
 use App\Http\Controllers\Api\RegistroTarefaController;
@@ -149,10 +149,10 @@ Route::middleware(['auth:sanctum', 'permission:crud comentario desenvolvimento']
     Route::put('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'update']);
     Route::delete('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'destroy']);
 });
-   
+
 
 Route::middleware(['auth:sanctum', 'permission:exibir feedback tarefas'])->group(function () {
-    
+
 });
     Route::get('/tarefas/{tarefa}/feedbacks', [TarefaFeedbackController::class, 'index']);
     Route::get('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'show']);
@@ -190,9 +190,10 @@ Route::middleware(['auth:sanctum', 'permission:exibir discussao equipe'])->group
 });
 
 
-Route::middleware('auth:sanctum')->group(function () {
-    //Route::apiResource('equipes', EquipeController::class); //colocar o nome da tabela e o nome do controller
-    Route::post('logout', [UserAuthController::class, 'logout']);
+Route::middleware("auth:sanctum")->group(function () {
+    Route::get("/users/{id}", [UserAuthController::class, "show"]);
+    Route::put("/users/{id}", [UserAuthController::class, "update"]);
+    Route::post("logout", [UserAuthController::class, "logout"]);
 });
 
 Route::post('register', [UserAuthController::class, 'register']);
