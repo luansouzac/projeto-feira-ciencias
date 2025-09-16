@@ -21,6 +21,7 @@ class UsuarioSeeder extends Seeder
             'senha_hash' => Hash::make('@admif123!#'),
             'data_cadastro' => '2025-07-16',
             'id_tipo_usuario' => 1,
+            'id_matricula' => '00001'
         ]);
     }
 }
