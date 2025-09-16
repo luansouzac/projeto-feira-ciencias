@@ -128,8 +128,10 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { useNotificationStore } from '@/stores/notification';
+import { useUsuarioStore } from '@/stores/usuarioStore';
 
 const notificationStore = useNotificationStore();
+const UsuarioStore = useUsuarioStore();
 
 const defaultPhoto = 'https://via.placeholder.com/120x120.png?text=Foto';
 
@@ -242,8 +244,9 @@ const saveProfile = async () => {
   }
 };
 
-onMounted(() => {
-  fetchUserProfile();
+onMounted(async () => {
+  await UsuarioStore.fetchUsuarios();
+  user.value = UsuarioStore.getUsuarioById(1);
 });
 </script>
 
