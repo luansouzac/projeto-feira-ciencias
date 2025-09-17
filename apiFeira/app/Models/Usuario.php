@@ -97,7 +97,7 @@ class Usuario extends Authenticatable
     public function hasRole($roles, string $guard = null): bool
     {
         // Verifica se o tipoUsuario existe e se ele tem a role
-        if (this.tipoUsuario && this.tipoUsuario.hasRole($roles, $guard)) {
+        if ($this->tipoUsuario && $this->tipoUsuario->hasRole($roles, $guard)) {
             return true;
         }
 
