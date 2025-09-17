@@ -188,28 +188,6 @@ const formatPhone = () => {
   user.value.telefone = value;
 };
 
-const fetchUserProfile = async () => {
-  try {
-    const userDataString = sessionStorage.getItem('user_data');
-    if (userDataString) {
-      const userData = JSON.parse(userDataString);
-      const userId = userData.user.id_usuario;  // Ajustado para id_usuario
-      const token = userData.token;
-
-      const response = await axios.get(`http://localhost:5174/api/usuarios/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      user.value = {
-        ...response.data,
-        photo: response.data.photo || null,
-      };
-    }
-  } catch (err) {
-    notificationStore.showError('Erro ao carregar perfil.');
-  }
-};
-
 const saveProfile = async () => {
   const requiredFields = [
     'nome', 'email', 'cpf', 'telefone', 'instituicao', 'curso', 'id_matricula', 'id_tipo_usuario',
