@@ -68,9 +68,10 @@ onMounted(async () => {
 
     if (projetosResult.status === 'fulfilled') {
       let dadosProjetos = projetosResult.value.data;
-      if (userType.value === 2) {
-        dadosProjetos = dadosProjetos.filter(p => p.id_situacao > 1);
-      }
+      // Filtrando o projeto por status
+      // if (userType.value === 2) {
+      //   dadosProjetos = dadosProjetos.filter(p => p.id_situacao > 1);
+      // }
       projetos.value = dadosProjetos.map(transformarProjeto);
     } else {
       console.error("Erro ao buscar projetos:", projetosResult.reason);
@@ -102,6 +103,7 @@ const modalConfig = computed(() => ({
     { key: 'titulo', label: 'Título do Projeto', type: 'text', rules: [v => !!v || 'O título é obrigatório'] },
     { key: 'problema', label: 'Problema a ser Resolvido', type: 'textarea', rules: [v => !!v || 'A descrição do problema é obrigatória'] },
     { key: 'relevancia', label: 'Relevância do Projeto', type: 'textarea', rules: [v => !!v || 'A relevância é obrigatória'] },
+    { key: 'max_pessoas', label: 'Nº Máximo de Participantes', type: 'text', rules: [v => !!v || 'O número máximo de participantes é obrigatório'] },
     { key: 'id_orientador', label: 'Professor Orientador', type: 'select', items: avaliadores.value.map(a => ({ title: a.nome, value: a.id_usuario })), rules: [v => !!v || 'O orientador é obrigatório'] },
     { key: 'id_coorientador', label: 'Professor Coorientador (Opcional)', type: 'select', items: avaliadores.value.map(a => ({ title: a.nome, value: a.id_usuario })) },
   ],
@@ -112,7 +114,7 @@ const transformarProjeto = (apiProjeto) => {
 
   const inscritos = apiProjeto.equipe?.[0]?.membro_equipe?.length ?? 0;
 
-  const maxAlunos = apiProjeto.eventos?.max_pessoas || apiProjeto.max_membros || 5;
+  const maxAlunos = apiProjeto.max_pessoas || apiProjeto.eventos?.max_pessoas || 5;
   let status = 'Em Análise';
   let validado = false;
 
@@ -173,7 +175,8 @@ const handleSave = async (formData) => {
   isModalLoading.value = true;
   try {
     // Passo 1: Criar o projeto
-    const payloadProjeto = { ...formData, id_responsavel: userId, id_situacao: 2 }; // Default: 'Em Análise'
+    const situacaoProjeto = userType.value == 4 || userType.value == 1 ? 2 : 1;
+    const payloadProjeto = { ...formData, id_responsavel: userId, id_situacao: situacaoProjeto }; // Default: 'Em Análise'
     const { data: responseData } = await api.post('/projetos', payloadProjeto);
     const novoProjeto = responseData.data || responseData;
 
@@ -277,7 +280,7 @@ const confirmDialog = async() => {
           {{ userType === 2 ? 'Explore os temas e inscreva-se em um projeto.' : 'Visualize, gerencie e cadastre novas propostas.' }}
         </p>
       </v-col>
-      <v-col v-if="userType !== 2" cols="12" md="4" class="text-md-right">
+      <v-col cols="12" md="4" class="text-md-right">
         <v-btn
           color="green-darken-3"
           size="large"
@@ -402,7 +405,7 @@ const confirmDialog = async() => {
                     <v-spacer></v-spacer>
                     <v-btn v-show="projeto.alunoInscrito" color="red-darken-3" density="default" icon="mdi-delete" @click="sairDoProjeto(projeto)">
                     </v-btn>
-                    <v-btn :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="flat" @click="inscreverNoProjeto(projeto)">
+                    <v-btn v-show="projeto.status != 'Em Análise'" :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="flat" @click="inscreverNoProjeto(projeto)">
                       {{ projeto.alunoInscrito ? 'Inscrito' : 'Inscrever-se' }}
                     </v-btn>
                   </template>
@@ -443,7 +446,7 @@ const confirmDialog = async() => {
                    </div>
                    <div v-else>
                      <v-btn size="small" variant="text" @click="verDetalhes(projeto.id)" class="mr-1">Detalhes</v-btn>
-                     <v-btn size="small" :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="tonal" @click="inscreverNoProjeto(projeto)">
+                     <v-btn v-show="projeto.status != 'Em Análise'" size="small" :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="tonal" @click="inscreverNoProjeto(projeto)">
                        {{ projeto.alunoInscrito ? 'Inscrito' : 'Inscrever-se' }}
                      </v-btn>
                    </div>
@@ -457,7 +460,6 @@ const confirmDialog = async() => {
 
     <!-- MODAL DE CADASTRO (apenas para perfis diferentes de Aluno) -->
     <CrudModal
-      v-if="userType !== 2"
       v-model="isModalOpen"
       :title="modalConfig.title"
       :fields="modalConfig.fields"

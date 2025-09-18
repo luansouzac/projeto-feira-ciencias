@@ -81,6 +81,12 @@ const modalConfig = computed(() => ({
       rules: [v => !!v || 'A relevância é obrigatória'],
     },
     {
+      key: 'max_pessoas',
+      label: 'Nº Máximo de Participantes',
+      type: 'text',
+      rules: [v => !!v || 'O número máximo de participantes é obrigatório'],
+    },
+    {
       key: 'id_orientador',
       label: 'Professor orientador',
       type: 'select',
@@ -92,13 +98,12 @@ const modalConfig = computed(() => ({
     },
     {
       key: 'id_coorientador',
-      label: 'Professor coorientador',
+      label: 'Professor Coorientador (Opcional)',
       type: 'select',
       items: avaliadores.value.map(avaliador => ({
         title: avaliador.nome,
         value: avaliador.id_usuario,
-      })),
-      rules: [v => !!v || 'O Corientador é obrigatório'],
+      }))
     },
   ],
 }));
@@ -124,7 +129,7 @@ onMounted(async () => {
 
   const fetchProjetosPromise = api.get(`/projetos?id_responsavel=${userId}&situacao_not=2`);
   const fetchEventosPromise = eventoStore.fetchEventos();
-  const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=3`);
+  const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=4`);
   const fetchAprovadosCountPromise = api.get(`/projetos?id_responsavel=${userId}&id_situacao=2`);
 
     try {

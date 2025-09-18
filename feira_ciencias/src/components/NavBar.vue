@@ -35,6 +35,18 @@ const allNavLinks = [
     icon: "mdi-chart-bar",
     meta: { requiredTypeId: [1, 3] } // Só admin(1), avaliador(3) e orientador(4) podem ver
   },
+  {
+    title: "Avaliações",
+    to: "/avaliacoes",
+    icon: "mdi-chart-bar",
+    meta: { requiredTypeId: [1, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+  },
+  {
+    title: "Orientações",
+    to: "/projetos/orientados",
+    icon: "mdi-chart-bar",
+    meta: { requiredTypeId: [1, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+  },
 ];
 
 const userDataString = sessionStorage.getItem('user_data');

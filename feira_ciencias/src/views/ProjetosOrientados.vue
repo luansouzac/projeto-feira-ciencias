@@ -123,7 +123,7 @@ const verDetalhesDoProjeto = (projeto) => {
     <v-row class="mb-6" align="center">
       <v-col cols="12">
         <h1 class="text-h4 font-weight-bold text-teal-darken-4">
-          Meus Projetos Orientados
+          Orientação de Projetos
         </h1>
         <p class="text-subtitle-1 text-grey-darken-2">
           Gerencie os projetos que você está orientando.

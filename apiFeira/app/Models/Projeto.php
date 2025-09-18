@@ -25,7 +25,8 @@ class Projeto extends Model
         'data_aprovacao',
         'id_evento',
         'id_orientador',
-        'id_coorientador'
+        'id_coorientador',
+        'max_pessoas'
         ];
 
         public function responsavel() //Um Projeto PERTENCE a um Usuário.
