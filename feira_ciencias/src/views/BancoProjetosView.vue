@@ -50,7 +50,7 @@ onMounted(async () => {
   erro.value = null;
 
   const fetchProjetosPromise = api.get('/projetos');
-  const fetchAvaliadoresPromise = api.get('/usuarios?id_tipo_usuario=3');
+  const fetchAvaliadoresPromise = api.get('/usuarios?id_tipo_usuario=4');
   const fetchEventosPromise = eventoStore.fetchEventos();
 
   try {

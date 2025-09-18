@@ -20,6 +20,7 @@ const tiposUsuario = [
     { label: 'Administrador', value: 1 },
     { label: 'Aluno', value: 2 },
     { label: 'Avaliador', value: 3 },
+    { label: 'Orientador', value: 4 },
 ]
 
 const handleRegister = async () => {

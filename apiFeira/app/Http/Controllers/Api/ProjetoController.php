@@ -65,7 +65,7 @@ class ProjetoController extends Controller
                 'required',
                 'integer',
                 Rule::exists('usuarios', 'id_usuario')->where(function ($query) {
-                    $query->whereIn('id_tipo_usuario', ['1','3']);
+                    $query->whereIn('id_tipo_usuario', ['1','4']);
                 }),
             ],
             // 'id_coorientador' => [
