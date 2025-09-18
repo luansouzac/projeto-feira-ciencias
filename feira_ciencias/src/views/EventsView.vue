@@ -114,27 +114,27 @@ const eventosFiltrados = computed(() => {
     isModalOpen.value = true;
   };
   
-  const handleSave = async (formData) => {
-    isModalLoading.value = true;
-    
-    try {
-      if (formData.id_evento) {
-        if( eventoStore.updateEvento(formData.id_evento, formData) )
+const handleSave = async (formData) => {
+  isModalLoading.value = true;
+  try {
+    if (currentItem.value.id_evento) {
+      if( eventoStore.updateEvento(currentItem.value.id_evento, formData) )
         notificationStore.showSuccess('Evento alterado com sucesso!');
       else
-      console.error("Erro ao salvar o evento:", error);    
-  } else {
-    if( eventoStore.createEvento(formData) )
-    notificationStore.showSuccess('Evento criado com sucesso!');
-  else
-  console.error("Erro ao salvar o evento:", error);
-}
-isModalOpen.value = false; 
-} catch (error) {
-  console.error("Erro ao salvar o evento:", error);
-} finally {
-  isModalLoading.value = false;
-}
+        console.error("Erro ao salvar o evento:", error);    
+    } else {
+      if( eventoStore.createEvento(formData) )
+        notificationStore.showSuccess('Evento criado com sucesso!');
+      else
+        console.error("Erro ao salvar o evento:", error);
+    }
+    isModalOpen.value = false; 
+  } catch (error) {
+    console.error("Erro ao salvar o evento:", error);
+  } finally {
+    isModalLoading.value = false;
+  }
+  currentItem.value = null;
 };
 
 const opcoesAtivo = [

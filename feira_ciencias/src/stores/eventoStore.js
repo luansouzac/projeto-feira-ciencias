@@ -78,11 +78,11 @@ export const useEventoStore = defineStore('evento', {
         const response = await api.put(`/eventos/${id_evento}`, {
           nome: updated.nome,
           ativo: updated.ativo==1 ? "1" : "0",
-          data_evento: evento.data_evento,
-          inicio_submissao: evento.inicio_submissao,
-          fim_submissao:evento.fim_submissao,
-          min_pessoas:evento.min_pessoas,
-          max_pessoas:evento.max_pessoas	
+          data_evento: updated.data_evento,
+          inicio_submissao: updated.inicio_submissao,
+          fim_submissao:updated.fim_submissao,
+          min_pessoas:updated.min_pessoas,
+          max_pessoas:updated.max_pessoas	
         });
 
         //Atualizando os dados na Array local
@@ -94,7 +94,7 @@ export const useEventoStore = defineStore('evento', {
         return true;
       } catch (err) {
         this.error = err.response?.data?.message || 'Erro ao atualizar evento.';
-        //console.error('Erro ao atualizar evento:', err);
+        console.error('Erro ao atualizar evento:', err);
         return false;
       } finally {
         this.loading = false;
