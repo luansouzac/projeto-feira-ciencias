@@ -22,10 +22,13 @@ const viewMode = ref('grid');
 const avaliadores = ref([]);
 let userId = null;
 const userType = ref(null);
+const selectedProject = ref([]);
 
 // --- ESTADOS DO MODAL ---
 const isModalOpen = ref(false);
 const isModalLoading = ref(false);
+const showConfirmDialog = ref(false);
+
 const getInitialFormData = () => ({
   id_evento: null,
   titulo: '',
@@ -52,14 +55,15 @@ onMounted(async () => {
   const fetchProjetosPromise = api.get('/projetos');
   const fetchAvaliadoresPromise = api.get('/usuarios?id_tipo_usuario=4');
   const fetchEventosPromise = eventoStore.fetchEventos();
-
+  
   try {
     const results = await Promise.allSettled([
       fetchProjetosPromise,
       fetchAvaliadoresPromise,
       fetchEventosPromise,
     ]);
-
+    
+    console.log(fetchProjetosPromise);
     const [projetosResult, avaliadoresResult, eventosResult] = results;
 
     if (projetosResult.status === 'fulfilled') {
@@ -227,6 +231,38 @@ const inscreverNoProjeto = async (projeto) => {
     notificationStore.showError(mensagemErro);
   }
 };
+
+const sairDoProjeto = async (projeto) => {
+  selectedProject.value = projeto;
+  showConfirmDialog.value = true;
+};
+
+const cancelDialog = () => {
+  showConfirmDialog.value = false;
+}
+
+const confirmDialog = async() => {
+  notificationStore.showInfo(`Removendo a inscrição no projeto "${selectedProject.titulo}"...`);
+  try {
+    await api.post(`/projetos/desinscrever/${selectedProject.value.id}/${userId}`);
+    
+    notificationStore.showSuccess('Inscrição removida com sucesso!');
+    
+    selectedProject.value.alunoInscrito = false;
+    selectedProject.value.inscritos--;
+    if (selectedProject.value.inscritos < selectedProject.value.maxAlunos) {
+        selectedProject.value.status = 'Vagas Abertas';
+    }
+
+    //Fechar a caixa de diálogo
+    showConfirmDialog.value = false;
+  } catch (err) {
+    console.error("Erro ao sair do projeto:", err);
+    const mensagemErro = err.response?.data?.erro || 'Não foi possível sair do projeto.';
+    notificationStore.showError(mensagemErro);
+  }
+}
+
 </script>
 
 <template>
@@ -253,6 +289,23 @@ const inscreverNoProjeto = async (projeto) => {
         </v-btn>
       </v-col>
     </v-row>
+
+    <!-- CAIXA DE CONFIRMAÇÃO PARA SAIR DO PROJETO -->
+    <v-dialog v-model="showConfirmDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="headline">
+          Tem certeza que deseja sair da equipe do projeto?
+        </v-card-title>
+        <v-card-text>
+          Atenção: Ao confirmar, esta ação não pode ser desfeita.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="green-darken-3" text @click="cancelDialog">Cancelar</v-btn>
+          <v-btn color="red darken-1" text @click="confirmDialog">Confirmar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- FILTROS -->
     <v-card class="mb-8 pa-4" variant="outlined">
@@ -295,6 +348,7 @@ const inscreverNoProjeto = async (projeto) => {
         </v-col>
       </v-row>
     </div>
+    
 
     <!-- ESTADO DE ERRO -->
     <v-alert v-else-if="erro" type="error" variant="tonal" border="start" prominent>{{ erro }}</v-alert>
@@ -346,6 +400,8 @@ const inscreverNoProjeto = async (projeto) => {
                   <template v-else>
                     <v-btn variant="text" @click="verDetalhes(projeto.id)">Ver Detalhes</v-btn>
                     <v-spacer></v-spacer>
+                    <v-btn v-show="projeto.alunoInscrito" color="red-darken-3" density="default" icon="mdi-delete" @click="sairDoProjeto(projeto)">
+                    </v-btn>
                     <v-btn :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="flat" @click="inscreverNoProjeto(projeto)">
                       {{ projeto.alunoInscrito ? 'Inscrito' : 'Inscrever-se' }}
                     </v-btn>

@@ -78,4 +78,19 @@ class MembroEquipeController extends Controller
 
         return response()->json($membros, 200);
     }
+    
+    public function retiraMembroProjeto(string $id_projeto, string $id_usuario)
+    {
+        $equipe = Equipe::where('id_projeto', $id_projeto)->first();
+        if (!$equipe) {
+            return response()->json(['erro' => 'Equipe não encontrada'], 404);
+        }
+        
+        $membro = MembroEquipe::with('usuario')->where('id_equipe', $equipe->id_equipe)->where('id_usuario', $id_usuario)->get();
+        if($membro){
+            $membro[0]->delete();
+            return response()->json($membro, 200);
+        }
+        return response()->json(['erro'=> 'Não foi possível remover o usuário do projeto'],404);
+    }
 }
