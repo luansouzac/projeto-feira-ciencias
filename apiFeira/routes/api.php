@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\AvaliacaoController;
 use App\Http\Controllers\Api\EquipeController;
 use App\Http\Controllers\Api\TarefaFeedbackController;
 
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
@@ -190,10 +191,10 @@ Route::middleware(['auth:sanctum', 'permission:exibir discussao equipe'])->group
 });
 
 
-Route::middleware("auth:sanctum")->group(function () {
-    Route::get("/users/{id}", [UserAuthController::class, "show"]);
-    Route::put("/users/{id}", [UserAuthController::class, "update"]);
-    Route::post("logout", [UserAuthController::class, "logout"]);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/usuarios/{id}', [UserAuthController::class, 'show']);  // Pega dados do usuário
+    Route::put('/usuarios/{id}', [UserAuthController::class, 'update']); // Atualiza perfil
+    Route::post('/logout', [UserAuthController::class, 'logout']);        // Logout
 });
 
 Route::post('register', [UserAuthController::class, 'register']);
