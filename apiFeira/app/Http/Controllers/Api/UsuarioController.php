@@ -126,4 +126,39 @@ class UsuarioController extends Controller
 
         return response()->json($user);
     }
+
+    public function inserirLista(Request $request)
+    {
+        // 1. Validação dos dados
+        $request->validate([
+            'dados' => 'required|array',
+            'dados.*.nome' => 'required|string|max:255',
+            'dados.*.email' => 'required|string|email|max:100|unique:usuarios,email',
+            'dados.*.senha_hash' => 'sometimes|string|min:6',
+            'dados.*.id_tipo_usuario' => 'sometimes|integer|exists:tipo_usuarios,id_tipo_usuario',
+        ]);
+
+        // 2. Coleta dos dados
+        $listaDeDados = $request->input('dados');
+
+        // 3. Preparação dos dados
+        // Opcional: Adicionar timestamps (created_at e updated_at)
+        $agora = now();
+        $dadosParaInserir = collect($listaDeDados)->map(function ($item) use ($agora) {
+            $item["senha_hash"] = Hash::make($item["senha_hash"]);
+            return array_merge($item, [
+                'created_at' => $agora,
+                'updated_at' => $agora,
+            ]);
+        })->all();
+
+        try {
+            foreach ($dadosParaInserir as $dados){
+                Usuario::create($dados);
+            }
+            return response()->json(['mensagem' => 'Dados inseridos com sucesso!'], 201);
+        } catch (\Exception $e) {
+            return response()->json(['erro' => 'Não foi possível inserir os dados.', 'detalhes' => $e->getMessage()], 500);
+        }
+    }
 }

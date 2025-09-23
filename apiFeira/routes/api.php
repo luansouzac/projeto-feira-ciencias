@@ -32,6 +32,7 @@ Route::middleware(['auth:sanctum', 'permission:crud usuario'])->group(function (
     Route::get('/usuarios/{id}', [UsuarioController::class, 'show']);
     Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
     Route::get('/usuarios/{id}/projetos/avaliacao', [ProjetoController::class, 'projetosAvaliacao']);
+    Route::post('/usuarioslista', [UsuarioController::class, 'inserirLista']);
 });
 
 Route::middleware(['auth:sanctum', 'permission:exibir usuario'])->group(function () {
