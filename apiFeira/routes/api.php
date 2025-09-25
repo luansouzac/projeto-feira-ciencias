@@ -63,6 +63,7 @@ Route::middleware(['auth:sanctum', 'permission:crud equipe'])->group(function ()
     Route::get('/membros_projeto/{id}', [MembroEquipeController::class, 'membrosProjeto']);
     Route::apiResource('membro_equipes', MembroEquipeController::class);
     Route::apiResource('equipes', EquipeController::class);
+    Route::delete('/equipesProjeto/{id}', [EquipeController::class, 'destroyProjeto']);
     Route::post('/projetos/{id}/inscrever', [ProjetoController::class, 'inscrever']);
     Route::post('/projetos/desinscrever/{equipe}/{usuario}', [MembroEquipeController::class, 'retiraMembroProjeto']);
 });

@@ -33,6 +33,13 @@
                 :md="field.md || field.cols || 12"
                 class="py-1"
               >
+                <input
+                  v-if="['id'].includes(field.type)"
+                  v-model="formData[field.key]"
+                  :name="field.key"
+                  type="hidden"
+                >
+
                 <v-text-field
                   v-if="['text', 'number', 'datetime-local'].includes(field.type)"
                   v-model="formData[field.key]"
@@ -135,7 +142,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, onMounted } from 'vue';
 
 // --- PROPS E EMITS ---
 const props = defineProps({
@@ -218,7 +225,7 @@ const onSave = async () => {
   if (!valid) return;
 
   // Prepara os dados para o backend
-  const dataToSend = { ...formData.value };
+  const dataToSend = { ...formData.value }; 
   props.fields.forEach(field => {
     // Converte objetos Date de volta para strings YYYY-MM-DD
     if (field.type === 'date' && dataToSend[field.key]) {

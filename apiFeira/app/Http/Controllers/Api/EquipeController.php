@@ -62,4 +62,14 @@ class EquipeController extends Controller
         }
         return response()->json(['erro' => 'Equipe nao encontrada'], 404);
     }
+
+    public function destroyProjeto(string $id_projeto)
+    {
+        $item = Equipe::where('id_projeto', $id_projeto)->first();
+        if($item){
+            $item->delete();
+            return response()->json(['message' => 'Equipe deletada com sucesso'], 200);
+        }
+        return response()->json(['erro' => 'Equipe nao encontrada'], 404);
+    }
 }
