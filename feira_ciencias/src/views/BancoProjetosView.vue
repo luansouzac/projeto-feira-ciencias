@@ -421,7 +421,7 @@ const confirmDialog = async () => {
                   <template v-else>
                     <v-btn variant="text" @click="verDetalhes(projeto.id)">Ver Detalhes</v-btn>
                     <v-spacer></v-spacer>
-                    <v-btn v-show="projeto.alunoInscrito" color="red-darken-3" density="default" icon="mdi-delete" @click="sairDoProjeto(projeto)"></v-btn>
+                    <v-btn v-show="projeto.alunoInscrito" color="red-darken-3" density="default" icon="mdi-logout" @click="sairDoProjeto(projeto)"></v-btn>
                     <v-btn v-show="projeto.status != 'Em Análise'" :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="flat" @click="inscreverNoProjeto(projeto)">
                       {{ projeto.alunoInscrito ? 'Inscrito' : 'Inscrever-se' }}
                     </v-btn>
