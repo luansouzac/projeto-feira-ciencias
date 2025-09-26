@@ -22,7 +22,7 @@ const viewMode = ref('grid')
 const avaliadores = ref([])
 let userId = null
 const userType = ref(null)
-const selectedProject = ref([])
+const selectedProject = ref(null) // Corrigido para null
 const nenhumProjetoAprovado = ref(false)
 
 // --- ESTADOS DO MODAL ---
@@ -35,7 +35,7 @@ const getInitialFormData = () => ({
   titulo: '',
   problema: '',
   relevancia: '',
-  max_pessoas: 5, // Valor padrão adicionado para consistência
+  max_pessoas: 5,
   id_orientador: null,
   id_coorientador: null,
 })
@@ -70,20 +70,17 @@ onMounted(async () => {
     if (projetosResult.status === 'fulfilled') {
       let dadosProjetos = projetosResult.value.data
 
-      if (userType.value === 2 || userType.value === 4) {
+      if (userType.value === 2) {
         const projetosAprovados = dadosProjetos.filter((p) => p.id_situacao > 1)
-
         if (projetosAprovados.length === 0) {
           nenhumProjetoAprovado.value = true
         }
         dadosProjetos = projetosAprovados
       }
-
       projetos.value = dadosProjetos.map(transformarProjeto)
     } else {
       throw new Error('Não foi possível carregar os projetos.')
     }
-
 
     if (avaliadoresResult.status === 'fulfilled') {
       avaliadores.value = avaliadoresResult.value.data
@@ -101,7 +98,7 @@ onMounted(async () => {
   }
 })
 
-// --- CONFIGURAÇÃO DO MODAL (DESCOMENTADO) ---
+// --- CONFIGURAÇÃO DO MODAL ---
 const modalConfig = computed(() => ({
   title: 'Cadastrar Novo Projeto',
   fields: [
@@ -115,10 +112,16 @@ const modalConfig = computed(() => ({
   ],
 }));
 
-// --- FUNÇÕES DE TRANSFORMAÇÃO E VISUALIZAÇÃO ---
+// --- FUNÇÕES DE TRANSFORMAÇÃO E LÓGICA DE VISUALIZAÇÃO ---
+
+// NOVO: VERIFICA SE O ALUNO JÁ TEM INSCRIÇÃO EM ALGUM PROJETO
+const alunoJaInscrito = computed(() => {
+  if (userType.value !== 2) return false; // Regra só se aplica a alunos
+  return projetos.value.some(p => p.alunoInscrito);
+});
+
 const transformarProjeto = (apiProjeto) => {
   const inscritos = apiProjeto.equipe?.[0]?.membro_equipe?.length ?? 0
-
   const maxAlunos = apiProjeto.max_pessoas || apiProjeto.eventos?.max_pessoas || 5
   let status = 'Em Análise'
   let validado = false
@@ -149,7 +152,6 @@ const statusMap = {
   'Em Análise': { color: 'orange-darken-2' },
 }
 
-// Lógica correta: Aluno (2) não vê filtro 'Em Análise'
 const statusOptions = computed(() => {
   if (userType.value === 2) return ['Todos', 'Vagas Abertas', 'Esgotado']
   return ['Todos', 'Vagas Abertas', 'Esgotado', 'Em Análise']
@@ -178,46 +180,37 @@ const openCreateModal = () => {
   isModalOpen.value = true;
 };
 
-// FUNÇÃO DE SALVAR (DESCOMENTADA E AJUSTADA)
 const handleSave = async (formData) => {
   isModalLoading.value = true;
   try {
-    // AJUSTE: Se o usuário for tipo 4, o projeto já nasce aprovado (id_situacao: 2).
-    // Caso contrário, nasce em análise (id_situacao: 1).
     const situacaoProjeto = userType.value === 4 ? 2 : 1;
-
-    // Passo 1: Criar o projeto
     const payloadProjeto = { ...formData, id_responsavel: userId, id_situacao: situacaoProjeto };
     const { data: responseData } = await api.post('/projetos', payloadProjeto);
     const novoProjeto = responseData.data || responseData;
 
     if (!novoProjeto || !novoProjeto.id_projeto) {
-      throw new Error('A API não retornou um projeto válido após a criação.');
+      throw new Error('A API não retornou um projeto válido.');
     }
 
-    // Passo 2: Criar a equipe associada ao projeto
     const payloadEquipe = {
       id_projeto: novoProjeto.id_projeto,
       nome_equipe: `Equipe - ${novoProjeto.titulo}`
     };
     await api.post('/equipes', payloadEquipe);
 
-    // Passo 3: Atualizar a interface do usuário
-    novoProjeto.equipe = [{ membro_equipe: [] }]; // Simula a estrutura para a transformação
+    novoProjeto.equipe = [{ membro_equipe: [] }];
     projetos.value.unshift(transformarProjeto(novoProjeto));
     
     notificationStore.showSuccess('Projeto cadastrado com sucesso!');
     isModalOpen.value = false;
-
   } catch (error) {
     console.error("Erro ao cadastrar o projeto:", error);
-    const errorMessage = error.response?.data?.message || 'Ocorreu um erro ao cadastrar o projeto.';
+    const errorMessage = error.response?.data?.message || 'Ocorreu um erro.';
     notificationStore.showError(errorMessage);
   } finally {
     isModalLoading.value = false;
   }
 };
-
 
 const gerenciarProjeto = (id) => {
   router.push(`/gerenciar-projeto/${id}`)
@@ -239,12 +232,12 @@ const inscreverNoProjeto = async (projeto) => {
     }
   } catch (err) {
     console.error('Erro ao inscrever no projeto:', err)
-    const mensagemErro = err.response?.data?.erro || 'Não foi possível realizar a inscrição.'
+    const mensagemErro = err.response?.data?.erro || 'Não foi possível se inscrever.'
     notificationStore.showError(mensagemErro)
   }
 }
 
-const sairDoProjeto = async (projeto) => {
+const sairDoProjeto = (projeto) => {
   selectedProject.value = projeto
   showConfirmDialog.value = true
 }
@@ -254,22 +247,24 @@ const cancelDialog = () => {
 }
 
 const confirmDialog = async () => {
-  notificationStore.showInfo(`Removendo a inscrição no projeto "${selectedProject.value.titulo}"...`)
+  if (!selectedProject.value) return;
+  notificationStore.showInfo(`Cancelando inscrição em "${selectedProject.value.titulo}"...`)
   try {
     await api.post(`/projetos/desinscrever/${selectedProject.value.id}/${userId}`)
-
-    notificationStore.showSuccess('Inscrição removida com sucesso!')
-
+    notificationStore.showSuccess('Inscrição cancelada com sucesso!')
+    
     selectedProject.value.alunoInscrito = false
     selectedProject.value.inscritos--
     if (selectedProject.value.inscritos < selectedProject.value.maxAlunos) {
       selectedProject.value.status = 'Vagas Abertas'
     }
-    showConfirmDialog.value = false
   } catch (err) {
     console.error('Erro ao sair do projeto:', err)
     const mensagemErro = err.response?.data?.erro || 'Não foi possível sair do projeto.'
     notificationStore.showError(mensagemErro)
+  } finally {
+    showConfirmDialog.value = false
+    selectedProject.value = null;
   }
 }
 </script>
@@ -301,15 +296,15 @@ const confirmDialog = async () => {
     <v-dialog v-model="showConfirmDialog" max-width="500px">
       <v-card>
         <v-card-title class="headline">
-          Tem certeza que deseja sair da equipe do projeto?
+          Cancelar Inscrição
         </v-card-title>
         <v-card-text>
-          Atenção: Ao confirmar, esta ação não pode ser desfeita.
+          Tem certeza que deseja sair da equipe deste projeto?
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="green-darken-3" text @click="cancelDialog">Cancelar</v-btn>
-          <v-btn color="red darken-1" text @click="confirmDialog">Confirmar</v-btn>
+          <v-btn color="grey-darken-1" text @click="cancelDialog">Voltar</v-btn>
+          <v-btn color="red-darken-1" variant="flat" @click="confirmDialog">Confirmar Saída</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -359,24 +354,18 @@ const confirmDialog = async () => {
     <div v-else>
       <v-alert
         v-if="userType === 2 && nenhumProjetoAprovado"
-        type="info"
-        variant="tonal"
-        border="start"
-        prominent
+        type="info" variant="tonal" border="start" prominent
         icon="mdi-clock-time-three-outline"
       >
         <v-alert-title class="font-weight-bold">Inscrições em Breve!</v-alert-title>
-        Por enquanto, continue mandando ideias de projetos. As inscrições para os projetos aprovados ainda não abriram!
+        As inscrições para os projetos aprovados ainda não abriram!
       </v-alert>
 
       <v-alert
         v-else-if="projetosFiltrados.length === 0"
-        type="info"
-        variant="tonal"
-        border="start"
-        prominent
+        type="info" variant="tonal" border="start" prominent
       >
-        Aprove algum projeto na tela de "Avaliações" para que os alunos possam se inscrever!
+        Nenhum projeto encontrado com os filtros selecionados.
       </v-alert>
 
       <div v-else>
@@ -415,15 +404,26 @@ const confirmDialog = async () => {
                 <v-card-actions class="pa-2">
                   <template v-if="userType !== 2">
                     <v-spacer></v-spacer>
-                    <v-btn variant="text" @click="verDetalhes(projeto.id)">Ver Detalhes</v-btn>
+                    <v-btn color="grey-darken-3" variant="text" @click="verDetalhes(projeto.id)">Detalhes</v-btn>
                     <v-btn color="green-darken-3" variant="text" @click="gerenciarProjeto(projeto.id)">Gerenciar<v-icon end>mdi-arrow-right</v-icon></v-btn>
                   </template>
                   <template v-else>
                     <v-btn variant="text" @click="verDetalhes(projeto.id)">Ver Detalhes</v-btn>
                     <v-spacer></v-spacer>
-                    <v-btn v-show="projeto.alunoInscrito" color="red-darken-3" density="default" icon="mdi-logout" @click="sairDoProjeto(projeto)"></v-btn>
-                    <v-btn v-show="projeto.status != 'Em Análise'" :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="flat" @click="inscreverNoProjeto(projeto)">
-                      {{ projeto.alunoInscrito ? 'Inscrito' : 'Inscrever-se' }}
+                    
+                    <v-btn v-if="projeto.alunoInscrito" color="red-darken-2" variant="text" @click="sairDoProjeto(projeto)">
+                      Sair
+                      <v-icon end>mdi-logout</v-icon>
+                    </v-btn>
+
+                    <v-btn
+                      v-else
+                      :disabled="projeto.status === 'Esgotado' || alunoJaInscrito"
+                      color="green-darken-3"
+                      variant="flat"
+                      @click="inscreverNoProjeto(projeto)"
+                    >
+                       {{ alunoJaInscrito ? 'Inscrição única' : 'Inscrever-se' }}
                     </v-btn>
                   </template>
                 </v-card-actions>
@@ -458,12 +458,31 @@ const confirmDialog = async () => {
                 <td class="d-none d-sm-table-cell"><v-chip :color="statusMap[projeto.status].color" size="small" label variant="tonal">{{ projeto.status }}</v-chip></td>
                 <td class="text-right">
                    <div v-if="userType !== 2">
-                     <v-btn color="grey-darken-2" variant="text" @click="gerenciarProjeto(projeto.id)">Gerenciar</v-btn>
-                   </div>
-                   <div v-else>
                      <v-btn size="small" variant="text" @click="verDetalhes(projeto.id)" class="mr-1">Detalhes</v-btn>
-                     <v-btn v-show="projeto.status != 'Em Análise'" size="small" :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="tonal" @click="inscreverNoProjeto(projeto)">
-                       {{ projeto.alunoInscrito ? 'Inscrito' : 'Inscrever-se' }}
+                     <v-btn size="small" color="green-darken-3" variant="text" @click="gerenciarProjeto(projeto.id)">Gerenciar</v-btn>
+                   </div>
+                   <div v-else class="d-flex justify-end align-center">
+                     <v-btn size="small" variant="text" @click="verDetalhes(projeto.id)" class="mr-1">Detalhes</v-btn>
+                     
+                      <v-btn
+                        v-if="projeto.alunoInscrito"
+                        size="small"
+                        color="red-darken-2"
+                        variant="text"
+                        @click="sairDoProjeto(projeto)"
+                      >
+                       Sair <v-icon size="small" end>mdi-logout</v-icon>
+                     </v-btn>
+                     
+                      <v-btn
+                        v-else
+                        size="small"
+                        :disabled="projeto.status === 'Esgotado' || alunoJaInscrito"
+                        color="green-darken-3"
+                        variant="tonal"
+                        @click="inscreverNoProjeto(projeto)"
+                      >
+                       Inscrever-se
                      </v-btn>
                    </div>
                 </td>
@@ -484,7 +503,6 @@ const confirmDialog = async () => {
     />
   </v-container>
 </template>
-
 <style scoped>
 .text-wrap {
   white-space: normal !important;
