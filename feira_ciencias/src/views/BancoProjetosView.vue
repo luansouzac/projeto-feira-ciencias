@@ -274,10 +274,10 @@ const confirmDialog = async () => {
     <v-row class="mb-6" align="center">
       <v-col cols="12" md="8">
         <h1 class="text-h4 font-weight-bold text-green-darken-4">
-          {{ userType === 2 ? 'Projetos Disponíveis' : 'Banco de Projetos' }}
+          {{ userType === 2 ? 'Projetos para inscrição' : 'Projetos aprovados' }}
         </h1>
         <p class="text-subtitle-1 text-grey-darken-2">
-          {{ userType === 2 ? 'Explore os temas e inscreva-se em um projeto.' : 'Visualize, gerencie e cadastre novas propostas.' }}
+          {{ userType === 2 ? 'Explore os temas e inscreva-se em um projeto.' : 'Visualize todos os projetos disponíveis para inscrição.' }}
         </p>
       </v-col>
       <v-col v-if="userType === 4" cols="12" md="4" class="text-md-right">
