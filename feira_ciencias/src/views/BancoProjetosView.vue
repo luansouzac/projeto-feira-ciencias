@@ -35,6 +35,7 @@ const getInitialFormData = () => ({
   titulo: '',
   problema: '',
   relevancia: '',
+  max_pessoas: 5, // Valor padrão adicionado para consistência
   id_orientador: null,
   id_coorientador: null,
 })
@@ -64,14 +65,12 @@ onMounted(async () => {
       fetchEventosPromise,
     ])
 
-    console.log(fetchProjetosPromise)
     const [projetosResult, avaliadoresResult, eventosResult] = results
 
-    // CÓDIGO CORRIGIDO
     if (projetosResult.status === 'fulfilled') {
       let dadosProjetos = projetosResult.value.data
 
-      if (userType.value === 2 || userType.value === 1 || userType.value === 4 || userType.value === 3) {
+      if (userType.value === 2 || userType.value === 4) {
         const projetosAprovados = dadosProjetos.filter((p) => p.id_situacao > 1)
 
         if (projetosAprovados.length === 0) {
@@ -81,7 +80,10 @@ onMounted(async () => {
       }
 
       projetos.value = dadosProjetos.map(transformarProjeto)
+    } else {
+      throw new Error('Não foi possível carregar os projetos.')
     }
+
 
     if (avaliadoresResult.status === 'fulfilled') {
       avaliadores.value = avaliadoresResult.value.data
@@ -99,19 +101,19 @@ onMounted(async () => {
   }
 })
 
-// --- CONFIGURAÇÃO DO MODAL ---
-// const modalConfig = computed(() => ({
-//   title: 'Cadastrar Novo Projeto',
-//   fields: [
-//     { key: 'id_evento', label: 'Evento Associado', type: 'select', items: eventos.value.map(e => ({ title: e.nome, value: e.id_evento })), rules: [v => !!v || 'É necessário selecionar um evento'] },
-//     { key: 'titulo', label: 'Título do Projeto', type: 'text', rules: [v => !!v || 'O título é obrigatório'] },
-//     { key: 'problema', label: 'Problema a ser Resolvido', type: 'textarea', rules: [v => !!v || 'A descrição do problema é obrigatória'] },
-//     { key: 'relevancia', label: 'Relevância do Projeto', type: 'textarea', rules: [v => !!v || 'A relevância é obrigatória'] },
-//     { key: 'max_pessoas', label: 'Nº Máximo de Participantes', type: 'text', rules: [v => !!v || 'O número máximo de participantes é obrigatório'] },
-//     { key: 'id_orientador', label: 'Professor Orientador', type: 'select', items: avaliadores.value.map(a => ({ title: a.nome, value: a.id_usuario })), rules: [v => !!v || 'O orientador é obrigatório'] },
-//     { key: 'id_coorientador', label: 'Professor Coorientador (Opcional)', type: 'select', items: avaliadores.value.map(a => ({ title: a.nome, value: a.id_usuario })) },
-//   ],
-// }));
+// --- CONFIGURAÇÃO DO MODAL (DESCOMENTADO) ---
+const modalConfig = computed(() => ({
+  title: 'Cadastrar Novo Projeto',
+  fields: [
+    { key: 'id_evento', label: 'Evento Associado', type: 'select', items: eventos.value.map(e => ({ title: e.nome, value: e.id_evento })), rules: [v => !!v || 'É necessário selecionar um evento'] },
+    { key: 'titulo', label: 'Título do Projeto', type: 'text', rules: [v => !!v || 'O título é obrigatório'] },
+    { key: 'problema', label: 'Problema a ser Resolvido', type: 'textarea', rules: [v => !!v || 'A descrição do problema é obrigatória'] },
+    { key: 'relevancia', label: 'Relevância do Projeto', type: 'textarea', rules: [v => !!v || 'A relevância é obrigatória'] },
+    { key: 'max_pessoas', label: 'Nº Máximo de Participantes', type: 'number', rules: [v => !!v || 'O nº máximo é obrigatório', v => v > 0 || 'Deve ser maior que zero'] },
+    { key: 'id_orientador', label: 'Professor Orientador', type: 'select', items: avaliadores.value.map(a => ({ title: a.nome, value: a.id_usuario })), rules: [v => !!v || 'O orientador é obrigatório'] },
+    { key: 'id_coorientador', label: 'Professor Coorientador (Opcional)', type: 'select', items: avaliadores.value.map(a => ({ title: a.nome, value: a.id_usuario })) },
+  ],
+}));
 
 // --- FUNÇÕES DE TRANSFORMAÇÃO E VISUALIZAÇÃO ---
 const transformarProjeto = (apiProjeto) => {
@@ -147,6 +149,7 @@ const statusMap = {
   'Em Análise': { color: 'orange-darken-2' },
 }
 
+// Lógica correta: Aluno (2) não vê filtro 'Em Análise'
 const statusOptions = computed(() => {
   if (userType.value === 2) return ['Todos', 'Vagas Abertas', 'Esgotado']
   return ['Todos', 'Vagas Abertas', 'Esgotado', 'Em Análise']
@@ -170,46 +173,51 @@ const getCorProgresso = (inscritos, max) => {
 }
 
 // --- FUNÇÕES DE AÇÃO ---
-// const openCreateModal = () => {
-//   currentItem.value = getInitialFormData();
-//   isModalOpen.value = true;
-// };
+const openCreateModal = () => {
+  currentItem.value = getInitialFormData();
+  isModalOpen.value = true;
+};
 
-// const handleSave = async (formData) => {
-//   isModalLoading.value = true;
-//   try {
-//     // Passo 1: Criar o projeto
-//     const situacaoProjeto = userType.value == 4 || userType.value == 1 ? 2 : 1;
-//     const payloadProjeto = { ...formData, id_responsavel: userId, id_situacao: situacaoProjeto }; // Default: 'Em Análise'
-//     const { data: responseData } = await api.post('/projetos', payloadProjeto);
-//     const novoProjeto = responseData.data || responseData;
+// FUNÇÃO DE SALVAR (DESCOMENTADA E AJUSTADA)
+const handleSave = async (formData) => {
+  isModalLoading.value = true;
+  try {
+    // AJUSTE: Se o usuário for tipo 4, o projeto já nasce aprovado (id_situacao: 2).
+    // Caso contrário, nasce em análise (id_situacao: 1).
+    const situacaoProjeto = userType.value === 4 ? 2 : 1;
 
-//     if (!novoProjeto || !novoProjeto.id_projeto) {
-//       throw new Error('A API não retornou um projeto válido após a criação.');
-//     }
+    // Passo 1: Criar o projeto
+    const payloadProjeto = { ...formData, id_responsavel: userId, id_situacao: situacaoProjeto };
+    const { data: responseData } = await api.post('/projetos', payloadProjeto);
+    const novoProjeto = responseData.data || responseData;
 
-//     // Passo 2: Criar a equipe associada ao projeto
-//     const payloadEquipe = {
-//       id_projeto: novoProjeto.id_projeto,
-//       nome_equipe: `Equipe - ${novoProjeto.titulo}`
-//     };
-//     await api.post('/equipes', payloadEquipe);
+    if (!novoProjeto || !novoProjeto.id_projeto) {
+      throw new Error('A API não retornou um projeto válido após a criação.');
+    }
 
-//     // Passo 3: Atualizar a interface do usuário
-//     novoProjeto.equipe = [{ membro_equipe: [] }];
+    // Passo 2: Criar a equipe associada ao projeto
+    const payloadEquipe = {
+      id_projeto: novoProjeto.id_projeto,
+      nome_equipe: `Equipe - ${novoProjeto.titulo}`
+    };
+    await api.post('/equipes', payloadEquipe);
 
-//     projetos.value.unshift(transformarProjeto(novoProjeto));
-//     notificationStore.showSuccess('Projeto e equipe cadastrados com sucesso!');
-//     isModalOpen.value = false;
+    // Passo 3: Atualizar a interface do usuário
+    novoProjeto.equipe = [{ membro_equipe: [] }]; // Simula a estrutura para a transformação
+    projetos.value.unshift(transformarProjeto(novoProjeto));
+    
+    notificationStore.showSuccess('Projeto cadastrado com sucesso!');
+    isModalOpen.value = false;
 
-//   } catch (error) {
-//     console.error("Erro ao cadastrar o projeto:", error);
-//     const errorMessage = error.response?.data?.message || 'Ocorreu um erro ao cadastrar o projeto.';
-//     notificationStore.showError(errorMessage);
-//   } finally {
-//     isModalLoading.value = false;
-//   }
-// };
+  } catch (error) {
+    console.error("Erro ao cadastrar o projeto:", error);
+    const errorMessage = error.response?.data?.message || 'Ocorreu um erro ao cadastrar o projeto.';
+    notificationStore.showError(errorMessage);
+  } finally {
+    isModalLoading.value = false;
+  }
+};
+
 
 const gerenciarProjeto = (id) => {
   router.push(`/gerenciar-projeto/${id}`)
@@ -223,9 +231,7 @@ const inscreverNoProjeto = async (projeto) => {
   notificationStore.showInfo(`Enviando inscrição para "${projeto.titulo}"...`)
   try {
     await api.post(`/projetos/${projeto.id}/inscrever`)
-
     notificationStore.showSuccess('Inscrição realizada com sucesso!')
-
     projeto.alunoInscrito = true
     projeto.inscritos++
     if (projeto.inscritos >= projeto.maxAlunos) {
@@ -248,7 +254,7 @@ const cancelDialog = () => {
 }
 
 const confirmDialog = async () => {
-  notificationStore.showInfo(`Removendo a inscrição no projeto "${selectedProject.titulo}"...`)
+  notificationStore.showInfo(`Removendo a inscrição no projeto "${selectedProject.value.titulo}"...`)
   try {
     await api.post(`/projetos/desinscrever/${selectedProject.value.id}/${userId}`)
 
@@ -259,8 +265,6 @@ const confirmDialog = async () => {
     if (selectedProject.value.inscritos < selectedProject.value.maxAlunos) {
       selectedProject.value.status = 'Vagas Abertas'
     }
-
-    //Fechar a caixa de diálogo
     showConfirmDialog.value = false
   } catch (err) {
     console.error('Erro ao sair do projeto:', err)
@@ -281,7 +285,18 @@ const confirmDialog = async () => {
           {{ userType === 2 ? 'Explore os temas e inscreva-se em um projeto.' : 'Visualize, gerencie e cadastre novas propostas.' }}
         </p>
       </v-col>
-      </v-row>
+      <v-col v-if="userType === 4" cols="12" md="4" class="text-md-right">
+        <v-btn
+          color="green-darken-3"
+          size="large"
+          prepend-icon="mdi-plus-box-outline"
+          @click="openCreateModal"
+          block
+        >
+          Cadastrar Novo Projeto
+        </v-btn>
+      </v-col>
+    </v-row>
 
     <v-dialog v-model="showConfirmDialog" max-width="500px">
       <v-card>
@@ -338,7 +353,6 @@ const confirmDialog = async () => {
         </v-col>
       </v-row>
     </div>
-    
 
     <v-alert v-else-if="erro" type="error" variant="tonal" border="start" prominent>{{ erro }}</v-alert>
 
@@ -362,7 +376,7 @@ const confirmDialog = async () => {
         border="start"
         prominent
       >
-        As inscrições ainda não abriram. Por enquanto, continue mandando ideias de projetos.
+        Aprove algum projeto na tela de "Avaliações" para que os alunos possam se inscrever!
       </v-alert>
 
       <div v-else>
@@ -406,8 +420,7 @@ const confirmDialog = async () => {
                   <template v-else>
                     <v-btn variant="text" @click="verDetalhes(projeto.id)">Ver Detalhes</v-btn>
                     <v-spacer></v-spacer>
-                    <v-btn v-show="projeto.alunoInscrito" color="red-darken-3" density="default" icon="mdi-delete" @click="sairDoProjeto(projeto)">
-                    </v-btn>
+                    <v-btn v-show="projeto.alunoInscrito" color="red-darken-3" density="default" icon="mdi-delete" @click="sairDoProjeto(projeto)"></v-btn>
                     <v-btn v-show="projeto.status != 'Em Análise'" :disabled="projeto.status === 'Esgotado' || projeto.alunoInscrito" color="green-darken-3" variant="flat" @click="inscreverNoProjeto(projeto)">
                       {{ projeto.alunoInscrito ? 'Inscrito' : 'Inscrever-se' }}
                     </v-btn>
@@ -460,7 +473,15 @@ const confirmDialog = async () => {
       </div>
     </div>
 
-    </v-container>
+    <CrudModal
+      v-model="isModalOpen"
+      :title="modalConfig.title"
+      :fields="modalConfig.fields"
+      :item="currentItem"
+      :loading="isModalLoading"
+      @save="handleSave"
+    />
+  </v-container>
 </template>
 
 <style scoped>
