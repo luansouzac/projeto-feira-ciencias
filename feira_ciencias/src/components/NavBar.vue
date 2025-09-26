@@ -12,17 +12,23 @@ const tipoUsuario = ref(null);
 
 const allNavLinks = [
   { title: "Home", to: "/home", icon: "mdi-view-dashboard-outline" },
+  { 
+    title: "Projetos", 
+    to: "/projetos", 
+    icon: "mdi-folder-account-outline",
+    meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
+  },
   {
     title: "Banco de Projetos",
     to: "/banco-projetos",
     icon: "mdi-database",
   },
-  { 
-    title: "Projetos", 
-    to: "/projetos/inscritos", 
-    icon: "mdi-folder-account-outline",
-    meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
-  },
+  // { 
+  //   title: "Projetos", 
+  //   to: "/projetos/inscritos", 
+  //   icon: "mdi-folder-account-outline",
+  //   meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
+  // },
   {
     title: "Projetos Orientados",
     to: "/projetos/orientados",
