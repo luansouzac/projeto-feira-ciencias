@@ -312,7 +312,7 @@ function handleApprovedCardClick() {
               <v-icon size="48" class="mr-4">mdi-folder-account-outline</v-icon>
               <div>
                 <div class="text-h4 font-weight-bold text-grey-darken-4">{{ totalProjetos }}</div>
-                <div class="text-subtitle-2 text-grey-darken-2">Projetos Registrados</div>
+                <div class="text-subtitle-2 text-grey-darken-2">Projetos Submetidos</div>
               </div>
             </div>
           </v-card-text>
@@ -352,8 +352,8 @@ function handleApprovedCardClick() {
     <v-divider class="my-6"></v-divider>
     <v-row align="center" class="mb-4">
       <v-col cols="12" md="6">
-        <h2 class="text-h5 font-weight-bold text-grey-darken-4">Meus Projetos</h2>
-        <p class="text-subtitle-2 text-grey-darken-1">Gerencie e acompanhe o andamento de suas propostas.</p>
+        <h2 class="text-h5 font-weight-bold text-grey-darken-4">Projetos submetidos</h2>
+        <p class="text-subtitle-2 text-grey-darken-1">Aguarde a aprovação do professor em algum projeto submetido.</p>
       </v-col>
       <v-col cols="12" md="6" class="d-flex justify-md-end">
         <v-select
