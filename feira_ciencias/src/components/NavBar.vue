@@ -42,7 +42,7 @@ const allNavLinks = [
     meta: { requiredTypeId: [1, 3] } // Só admin(1), avaliador(3) e orientador(4) podem ver
   },
   {
-    title: "Avaliações",
+    title: "Aprovação de projetos",
     to: "/avaliacoes",
     icon: "mdi-chart-bar",
     meta: { requiredTypeId: [1, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
