@@ -415,6 +415,7 @@ const confirmDialog = async () => {
                 <v-card-actions class="pa-2">
                   <template v-if="userType !== 2">
                     <v-spacer></v-spacer>
+                    <v-btn variant="text" @click="verDetalhes(projeto.id)">Ver Detalhes</v-btn>
                     <v-btn color="green-darken-3" variant="text" @click="gerenciarProjeto(projeto.id)">Gerenciar<v-icon end>mdi-arrow-right</v-icon></v-btn>
                   </template>
                   <template v-else>
