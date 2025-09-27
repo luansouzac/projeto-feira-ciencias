@@ -26,6 +26,7 @@ const isTaskFeedbackModalOpen = ref(false)
 const selectedTaskForFeedback = ref(null)
 const isFeedbackLoading = ref(false)
 const feedbackError = ref(null)
+const newFeedbackText = ref('');
 
 // --- ESTADOS PARA O MODAL DE CRIAR/EDITAR TAREFA ---
 const isTaskModalOpen = ref(false)
@@ -164,6 +165,34 @@ onMounted(async () => {
     loading.value = false
   }
 })
+// --- NOVO: FUNÇÃO PARA ENVIAR FEEDBACK DE TAREFA ---
+const handleSendFeedback = async () => {
+  if (!selectedTaskForFeedback.value || !newFeedbackText.value.trim()) {
+    notificationStore.showError('Por favor, escreva um feedback.');
+    return;
+  }
+  isFeedbackLoading.value = true;
+  try {
+    const tarefaId = selectedTaskForFeedback.value.id_tarefa;
+    const payload = { feedback: newFeedbackText.value };
+    
+    // Chama a API para criar o novo feedback
+    const { data: newFeedback } = await api.post(`/tarefas/${tarefaId}/feedbacks`, payload);
+
+    // Adiciona o novo feedback à lista existente no modal em tempo real
+    selectedTaskForFeedback.value.feedbacks.unshift(newFeedback);
+    
+    // Limpa o campo de texto
+    newFeedbackText.value = '';
+    notificationStore.showSuccess('Feedback enviado com sucesso!');
+
+  } catch (err) {
+    console.error("Erro ao enviar feedback:", err);
+    notificationStore.showError('Não foi possível enviar o feedback.');
+  } finally {
+    isFeedbackLoading.value = false;
+  }
+};
 
 // --- FUNÇÕES DE NAVEGAÇÃO E AUXILIARES ---
 const getMemberName = (userId) => {
@@ -701,59 +730,78 @@ const formatDateSimple = (dateString) => {
     </v-dialog>
 
     <v-dialog v-model="isTaskFeedbackModalOpen" max-width="700px" persistent>
-      <v-card>
-        <v-card-title class="text-h5 bg-green-darken-3 text-white">
-          <v-icon start>mdi-comment-multiple-outline</v-icon>
-          Feedbacks da Tarefa
-        </v-card-title>
-        <v-card-subtitle class="bg-green-darken-3 text-white pb-2">
-          "{{ selectedTaskForFeedback?.descricao }}"
-        </v-card-subtitle>
-        <v-card-text class="pt-6">
-          <div v-if="isFeedbackLoading" class="text-center py-8">
-            <v-progress-circular indeterminate color="green-darken-2"></v-progress-circular>
-            <p class="mt-3 text-grey-darken-1">Buscando feedbacks...</p>
-          </div>
-          <v-alert v-else-if="feedbackError" type="error" variant="tonal">
-            {{ feedbackError }}
-          </v-alert>
-
-          <div v-else>
-            <div
-              v-if="
-                !selectedTaskForFeedback?.feedbacks ||
-                selectedTaskForFeedback.feedbacks.length === 0
-              "
-              class="text-center pa-8 text-grey-darken-1"
-            >
-              <v-icon size="48" class="mb-4">mdi-comment-remove-outline</v-icon>
-              <p>Nenhum feedback registrado para esta tarefa específica.</p>
-            </div>
-            <v-timeline v-else side="end" align="start" density="compact">
-              <v-timeline-item
-                v-for="fb in selectedTaskForFeedback.feedbacks"
-                :key="fb.id_feedback"
-                dot-color="green-darken-1"
-                size="small"
-              >
-                <div class="feedback-item">
-                  <p class="text-body-1 font-italic">"{{ fb.feedback }}"</p>
-                  <div class="text-caption text-grey-darken-1 mt-2">
-                    - {{ fb.usuario?.nome || 'Usuário' }} em {{ formatDate(fb.created_at) }}
-                  </div>
-                </div>
-              </v-timeline-item>
-            </v-timeline>
-          </div>
-        </v-card-text>
-        <v-card-actions class="pa-4">
-          <v-spacer></v-spacer>
-          <v-btn color="grey-darken-1" variant="text" @click="isTaskFeedbackModalOpen = false"
-            >Fechar</v-btn
+  <v-card>
+    <v-card-title class="text-h5 bg-green-darken-3 text-white">
+      <v-icon start>mdi-comment-multiple-outline</v-icon>
+      Feedbacks da Tarefa
+    </v-card-title>
+    <v-card-subtitle class="bg-green-darken-3 text-white pb-2">
+      "{{ selectedTaskForFeedback?.descricao }}"
+    </v-card-subtitle>
+    
+    <template v-if="authStore.user?.id_tipo_usuario !== 2"> <v-form @submit.prevent="handleSendFeedback" class="pa-4">
+        <v-textarea
+          v-model="newFeedbackText"
+          label="Escreva seu feedback aqui..."
+          variant="outlined"
+          rows="3"
+          autofocus
+          clearable
+        ></v-textarea>
+        <div class="d-flex justify-end">
+          <v-btn 
+            color="green-darken-2" 
+            variant="flat"
+            :loading="isFeedbackLoading"
+            @click="handleSendFeedback"
+            prepend-icon="mdi-send-outline"
           >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+            Enviar Feedback
+          </v-btn>
+        </div>
+      </v-form>
+      <v-divider></v-divider>
+    </template>
+    
+    <v-card-text class="pt-4">
+      <div v-if="isFeedbackLoading && (!selectedTaskForFeedback?.feedbacks || selectedTaskForFeedback.feedbacks.length === 0)" class="text-center py-8">
+        <v-progress-circular indeterminate color="green-darken-2"></v-progress-circular>
+        <p class="mt-3 text-grey-darken-1">Buscando feedbacks...</p>
+      </div>
+      <v-alert v-else-if="feedbackError" type="error" variant="tonal">
+        {{ feedbackError }}
+      </v-alert>
+      
+      <div v-else>
+        <div v-if="!selectedTaskForFeedback?.feedbacks || selectedTaskForFeedback.feedbacks.length === 0" class="text-center pa-8 text-grey-darken-1">
+          <v-icon size="48" class="mb-4">mdi-comment-remove-outline</v-icon>
+          <p>Nenhum feedback registrado para esta tarefa.</p>
+        </div>
+        <v-timeline v-else side="end" align="start" density="compact">
+          <v-timeline-item
+            v-for="fb in selectedTaskForFeedback.feedbacks"
+            :key="fb.id_feedback"
+            dot-color="green-darken-1"
+            size="small"
+          >
+            <div class="feedback-item">
+              <p class="text-body-1 font-italic">"{{ fb.feedback }}"</p>
+              <div class="text-caption text-grey-darken-1 mt-2">
+                - {{ fb.usuario?.nome || 'Usuário' }} em {{ formatDate(fb.created_at) }}
+              </div>
+            </div>
+          </v-timeline-item>
+        </v-timeline>
+      </div>
+    </v-card-text>
+
+    <v-divider></v-divider>
+    <v-card-actions class="pa-4">
+      <v-spacer></v-spacer>
+      <v-btn color="grey-darken-1" variant="text" @click="isTaskFeedbackModalOpen = false">Fechar</v-btn>
+    </v-card-actions>
+  </v-card>
+</v-dialog>
 
     <!-- DIÁLOGO DE CONFIRMAÇÃO PARA APAGAR TAREFA -->
     <v-dialog v-model="isDeleteTaskDialogOpen" persistent max-width="500px">
