@@ -132,7 +132,7 @@ const handleLogin = async () => {
           </v-btn>
 
           <div class="d-flex justify-space-between mt-6">
-            <RouterLink to="/recuperar-senha" class="text-white text-decoration-none text-body-2">Esqueceu sua senha?</RouterLink>
+            <RouterLink to="/recuperar-senha" class="text-white text-decoration-none text-body-2"></RouterLink>
             <RouterLink to="/registrar" class="text-white text-decoration-none text-body-2">Criar conta</RouterLink>
           </div>
         </v-form>
