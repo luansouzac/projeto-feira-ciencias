@@ -13,15 +13,8 @@ const form = ref({
     name: '',
     email: '',
     password: '',
-    id_tipo_usuario: null,
+    id_tipo_usuario: 2,
 })
-
-const tiposUsuario = [
-    { label: 'Administrador', value: 1 },
-    { label: 'Aluno', value: 2 },
-    { label: 'Avaliador', value: 3 },
-    { label: 'Orientador', value: 4 },
-]
 
 const handleRegister = async () => {
     loading.value = true
@@ -88,10 +81,6 @@ const handleRegister = async () => {
 
                     <v-text-field v-model="form.matricula" label="Matrícula" variant="outlined"
                         prepend-inner-icon="mdi-numeric" required class="mb-4" />
-
-                    <v-select v-model="form.id_tipo_usuario" :items="tiposUsuario" item-title="label" item-value="value"
-                        label="Tipo de Usuário" variant="outlined" prepend-inner-icon="mdi-account-cog-outline" required
-                        class="mb-4" />
 
                     <v-alert v-if="errorMessage" type="error" variant="tonal" density="compact" class="mb-4"
                         :text="errorMessage" />

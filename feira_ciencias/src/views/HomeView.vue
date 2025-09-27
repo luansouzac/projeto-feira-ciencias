@@ -73,12 +73,12 @@ const atalhos = [
         Bem-vindo de volta, {{ nomeUsuario }}!
       </h1>
       <p class="text-subtitle-1 text-grey-darken-1 mt-2">
-        Acesse rapidamente suas principais áreas do sistema
+        Seja bem-vindo ao nosso sistema de gestão de projetos!
       </p>
     </div>
 
     <!-- BLOCO DOS CARDS -->
-    <v-row justify="center" align="center" class="w-100">
+    <!-- <v-row justify="center" align="center" class="w-100">
       <v-col
         v-for="(item, index) in atalhos"
         :key="index"
@@ -96,7 +96,7 @@ const atalhos = [
          
         />
       </v-col>
-    </v-row>
+    </v-row> -->
   </v-container>
 </template>
 

@@ -12,17 +12,23 @@ const tipoUsuario = ref(null);
 
 const allNavLinks = [
   { title: "Home", to: "/home", icon: "mdi-view-dashboard-outline" },
-  {
-    title: "Banco de Projetos",
-    to: "/banco-projetos",
-    icon: "mdi-database",
-  },
   { 
-    title: "Projetos", 
-    to: "/projetos/inscritos", 
+    title: "Submeter Projetos", 
+    to: "/projetos", 
     icon: "mdi-folder-account-outline",
     meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
   },
+  {
+    title: "Banco de Projetos Aprovados",
+    to: "/banco-projetos",
+    icon: "mdi-database",
+  },
+  // { 
+  //   title: "Projetos", 
+  //   to: "/projetos/inscritos", 
+  //   icon: "mdi-folder-account-outline",
+  //   meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
+  // },
   {
     title: "Projetos Orientados",
     to: "/projetos/orientados",
@@ -36,17 +42,17 @@ const allNavLinks = [
     meta: { requiredTypeId: [1, 3] } // Só admin(1), avaliador(3) e orientador(4) podem ver
   },
   {
-    title: "Avaliações",
+    title: "Aprovação de projetos",
     to: "/avaliacoes",
     icon: "mdi-chart-bar",
     meta: { requiredTypeId: [1, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
   },
-  {
-    title: "Orientações",
-    to: "/projetos/orientados",
-    icon: "mdi-chart-bar",
-    meta: { requiredTypeId: [1, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
-  },
+  // {
+  //   title: "Orientações",
+  //   to: "/projetos/orientados",
+  //   icon: "mdi-chart-bar",
+  //   meta: { requiredTypeId: [1, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+  // },
 ];
 
 const userDataString = sessionStorage.getItem('user_data');
