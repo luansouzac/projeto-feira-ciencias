@@ -1014,7 +1014,7 @@ const formatDateSimple = (dateString) => {
               label="Anexar Arquivo (Opcional)"
               variant="outlined"
               prepend-icon="mdi-paperclip"
-              accept="image/*,application/jpg,jpeg,png,pdf,doc,docx,xls,xlsx,ppt,pptx,txt"
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
               class="mt-4"
               clearable
             ></v-file-input>
