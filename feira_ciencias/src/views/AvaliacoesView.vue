@@ -220,7 +220,7 @@ function handleOrientadosCardClick() {
 
     <v-row align="center" class="mb-4">
       <v-col cols="12">
-        <h2 class="text-h5 font-weight-bold text-grey-darken-4">Projetos para Aprovação</h2>
+        <h2 class="text-h5 font-weight-bold text-grey-darken-4">Projetos para Aprovaçãog</h2>
         <p class="text-subtitle-2 text-grey-darken-1">
           Aprove os projetos que vão ficar disponíveis para a inscrição dos participantes.
         </p>
