@@ -103,8 +103,24 @@ const combinedFeedbacks = computed(() => {
       icon: 'mdi-comment-processing-outline',
     })),
   )
+  const submissionFeedbacks = (tasks.value || []).flatMap((task) =>
+    (task.registros || [])
+      // Filtra apenas registros que são entregas (têm comentário ou arquivo)
+      .filter((reg) => reg.resultado || reg.arquivo) 
+      .map((reg) => ({
+        id: `sub-${reg.id_registro_tarefa}`, // Use uma chave única do seu registro
+        date: new Date(reg.data_execucao),
+        type: 'Entrega de Tarefa',
+        title: `Entrega da tarefa: "${task.descricao}"`,
+        feedbackText: reg.resultado || 'Tarefa entregue sem comentários.',
+        author: getMemberName(reg.id_responsavel) || 'Usuário desconhecido',
+        color: 'purple-darken-1',
+        icon: 'mdi-upload',
+        arquivo: reg.arquivo, // <-- A propriedade chave!
+      })),
+  )
 
-  return [...evaluationFeedbacks, ...taskFeedbacks].sort((a, b) => b.date - a.date)
+  return [...evaluationFeedbacks, ...taskFeedbacks, ...submissionFeedbacks].sort((a, b) => b.date - a.date)
 })
 
 // --- Lógica de busca de dados (onMounted) ---
@@ -147,6 +163,9 @@ onMounted(async () => {
 
         // Processa os registros para encontrar o responsável
         const registrations = registrationResponse.data.data || registrationResponse.data || []
+
+        task.registros = registrations
+
         if (registrations.length > 0) {
           task.id_usuario_atribuido = registrations[registrations.length - 1].id_responsavel
         }
@@ -154,6 +173,7 @@ onMounted(async () => {
         // Associa os feedbacks
         task.feedbacks = feedbackResponse.data.data || feedbackResponse.data || []
       })
+      tasks.value = initialTasks
     }
 
     tasks.value = initialTasks
@@ -174,20 +194,44 @@ const getMemberName = (userId) => {
 
 // --- FUNÇÕES PARA MODAIS ---
 const openTaskFeedbackModal = async (task) => {
-  selectedTaskForFeedback.value = { ...task, feedbacks: [] }
+  // Usaremos um array genérico 'events' para feedbacks e entregas
+  selectedTaskForFeedback.value = { ...task, events: [] }
   isTaskFeedbackModalOpen.value = true
   isFeedbackLoading.value = true
   feedbackError.value = null
 
   try {
-    const url = `/tarefas/${task.id_tarefa}/feedbacks`
-    const { data } = await api.get(url)
+    // Busca feedbacks e registros de entrega em paralelo
+    const [feedbackResponse, registrationResponse] = await Promise.all([
+      api.get(`/tarefas/${task.id_tarefa}/feedbacks`),
+      api.get(`/registros_tarefas?id_tarefa=${task.id_tarefa}`),
+    ])
+
+    const feedbacks = (feedbackResponse.data.data || feedbackResponse.data || []).map((fb) => ({
+      ...fb,
+      type: 'feedback', // Identificador para o template
+      date: new Date(fb.created_at),
+    }))
+
+    const submissions = (registrationResponse.data.data || registrationResponse.data || [])
+      .filter((reg) => reg.resultado || reg.arquivo)
+      .map((reg) => ({
+        ...reg,
+        type: 'submission', // Identificador para o template
+        date: new Date(reg.data_execucao),
+        feedback: reg.resultado, // Normaliza o campo para o template
+        usuario: { nome: getMemberName(reg.id_responsavel) }, // Normaliza para o template
+      }))
+
     if (selectedTaskForFeedback.value) {
-      selectedTaskForFeedback.value.feedbacks = data
+      // Junta os dois tipos de evento e ordena por data
+      selectedTaskForFeedback.value.events = [...feedbacks, ...submissions].sort(
+        (a, b) => new Date(b.date) - new Date(a.date),
+      )
     }
   } catch (err) {
-    console.error('Erro ao buscar feedbacks da tarefa:', err)
-    feedbackError.value = 'Não foi possível carregar os feedbacks. Tente novamente.'
+    console.error('Erro ao buscar histórico da tarefa:', err)
+    feedbackError.value = 'Não foi possível carregar o histórico. Tente novamente.'
   } finally {
     isFeedbackLoading.value = false
   }
@@ -452,23 +496,35 @@ const formatDateSimple = (dateString) => {
                 <p>Nenhum feedback foi registrado para este projeto ainda.</p>
               </div>
               <v-timeline v-else side="end" align="start">
-                <v-timeline-item
-                  v-for="fb in combinedFeedbacks"
-                  :key="fb.id"
-                  :dot-color="fb.color"
-                  :icon="fb.icon"
-                  size="small"
-                >
-                  <template v-slot:opposite>
-                    <div class="text-caption text-grey-darken-1">{{ formatDate(fb.date) }}</div>
-                  </template>
-                  <div class="feedback-item">
-                    <div class="font-weight-bold">{{ fb.title }}</div>
-                    <p class="text-body-2 mt-2 font-italic">"{{ fb.feedbackText }}"</p>
-                    <div class="text-caption opacity-75 mt-3">Por: {{ fb.author }}</div>
-                  </div>
-                </v-timeline-item>
-              </v-timeline>
+  <v-timeline-item
+    v-for="fb in combinedFeedbacks"
+    :key="fb.id"
+    :dot-color="fb.color"
+    :icon="fb.icon"
+    size="small"
+  >
+    <template v-slot:opposite>
+      </template>
+    <div class="feedback-item">
+      <div class="font-weight-bold">{{ fb.title }}</div>
+      <p class="text-body-2 mt-2 font-italic">"{{ fb.feedbackText }}"</p>
+
+      <div v-if="fb.arquivo" class="mt-3">
+        <v-btn
+          :href="`http://SUA_API.com/storage/${fb.arquivo}`"
+          target="_blank"
+          prepend-icon="mdi-download-circle-outline"
+          color="purple-darken-1"
+          variant="tonal"
+          size="small"
+        >
+          Ver Anexo
+        </v-btn>
+      </div>
+      <div class="text-caption opacity-75 mt-3">Por: {{ fb.author }}</div>
+    </div>
+  </v-timeline-item>
+</v-timeline>
             </v-card-text>
           </v-window-item>
 
@@ -728,20 +784,34 @@ const formatDateSimple = (dateString) => {
               <p>Nenhum feedback registrado para esta tarefa específica.</p>
             </div>
             <v-timeline v-else side="end" align="start" density="compact">
-              <v-timeline-item
-                v-for="fb in selectedTaskForFeedback.feedbacks"
-                :key="fb.id_feedback"
-                dot-color="green-darken-1"
-                size="small"
-              >
-                <div class="feedback-item">
-                  <p class="text-body-1 font-italic">"{{ fb.feedback }}"</p>
-                  <div class="text-caption text-grey-darken-1 mt-2">
-                    - {{ fb.usuario?.nome || 'Usuário' }} em {{ formatDate(fb.created_at) }}
-                  </div>
-                </div>
-              </v-timeline-item>
-            </v-timeline>
+  <v-timeline-item
+    v-for="event in selectedTaskForFeedback.events"
+    :key="`${event.type}-${event.id_feedback || event.id_registro_tarefa}`"
+    :dot-color="event.type === 'submission' ? 'purple-darken-1' : 'green-darken-1'"
+    :icon="event.type === 'submission' ? 'mdi-upload' : 'mdi-comment-processing-outline'"
+    size="small"
+  >
+    <div class="feedback-item">
+      <p class="text-body-1 font-italic">"{{ event.feedback || 'Nenhum comentário.' }}"</p>
+
+      <div v-if="event.type === 'submission' && event.arquivo" class="mt-2">
+        <v-btn
+          :href="`http://SUA_API.com/storage/${event.arquivo}`"
+          target="_blank"
+          prepend-icon="mdi-download-circle-outline"
+          color="purple-darken-1"
+          variant="tonal"
+          size="small"
+        >
+          Ver Anexo
+        </v-btn>
+      </div>
+      <div class="text-caption text-grey-darken-1 mt-2">
+        - {{ event.usuario?.nome || 'Usuário' }} em {{ formatDate(event.date || event.created_at) }}
+      </div>
+    </div>
+  </v-timeline-item>
+</v-timeline>
           </div>
         </v-card-text>
         <v-card-actions class="pa-4">
