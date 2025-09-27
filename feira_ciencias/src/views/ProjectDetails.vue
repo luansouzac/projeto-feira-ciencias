@@ -334,39 +334,56 @@ const confirmDeleteTask = async () => {
 // --- NOVO: FUNÇÕES PARA O MODAL DE SUBMISSÃO DE TAREFA ---
 
 const handleSendFeedback = async () => {
-  if (!newFeedbackText.value.trim() || !selectedTaskForFeedback.value) return
+  if (!newFeedbackText.value.trim() || !selectedTaskForFeedback.value) return;
 
-  isSendingFeedback.value = true
+  isSendingFeedback.value = true;
   try {
     const payload = {
       feedback: newFeedbackText.value,
-    }
+    };
+
     const response = await api.post(
       `/tarefas/${selectedTaskForFeedback.value.id_tarefa}/feedbacks`,
-      payload,
-    )
+      payload
+    );
 
-    // Para a UI atualizar em tempo real, seu backend DEVE retornar o feedback recém-criado
-    const newFeedbackFromServer = response.data.data || response.data
+    const newFeedbackFromServer = response.data.data || response.data;
 
-    // Adiciona o novo feedback no topo da lista de eventos (para aparecer primeiro)
+    // --- CORREÇÃO PRINCIPAL ESTÁ AQUI ---
+
+    // 1. Atualiza a lista de feedbacks da tarefa na fonte de dados principal (tasks.value)
+    // Isso garante que o feedback apareça no histórico geral do projeto.
+    const taskInMainList = tasks.value.find(
+      (t) => t.id_tarefa === selectedTaskForFeedback.value.id_tarefa
+    );
+    if (taskInMainList) {
+      // Garante que o array de feedbacks exista antes de adicionar
+      if (!taskInMainList.feedbacks) {
+        taskInMainList.feedbacks = [];
+      }
+      taskInMainList.feedbacks.unshift(newFeedbackFromServer); // Adiciona no início
+    }
+
+    // 2. Atualiza a lista de eventos do modal que está aberto.
+    // Isso garante que o feedback apareça instantaneamente no modal.
     const newFeedbackEvent = {
       ...newFeedbackFromServer,
       type: 'feedback',
       date: new Date(newFeedbackFromServer.created_at),
-    }
-    selectedTaskForFeedback.value.events.unshift(newFeedbackEvent)
+    };
+    selectedTaskForFeedback.value.events.unshift(newFeedbackEvent);
 
-    // Limpa o campo de texto e mostra notificação de sucesso
-    newFeedbackText.value = ''
-    notificationStore.showSuccess('Feedback enviado com sucesso!')
+    // --- FIM DA CORREÇÃO ---
+
+    newFeedbackText.value = '';
+    notificationStore.showSuccess('Feedback enviado com sucesso!');
   } catch (err) {
-    console.error('Erro ao enviar feedback:', err)
-    notificationStore.showError('Não foi possível enviar o feedback.')
+    console.error('Erro ao enviar feedback:', err);
+    notificationStore.showError('Não foi possível enviar o feedback.');
   } finally {
-    isSendingFeedback.value = false
+    isSendingFeedback.value = false;
   }
-}
+};
 const openSubmitTaskModal = (task) => {
   taskToSubmit.value = task
   submissionData.value = { resultado: '', arquivo: null } // Reseta o formulário
