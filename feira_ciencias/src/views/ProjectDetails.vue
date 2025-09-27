@@ -27,6 +27,11 @@ const selectedTaskForFeedback = ref(null)
 const isFeedbackLoading = ref(false)
 const feedbackError = ref(null)
 
+const newFeedbackText = ref('')
+const isSendingFeedback = ref(false)
+const isProfessor = computed(() => authStore.user?.id_tipo_usuario === 4 )
+
+
 // --- ESTADOS PARA O MODAL DE CRIAR/EDITAR TAREFA ---
 const isTaskModalOpen = ref(false)
 const isTaskModalLoading = ref(false)
@@ -106,7 +111,7 @@ const combinedFeedbacks = computed(() => {
   const submissionFeedbacks = (tasks.value || []).flatMap((task) =>
     (task.registros || [])
       // Filtra apenas registros que são entregas (têm comentário ou arquivo)
-      .filter((reg) => reg.resultado || reg.arquivo) 
+      .filter((reg) => reg.resultado || reg.arquivo)
       .map((reg) => ({
         id: `sub-${reg.id_registro_tarefa}`, // Use uma chave única do seu registro
         date: new Date(reg.data_execucao),
@@ -120,7 +125,9 @@ const combinedFeedbacks = computed(() => {
       })),
   )
 
-  return [...evaluationFeedbacks, ...taskFeedbacks, ...submissionFeedbacks].sort((a, b) => b.date - a.date)
+  return [...evaluationFeedbacks, ...taskFeedbacks, ...submissionFeedbacks].sort(
+    (a, b) => b.date - a.date,
+  )
 })
 
 // --- Lógica de busca de dados (onMounted) ---
@@ -325,6 +332,41 @@ const confirmDeleteTask = async () => {
 }
 
 // --- NOVO: FUNÇÕES PARA O MODAL DE SUBMISSÃO DE TAREFA ---
+
+const handleSendFeedback = async () => {
+  if (!newFeedbackText.value.trim() || !selectedTaskForFeedback.value) return
+
+  isSendingFeedback.value = true
+  try {
+    const payload = {
+      feedback: newFeedbackText.value,
+    }
+    const response = await api.post(
+      `/tarefas/${selectedTaskForFeedback.value.id_tarefa}/feedbacks`,
+      payload,
+    )
+
+    // Para a UI atualizar em tempo real, seu backend DEVE retornar o feedback recém-criado
+    const newFeedbackFromServer = response.data.data || response.data
+
+    // Adiciona o novo feedback no topo da lista de eventos (para aparecer primeiro)
+    const newFeedbackEvent = {
+      ...newFeedbackFromServer,
+      type: 'feedback',
+      date: new Date(newFeedbackFromServer.created_at),
+    }
+    selectedTaskForFeedback.value.events.unshift(newFeedbackEvent)
+
+    // Limpa o campo de texto e mostra notificação de sucesso
+    newFeedbackText.value = ''
+    notificationStore.showSuccess('Feedback enviado com sucesso!')
+  } catch (err) {
+    console.error('Erro ao enviar feedback:', err)
+    notificationStore.showError('Não foi possível enviar o feedback.')
+  } finally {
+    isSendingFeedback.value = false
+  }
+}
 const openSubmitTaskModal = (task) => {
   taskToSubmit.value = task
   submissionData.value = { resultado: '', arquivo: null } // Reseta o formulário
@@ -332,11 +374,10 @@ const openSubmitTaskModal = (task) => {
 }
 
 const handleSubmissionFileChange = (file) => {
+  submissionData.value.arquivo = file || null
 
-  submissionData.value.arquivo = file || null;
-
-  console.log('Arquivo capturado pela função:', submissionData.value.arquivo);
-};
+  console.log('Arquivo capturado pela função:', submissionData.value.arquivo)
+}
 
 const handleSubmitTask = async () => {
   if (!taskToSubmit.value) return
@@ -353,7 +394,7 @@ const handleSubmitTask = async () => {
   if (submissionData.value.arquivo) {
     formData.append('arquivo', submissionData.value.arquivo)
   }
-   try {
+  try {
     // 1. Envia o registro da tarefa (a entrega)
     await api.post('/registros_tarefas', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -496,35 +537,34 @@ const formatDateSimple = (dateString) => {
                 <p>Nenhum feedback foi registrado para este projeto ainda.</p>
               </div>
               <v-timeline v-else side="end" align="start">
-  <v-timeline-item
-    v-for="fb in combinedFeedbacks"
-    :key="fb.id"
-    :dot-color="fb.color"
-    :icon="fb.icon"
-    size="small"
-  >
-    <template v-slot:opposite>
-      </template>
-    <div class="feedback-item">
-      <div class="font-weight-bold">{{ fb.title }}</div>
-      <p class="text-body-2 mt-2 font-italic">"{{ fb.feedbackText }}"</p>
+                <v-timeline-item
+                  v-for="fb in combinedFeedbacks"
+                  :key="fb.id"
+                  :dot-color="fb.color"
+                  :icon="fb.icon"
+                  size="small"
+                >
+                  <template v-slot:opposite> </template>
+                  <div class="feedback-item">
+                    <div class="font-weight-bold">{{ fb.title }}</div>
+                    <p class="text-body-2 mt-2 font-italic">"{{ fb.feedbackText }}"</p>
 
-      <div v-if="fb.arquivo" class="mt-3">
-        <v-btn
-          :href="`http://SUA_API.com/storage/${fb.arquivo}`"
-          target="_blank"
-          prepend-icon="mdi-download-circle-outline"
-          color="purple-darken-1"
-          variant="tonal"
-          size="small"
-        >
-          Ver Anexo
-        </v-btn>
-      </div>
-      <div class="text-caption opacity-75 mt-3">Por: {{ fb.author }}</div>
-    </div>
-  </v-timeline-item>
-</v-timeline>
+                    <div v-if="fb.arquivo" class="mt-3">
+                      <v-btn
+                        :href="`http://SUA_API.com/storage/${fb.arquivo}`"
+                        target="_blank"
+                        prepend-icon="mdi-download-circle-outline"
+                        color="purple-darken-1"
+                        variant="tonal"
+                        size="small"
+                      >
+                        Ver Anexo
+                      </v-btn>
+                    </div>
+                    <div class="text-caption opacity-75 mt-3">Por: {{ fb.author }}</div>
+                  </div>
+                </v-timeline-item>
+              </v-timeline>
             </v-card-text>
           </v-window-item>
 
@@ -784,34 +824,70 @@ const formatDateSimple = (dateString) => {
               <p>Nenhum feedback registrado para esta tarefa específica.</p>
             </div>
             <v-timeline v-else side="end" align="start" density="compact">
-  <v-timeline-item
-    v-for="event in selectedTaskForFeedback.events"
-    :key="`${event.type}-${event.id_feedback || event.id_registro_tarefa}`"
-    :dot-color="event.type === 'submission' ? 'purple-darken-1' : 'green-darken-1'"
-    :icon="event.type === 'submission' ? 'mdi-upload' : 'mdi-comment-processing-outline'"
-    size="small"
-  >
-    <div class="feedback-item">
-      <p class="text-body-1 font-italic">"{{ event.feedback || 'Nenhum comentário.' }}"</p>
+              <v-timeline-item
+                v-for="event in selectedTaskForFeedback.events"
+                :key="`${event.type}-${event.id_feedback || event.id_registro_tarefa}`"
+                :dot-color="event.type === 'submission' ? 'purple-darken-1' : 'green-darken-1'"
+                :icon="
+                  event.type === 'submission' ? 'mdi-upload' : 'mdi-comment-processing-outline'
+                "
+                size="small"
+              >
+                <div class="feedback-item">
+                  <p class="text-body-1 font-italic">
+                    "{{ event.feedback || 'Nenhum comentário.' }}"
+                  </p>
 
-      <div v-if="event.type === 'submission' && event.arquivo" class="mt-2">
-        <v-btn
-          :href="`http://SUA_API.com/storage/${event.arquivo}`"
-          target="_blank"
-          prepend-icon="mdi-download-circle-outline"
-          color="purple-darken-1"
-          variant="tonal"
-          size="small"
-        >
-          Ver Anexo
-        </v-btn>
-      </div>
-      <div class="text-caption text-grey-darken-1 mt-2">
-        - {{ event.usuario?.nome || 'Usuário' }} em {{ formatDate(event.date || event.created_at) }}
-      </div>
-    </div>
-  </v-timeline-item>
-</v-timeline>
+                  <div v-if="event.type === 'submission' && event.arquivo" class="mt-2">
+                    <v-btn
+                      :href="`http://SUA_API.com/storage/${event.arquivo}`"
+                      target="_blank"
+                      prepend-icon="mdi-download-circle-outline"
+                      color="purple-darken-1"
+                      variant="tonal"
+                      size="small"
+                    >
+                      Ver Anexo
+                    </v-btn>
+                  </div>
+                  <div class="text-caption text-grey-darken-1 mt-2">
+                    - {{ event.usuario?.nome || 'Usuário' }} em
+                    {{ formatDate(event.date || event.created_at) }}
+                  </div>
+                </div>
+              </v-timeline-item>
+            </v-timeline>
+            <template v-if="isProfessor">
+  <v-divider></v-divider>
+  <v-card-text>
+    <h4 class="text-h6 font-weight-medium mb-4">Enviar Novo Feedback</h4>
+    <v-textarea
+      v-model="newFeedbackText"
+      label="Escreva seu feedback aqui"
+      variant="outlined"
+      rows="3"
+      auto-grow
+      :disabled="isSendingFeedback"
+    ></v-textarea>
+  </v-card-text>
+</template>
+<v-card-actions class="pa-4">
+  <v-spacer></v-spacer>
+  <v-btn color="grey-darken-1" variant="text" @click="isTaskFeedbackModalOpen = false">
+    Fechar
+  </v-btn>
+
+  <v-btn
+    v-if="isProfessor"
+    color="green-darken-2"
+    variant="flat"
+    @click="handleSendFeedback"
+    :loading="isSendingFeedback"
+    :disabled="!newFeedbackText.trim()"
+  >
+    Enviar Feedback
+  </v-btn>
+  </v-card-actions>
           </div>
         </v-card-text>
         <v-card-actions class="pa-4">
