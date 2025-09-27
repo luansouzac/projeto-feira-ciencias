@@ -53,6 +53,11 @@ const modalConfig = computed(() => ({
   title: currentItem.value && currentItem.value.id_projeto ? 'Editar Projeto' : 'Novo Projeto',
   fields: [
     {
+      key: 'id_projeto',
+      label: 'Identificação do Projeto',
+      type: 'id',
+    },
+    {
       key: 'id_evento',
       label: 'Evento Associado',
       type: 'select',
@@ -152,7 +157,6 @@ onMounted(async () => {
 
     if (avaliadoresResult.status === 'fulfilled') {
       avaliadores.value = avaliadoresResult.value.data;
-      console.log("Avaliadores carregados:", avaliadores.value);
     } else {
         console.error("Erro ao buscar avaliadores:", avaliadoresResult.reason);
     }
@@ -195,7 +199,7 @@ const openDeleteModal = (projeto) => {
 
 const handleSave = async (formData) => {
   isModalLoading.value = true;
-  
+  console.log(formData);
   // A lógica para adicionar o id_responsavel e id_situacao foi movida para dentro da verificação de "criação"
   const isCreating = !formData.id_projeto;
 
@@ -213,7 +217,12 @@ const handleSave = async (formData) => {
       const { dataEquipe } = await api.post('/equipes', {"id_projeto":data.id_projeto});
       notificationStore.showSuccess('Projeto criado com sucesso!');
     } else {
-      const { data } = await api.put(`/projetos/${formData.id_projeto}`, formData);
+      const payload = {
+        ...formData,
+        id_responsavel: userId,
+        id_situacao: 1,
+      };
+      const { data } = await api.put(`/projetos/${formData.id_projeto}`, payload);
       const index = todosProjetos.value.findIndex(p => p.id_projeto === data.id_projeto);
       if (index !== -1) todosProjetos.value.splice(index, 1, data);
       notificationStore.showSuccess('Projeto alterado com sucesso!');
@@ -232,6 +241,7 @@ const handleDelete = async () => {
 
   isModalLoading.value = true;
   try {
+    await api.delete(`/equipesProjeto/${projectToDelete.value.id_projeto}`);
     await api.delete(`/projetos/${projectToDelete.value.id_projeto}`);
     
     const index = todosProjetos.value.findIndex(p => p.id_projeto === projectToDelete.value.id_projeto);
