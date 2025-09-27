@@ -130,6 +130,28 @@ const combinedFeedbacks = computed(() => {
   )
 })
 
+const getFullStorageUrl = (filePath) => {
+  if (!filePath) {
+    return null;
+  }
+
+  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+
+  return `${baseUrl}/storage/${filePath}`;
+};
+/*************  ✨ Windsurf Command ⭐  *************/
+/**
+ * Verifica se a extens o do arquivo  passado como par metro  uma imagem.
+ * @param {string} filePath - Caminho do arquivo.
+ * @returns {boolean} true se o arquivo for uma imagem, false caso contr rio.
+ */
+/*******  f06cf191-6408-43b2-8dbb-6452468b3f1c  *******/
+const isImage = (filePath) => {
+    if (!filePath) return false;
+    // Verifica se a extensão do arquivo é de imagem
+    return /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filePath);
+}
+
 // --- Lógica de busca de dados (onMounted) ---
 onMounted(async () => {
   const projectId = route.params.id
@@ -854,39 +876,52 @@ const formatDateSimple = (dateString) => {
               <p>Nenhum feedback registrado para esta tarefa específica.</p>
             </div>
             <v-timeline v-else side="end" align="start" density="compact">
-              <v-timeline-item
-                v-for="event in selectedTaskForFeedback.events"
-                :key="`${event.type}-${event.id_feedback || event.id_registro_tarefa}`"
-                :dot-color="event.type === 'submission' ? 'purple-darken-1' : 'green-darken-1'"
-                :icon="
-                  event.type === 'submission' ? 'mdi-upload' : 'mdi-comment-processing-outline'
-                "
-                size="small"
-              >
-                <div class="feedback-item">
-                  <p class="text-body-1 font-italic">
-                    "{{ event.feedback || 'Nenhum comentário.' }}"
-                  </p>
+  <v-timeline-item
+    v-for="event in selectedTaskForFeedback.events"
+    :key="`${event.type}-${event.id_feedback || event.id_registro_tarefa}`"
+    :dot-color="event.type === 'submission' ? 'purple-darken-1' : 'green-darken-1'"
+    :icon="event.type === 'submission' ? 'mdi-upload' : 'mdi-comment-processing-outline'"
+    size="small"
+  >
+    <div class="feedback-item">
+      <p class="text-body-1 font-italic">"{{ event.feedback || 'Nenhum comentário.' }}"</p>
 
-                  <div v-if="event.type === 'submission' && event.arquivo" class="mt-2">
-                    <v-btn
-                      :href="`http://SUA_API.com/storage/${event.arquivo}`"
-                      target="_blank"
-                      prepend-icon="mdi-download-circle-outline"
-                      color="purple-darken-1"
-                      variant="tonal"
-                      size="small"
-                    >
-                      Ver Anexo
-                    </v-btn>
-                  </div>
-                  <div class="text-caption text-grey-darken-1 mt-2">
-                    - {{ event.usuario?.nome || 'Usuário' }} em
-                    {{ formatDate(event.date || event.created_at) }}
-                  </div>
-                </div>
-              </v-timeline-item>
-            </v-timeline>
+      <div v-if="event.type === 'submission' && event.arquivo" class="mt-2">
+
+        <v-img
+          v-if="isImage(event.arquivo)"
+          :src="getFullStorageUrl(event.arquivo)"
+          max-width="300"
+          class="rounded border"
+          aspect-ratio="16/9"
+          cover
+        >
+          <template v-slot:placeholder>
+            <v-row class="fill-height ma-0" align="center" justify="center">
+              <v-progress-circular indeterminate color="grey-lighten-5"></v-progress-circular>
+            </v-row>
+          </template>
+        </v-img>
+
+        <v-btn
+          class="mt-2"
+          :href="getFullStorageUrl(event.arquivo)"
+          target="_blank"
+          prepend-icon="mdi-download-circle-outline"
+          color="purple-darken-1"
+          variant="tonal"
+          size="small"
+        >
+          {{ isImage(event.arquivo) ? 'Abrir Imagem' : 'Ver Anexo' }}
+        </v-btn>
+      </div>
+
+      <div class="text-caption text-grey-darken-1 mt-2">
+        - {{ event.usuario?.nome || event.responsavel?.nome || 'Usuário' }} em {{ formatDate(event.date || event.created_at) }}
+      </div>
+    </div>
+  </v-timeline-item>
+</v-timeline>
             <template v-if="isProfessor">
   <v-divider></v-divider>
   <v-card-text>
