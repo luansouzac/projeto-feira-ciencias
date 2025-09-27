@@ -80,33 +80,57 @@ const taskModalTitle = computed(() => {
 })
 
 // --- COMPUTED PARA JUNTAR TODOS OS FEEDBACKS (AVALIAÇÃO + TAREFAS) ---
+// --- COMPUTED PARA JUNTAR TODOS OS FEEDBACKS (AVALIAÇÃO + TAREFAS + ENTREGAS) ---
 const combinedFeedbacks = computed(() => {
-  const evaluationFeedbacks = (avaliacoes.value || []).map((ava) => ({
+  const backendUrl = import.meta.env.VITE_API_BASE_URL;
+
+  // 1. Feedbacks de Avaliação do Projeto (sem alterações)
+  const evaluationFeedbacks = (avaliacoes.value || []).map(ava => ({
     id: `ava-${ava.id_projeto_avaliacao}`,
     date: new Date(ava.created_at),
-    type: 'Avaliação do Projeto',
     title: avaliacaoStatusMap[ava.id_situacao]?.text || 'Avaliação',
     feedbackText: ava.feedback || 'Nenhum comentário adicional.',
     author: ava.avaliador?.nome || 'Avaliador desconhecido',
     color: avaliacaoStatusMap[ava.id_situacao]?.color || 'grey',
     icon: avaliacaoStatusMap[ava.id_situacao]?.icon || 'mdi-comment-question-outline',
-  }))
+    fileUrl: null, // Avaliações não têm anexo
+  }));
 
-  const taskFeedbacks = (tasks.value || []).flatMap((task) =>
-    (task.feedbacks || []).map((fb) => ({
-      id: `task-${fb.id_feedback}`,
-      date: new Date(fb.created_at),
-      type: 'Feedback de Tarefa',
-      title: `Na tarefa: "${task.descricao}"`,
-      feedbackText: fb.feedback,
-      author: fb.usuario?.nome || 'Usuário desconhecido',
-      color: 'blue-darken-1',
-      icon: 'mdi-comment-processing-outline',
-    })),
-  )
+  // 2. Feedbacks de Tarefas (sem alterações)
+  const taskFeedbacks = (tasks.value || [])
+    .flatMap(task =>
+      (task.feedbacks || []).map(fb => ({
+        id: `task-${fb.id_feedback}`,
+        date: new Date(fb.created_at),
+        title: `Feedback na tarefa: "${task.descricao}"`,
+        feedbackText: fb.feedback,
+        author: fb.usuario?.nome || 'Usuário desconhecido',
+        color: 'blue-darken-1', 
+        icon: 'mdi-comment-processing-outline',
+        fileUrl: null, // Feedbacks não têm anexo
+      }))
+    );
 
-  return [...evaluationFeedbacks, ...taskFeedbacks].sort((a, b) => b.date - a.date)
-})
+  // 3. NOVO: Registros de Entrega de Tarefas
+  const taskSubmissions = (tasks.value || [])
+    .flatMap(task =>
+      (task.registrations || []).map(reg => ({
+        id: `reg-${reg.id_registro}`,
+        date: new Date(reg.data_execucao),
+        title: `Entrega da tarefa: "${task.descricao}"`,
+        feedbackText: reg.resultado || 'Tarefa entregue sem comentários.',
+        author: reg.responsavel?.nome || 'Membro da equipe',
+        color: 'green-darken-1',
+        icon: 'mdi-check-circle-outline',
+        // Constrói a URL do arquivo se ele existir
+        fileUrl: reg.arquivo ? `${backendUrl}/storage/${reg.arquivo}` : null,
+      }))
+    );
+
+  // Junta tudo e ordena por data
+  return [...evaluationFeedbacks, ...taskFeedbacks, ...taskSubmissions]
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+});
 
 // --- Lógica de busca de dados (onMounted) ---
 onMounted(async () => {
@@ -154,6 +178,8 @@ onMounted(async () => {
 
         // Associa os feedbacks
         task.feedbacks = feedbackResponse.data.data || feedbackResponse.data || []
+
+        task.registrations = registrations;
       })
     }
 
@@ -482,24 +508,37 @@ const formatDateSimple = (dateString) => {
                 <v-icon size="48" class="mb-4">mdi-comment-processing-outline</v-icon>
                 <p>Nenhum feedback foi registrado para este projeto ainda.</p>
               </div>
-              <v-timeline v-else side="end" align="start">
-                <v-timeline-item
-                  v-for="fb in combinedFeedbacks"
-                  :key="fb.id"
-                  :dot-color="fb.color"
-                  :icon="fb.icon"
-                  size="small"
-                >
-                  <template v-slot:opposite>
-                    <div class="text-caption text-grey-darken-1">{{ formatDate(fb.date) }}</div>
-                  </template>
-                  <div class="feedback-item">
-                    <div class="font-weight-bold">{{ fb.title }}</div>
-                    <p class="text-body-2 mt-2 font-italic">"{{ fb.feedbackText }}"</p>
-                    <div class="text-caption opacity-75 mt-3">Por: {{ fb.author }}</div>
-                  </div>
-                </v-timeline-item>
-              </v-timeline>
+              <v-timeline-item
+  v-for="fb in combinedFeedbacks"
+  :key="fb.id"
+  :dot-color="fb.color"
+  :icon="fb.icon"
+  size="small"
+>
+  <template v-slot:opposite>
+      <div class="text-caption text-grey-darken-1">{{ formatDate(fb.date) }}</div>
+  </template>
+  <div class="feedback-item">
+    <div class="font-weight-bold">{{ fb.title }}</div>
+    <p class="text-body-2 mt-2 font-italic">"{{ fb.feedbackText }}"</p>
+    
+    <v-btn
+      v-if="fb.fileUrl"
+      :href="fb.fileUrl"
+      target="_blank"
+      color="green-darken-3"
+      variant="tonal"
+      size="small"
+      class="mt-3"
+      prepend-icon="mdi-paperclip"
+    >
+      Ver Anexo
+    </v-btn>
+    <div class="text-caption opacity-75 mt-3">
+      Por: {{ fb.author }}
+    </div>
+  </div>
+</v-timeline-item>
             </v-card-text>
           </v-window-item>
 
@@ -777,21 +816,39 @@ const formatDateSimple = (dateString) => {
           <v-icon size="48" class="mb-4">mdi-comment-remove-outline</v-icon>
           <p>Nenhum feedback registrado para esta tarefa.</p>
         </div>
-        <v-timeline v-else side="end" align="start" density="compact">
-          <v-timeline-item
-            v-for="fb in selectedTaskForFeedback.feedbacks"
-            :key="fb.id_feedback"
-            dot-color="green-darken-1"
-            size="small"
-          >
-            <div class="feedback-item">
-              <p class="text-body-1 font-italic">"{{ fb.feedback }}"</p>
-              <div class="text-caption text-grey-darken-1 mt-2">
-                - {{ fb.usuario?.nome || 'Usuário' }} em {{ formatDate(fb.created_at) }}
-              </div>
-            </div>
-          </v-timeline-item>
-        </v-timeline>
+        <v-timeline v-else side="end" align="start">
+  <v-timeline-item
+    v-for="fb in combinedFeedbacks"
+    :key="fb.id"
+    :dot-color="fb.color"
+    :icon="fb.icon"
+    size="small"
+  >
+    <template v-slot:opposite>
+      <div class="text-caption text-grey-darken-1">{{ formatDate(fb.date) }}</div>
+    </template>
+    <div class="feedback-item">
+      <div class="font-weight-bold">{{ fb.title }}</div>
+      <p class="text-body-2 mt-2 font-italic">"{{ fb.feedbackText }}"</p>
+      
+      <v-btn
+        v-if="fb.fileUrl"
+        :href="fb.fileUrl"
+        target="_blank"
+        color="green-darken-3"
+        variant="tonal"
+        size="small"
+        class="mt-3"
+        prepend-icon="mdi-paperclip"
+      >
+        Ver Anexo
+      </v-btn>
+      <div class="text-caption opacity-75 mt-3">
+        Por: {{ fb.author }}
+      </div>
+    </div>
+  </v-timeline-item>
+</v-timeline>
       </div>
     </v-card-text>
 
