@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\RegistroTarefa;
+use Illuminate\Support\Facades\Storage;
 
 class RegistroTarefaController extends Controller
 {
@@ -25,9 +26,40 @@ class RegistroTarefaController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
-        $item = RegistroTarefa::create($request->all());
+        // 1. VALIDAÇÃO DOS DADOS
+        // Adicionamos regras para validar todos os campos, incluindo o arquivo.
+        $validatedData = $request->validate([
+            'id_tarefa' => 'required|integer|exists:tarefas,id_tarefa',
+            'id_responsavel' => 'required|integer|exists:usuarios,id_usuario',
+            'resultado' => 'nullable|string', // Comentário do aluno
+            'data_execucao' => 'required|date',
+            'arquivo' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx,ppt,pptx,txt|max:5120',
+        ]);
+
+        // 2. LÓGICA PARA SALVAR O ARQUIVO (SE EXISTIR)
+        if ($request->hasFile('arquivo')) {
+            // Salva o arquivo na pasta 'storage/app/public/arquivos/registros_tarefas'
+            // e retorna o caminho para ser salvo no banco.
+            $path = $request->file('arquivo')->store('arquivos/registros_tarefas', 'public');
+            
+            // Adiciona o caminho do arquivo aos dados que serão salvos no banco.
+            $validatedData['arquivo'] = $path;
+        }
+        
+        // 3. ADICIONA UMA DESCRIÇÃO PADRÃO DA ATIVIDADE
+        // Usamos o campo 'resultado' para o comentário do aluno e 'descricao_atividade' para um log.
+        $validatedData['descricao_atividade'] = 'Entrega de tarefa realizada pelo aluno.';
+
+        // 4. CRIA O REGISTRO NO BANCO DE DADOS
+        // Usa create() com os dados já validados e com o caminho do arquivo.
+        $item = RegistroTarefa::create($validatedData);
+
+        // Retorna o registro criado como confirmação.
         return response()->json($item, 201);
     }
 

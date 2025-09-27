@@ -1,120 +1,231 @@
+<script setup>
+import { ref, onMounted } from 'vue';
+import api from '../assets/plugins/axios.js'; // Usando sua instância configurada
+import { useNotificationStore } from '@/stores/notification';
+import { useAuthStore } from '@/stores/authStore';
+const authStore = useAuthStore();
+
+const notificationStore = useNotificationStore();
+
+// 1. ESTADO DO COMPONENTE
+const profileForm = ref(null);
+const carregando = ref(false);
+const defaultPhoto = 'https://cdn.vuetifyjs.com/images/avatars/avatar-2.jpg';
+
+// Pega a URL base do backend do arquivo .env
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
+
+const form = ref({
+  nome: '',
+  email: '',
+  id_matricula: '',
+  telefone: '',
+  ano: '',
+  photo_url: null,
+});
+
+const photoFile = ref(null);
+
+
+const rules = {
+  required: v => !!v || 'Campo obrigatório.',
+  email: v => /.+@.+\..+/.test(v) || 'E-mail inválido.',
+};
+
+const formatPhone = (event) => {
+  let value = event.target.value.replace(/\D/g, '');
+  if (value.length > 11) value = value.substring(0, 11);
+  value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+  value = value.replace(/(\d{5})(\d{4})$/, '$1-$2');
+  form.value.telefone = value;
+};
+
+// 3. LÓGICA DE CARREGAMENTO E AÇÕES
+onMounted(() => {
+  const userDataString = sessionStorage.getItem('user_data');
+  if (userDataString) {
+    const userData = JSON.parse(userDataString).user;
+    form.value.nome = userData.nome;
+    form.value.email = userData.email;
+    form.value.id_matricula = userData.id_matricula;
+    form.value.telefone = userData.telefone || '';
+    form.value.ano = userData.ano || '';
+    
+    // CORRIGIDO: Usamos 'userData.photo' diretamente, que é a variável correta neste escopo.
+    form.value.photo_url = userData.photo ? `${backendUrl}/storage/${userData.photo}` : null;
+    console.log('URL da foto construída:', form.value.photo_url);
+  }
+});
+
+const handleFileChange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  photoFile.value = file;
+  form.value.photo_url = URL.createObjectURL(file);
+};
+
+const saveProfile = async () => {
+  const { valid } = await profileForm.value.validate();
+  if (!valid) {
+    notificationStore.showError('Por favor, corrija os campos inválidos.');
+    return;
+  }
+
+  carregando.value = true;
+  const formData = new FormData();
+  formData.append('nome', form.value.nome);
+  formData.append('email', form.value.email);
+  formData.append('id_matricula', form.value.id_matricula);
+  formData.append('telefone', form.value.telefone);
+  formData.append('ano', form.value.ano);
+
+  if (photoFile.value) {
+    formData.append('photo', photoFile.value);
+  }
+  
+  formData.append('_method', 'PUT');
+
+  try {
+    const userDataString = sessionStorage.getItem('user_data');
+    const userId = JSON.parse(userDataString).user.id_usuario;
+
+    const { data } = await api.post(`/usuarios/${userId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    
+    const storedData = JSON.parse(userDataString);
+    storedData.user = data;
+    authStore.setUserData({ user: data, token: authStore.token });
+
+    notificationStore.showSuccess('Perfil atualizado com sucesso!');
+    
+    // Recarrega a URL da foto do backend após o salvamento
+    form.value.photo_url = data.photo ? `${backendUrl}/storage/${data.photo}` : null;
+    photoFile.value = null; // Limpa o arquivo temporário
+
+  } catch (error) {
+    console.error('Erro ao salvar perfil:', error);
+    // Adicionado tratamento de erro de validação do Laravel
+    if (error.response && error.response.status === 422 && error.response.data.errors) {
+      const errors = error.response.data.errors;
+      const firstErrorKey = Object.keys(errors)[0];
+      const firstErrorMessage = errors[firstErrorKey][0];
+      notificationStore.showError(`Erro de Validação: ${firstErrorMessage}`);
+    } else {
+      const message = error.response?.data?.message || 'Erro inesperado ao salvar o perfil.';
+      notificationStore.showError(message);
+    }
+  } finally {
+    carregando.value = false;
+  }
+};
+</script>
+
 <template>
   <v-container class="py-10">
     <v-row justify="center">
-      <v-col cols="12" md="6">
-        <v-card class="pa-6 elevation-6 rounded-lg">
-          <v-card-title class="text-h5 font-weight-bold mb-4">
+      <v-col cols="12" md="8" lg="6">
+        <v-card class="pa-4 pa-md-6 elevation-6 rounded-lg">
+          <v-card-title class="text-h5 font-weight-bold text-green-darken-4 mb-6">
             Meu Perfil
           </v-card-title>
 
-          <v-row justify="center" class="mb-4">
-            <v-avatar size="120" class="elevation-6">
-              <v-img :src="user.photo || defaultPhoto" cover />
+          <div class="d-flex flex-column align-center mb-6">
+            <v-avatar size="120" class="elevation-4 border">
+              <v-img :src="form.photo_url || defaultPhoto" cover />
             </v-avatar>
-          </v-row>
-
-          <v-row justify="center" class="mb-2">
-            <v-btn icon color="primary" @click="$refs.fileInput.click()">
-              <v-icon>mdi-camera</v-icon>
+            <v-btn
+              color="green-darken-3"  
+              variant="text"
+              class="mt-4"
+              @click="$refs.fileInput.click()"
+              prepend-icon="mdi-camera"
+            >
+              Alterar Foto
             </v-btn>
             <input
               type="file"
               ref="fileInput"
               class="d-none"
-              accept="image/*"
+              accept="image/png, image/jpeg"
               @change="handleFileChange"
             />
-          </v-row>
+          </div>
 
           <v-divider class="my-4" />
 
-          <v-form ref="profileForm" lazy-validation>
+          <v-form ref="profileForm" @submit.prevent="saveProfile">
             <v-row dense>
-              <v-col cols="12" sm="6">
+              <v-col cols="12">
                 <v-text-field
-                  v-model="user.nome"
+                  v-model="form.nome"
                   label="Nome Completo"
                   :rules="[rules.required]"
-                  outlined
-                  dense
+                  variant="outlined"
+                  density="compact"
+                  color="green-darken-3" 
                 />
               </v-col>
-              <v-col cols="12" sm="6">
+              <v-col cols="12">
                 <v-text-field
-                  v-model="user.email"
+                  v-model="form.email"
                   label="Email"
-                  :rules="[rules.required]"
-                  outlined
-                  dense
+                  type="email"
+                  :rules="[rules.required, rules.email]"
+                  variant="outlined"
+                  density="compact"
+                  color="green-darken-3" 
+                  disabled="true"
                 />
               </v-col>
 
               <v-col cols="12" sm="6">
                 <v-text-field
-                  v-model="user.cpf"
-                  label="CPF"
-                  :rules="[rules.required]"
-                  outlined
-                  dense
-                  @input="formatCpf"
-                />
-              </v-col>
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="user.telefone"
-                  label="Telefone"
-                  :rules="[rules.required]"
-                  outlined
-                  dense
-                  @input="formatPhone"
-                />
-              </v-col>
-
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="user.instituicao"
-                  label="Instituição"
-                  :rules="[rules.required]"
-                  outlined
-                  dense
-                />
-              </v-col>
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="user.curso"
-                  label="Curso"
-                  :rules="[rules.required]"
-                  outlined
-                  dense
-                />
-              </v-col>
-
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="user.id_matricula"
+                  v-model="form.id_matricula"
                   label="Matrícula"
                   :rules="[rules.required]"
-                  outlined
-                  dense
+                  variant="outlined"
+                  density="compact"
+                  color="green-darken-3" 
                 />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-select
-                  v-model="user.id_tipo_usuario"
-                  :items="userTypes"
-                  item-title="label"
-                  item-value="value"
-                  label="Tipo de Usuário"
+                <v-text-field
+                  v-model="form.ano"
+                  label="Ano de Ingresso"
+                  variant="outlined"
+                  density="compact"
+                  type="number"
+                  placeholder="Ex: 2023"
+                  color="green-darken-3"
+                />
+              </v-col>
+
+              <v-col cols="12">
+                <v-text-field
+                  v-model="form.telefone"
+                  label="Telefone (WhatsApp)"
                   :rules="[rules.required]"
-                  outlined
-                  dense
+                  variant="outlined"
+                  density="compact"
+                  placeholder="(99) 99999-9999"
+                  @input="formatPhone"
+                  color="green-darken-3" 
                 />
               </v-col>
             </v-row>
 
-            <v-card-actions class="justify-end mt-4">
-              <v-btn color="primary" size="large" @click="saveProfile">
-                Salvar perfil
+            <v-card-actions class="justify-end mt-6 pa-0">
+              <v-btn
+                :loading="carregando"
+                color="green-darken-3"
+                size="large"
+                variant="flat"
+                type="submit"
+                prepend-icon="mdi-content-save"
+              >
+                Salvar Alterações
               </v-btn>
             </v-card-actions>
           </v-form>
@@ -123,110 +234,6 @@
     </v-row>
   </v-container>
 </template>
-
-<script setup>
-import { ref, onMounted } from 'vue';
-import axios from 'axios';
-import { useNotificationStore } from '@/stores/notification';
-import { useUsuarioStore } from '@/stores/usuarioStore';
-
-const notificationStore = useNotificationStore();
-const UsuarioStore = useUsuarioStore();
-
-const defaultPhoto = 'https://via.placeholder.com/120x120.png?text=Foto';
-
-const user = ref({
-  nome: '',
-  email: '',
-  cpf: '',
-  telefone: '',
-  instituicao: '',
-  curso: '',
-  id_matricula: '',
-  id_tipo_usuario: null,
-  photo: null,
-});
-
-const userTypes = [
-  { label: 'Administrador', value: 1 },
-  { label: 'Professor', value: 2 },
-  { label: 'Orientador', value: 3 },
-  { label: 'Aluno', value: 4 },
-];
-
-const rules = {
-  required: v => !!v || 'Campo obrigatório.',
-};
-
-const profileForm = ref(null);
-
-const handleFileChange = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      user.value.photo = reader.result;
-    };
-    reader.readAsDataURL(file);
-  }
-};
-
-const formatCpf = () => {
-  let value = user.value.cpf.replace(/\D/g, '');
-  if (value.length > 11) value = value.substring(0, 11);
-  value = value.replace(/(\d{3})(\d)/, '$1.$2');
-  value = value.replace(/(\d{3})(\d)/, '$1.$2');
-  value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-  user.value.cpf = value;
-};
-
-const formatPhone = () => {
-  let value = user.value.telefone.replace(/\D/g, '');
-  if (value.length > 11) value = value.substring(0, 11);
-  value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
-  value = value.replace(/(\d{4,5})(\d{4})$/, '$1-$2');
-  user.value.telefone = value;
-};
-
-const saveProfile = async () => {
-  const requiredFields = [
-    'nome', 'email', 'cpf', 'telefone', 'instituicao', 'curso', 'id_matricula', 'id_tipo_usuario',
-  ];
-
-  for (const field of requiredFields) {
-    if (!user.value[field] || user.value[field].toString().trim() === '') {
-      notificationStore.showError(`Campo ${field} é obrigatório.`);
-      return;
-    }
-  }
-
-  try {
-    const userDataString = sessionStorage.getItem('user_data');
-    if (!userDataString) {
-      notificationStore.showError('Usuário não autenticado.');
-      return;
-    }
-
-    const userData = JSON.parse(userDataString);
-    const userId = userData.user.id_usuario;  // Ajustado para id_usuario
-    const token = userData.token;
-
-    await axios.put(`http://localhost:5174/api/usuarios/${userId}`, user.value, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    notificationStore.showSuccess('Perfil atualizado com sucesso!');
-  } catch (error) {
-    console.error('Erro ao salvar perfil:', error);
-    notificationStore.showError('Erro ao salvar perfil.');
-  }
-};
-
-onMounted(async () => {
-  await UsuarioStore.fetchUsuarios();
-  user.value = UsuarioStore.getUsuarioById(1);
-});
-</script>
 
 <style scoped>
 .d-none {

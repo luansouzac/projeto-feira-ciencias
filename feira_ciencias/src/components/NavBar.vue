@@ -1,97 +1,84 @@
 <script setup>
-import { ref, computed } from "vue";
-import { useRouter } from "vue-router";
+import { ref, computed } from 'vue';
+import { useAuthStore } from '@/stores/authStore'; // Importa a store de autenticação
 
-const router = useRouter();
+const authStore = useAuthStore(); // Inicia a store
 
-// Controle da gaveta de navegação mobile
+// Controle da gaveta de navegação para telas mobile
 const drawer = ref(false);
 
-const nomeUsuario = ref("");
-const tipoUsuario = ref(null);
+// MAPEAMENTO DE PERFIS (Exemplo baseado nas suas rotas)
+// 1: Administrador
+// 2: Aluno
+// 3: Orientador
+// 4: Avaliador
 
+// Lista completa de todos os links de navegação possíveis
 const allNavLinks = [
-  { title: "Home", to: "/home", icon: "mdi-view-dashboard-outline" },
   { 
-    title: "Submeter Projetos", 
-    to: "/projetos", 
-    icon: "mdi-folder-account-outline",
-    meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
+    title: 'Home', 
+    to: '/home', 
+    icon: 'mdi-view-dashboard-outline' 
   },
   {
-    title: "Banco de Projetos Aprovados",
-    to: "/banco-projetos",
-    icon: "mdi-database",
-  },
-  // { 
-  //   title: "Projetos", 
-  //   to: "/projetos/inscritos", 
-  //   icon: "mdi-folder-account-outline",
-  //   meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
-  // },
-  {
-    title: "Projetos Orientados",
-    to: "/projetos/orientados",
-    icon: "mdi-star-outline",
-    meta: { requiredTypeId: [1, 3] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+    title: 'Submeter Projetos',
+    to: '/projetos',
+    icon: 'mdi-folder-plus-outline',
+    meta: { requiredTypeId: [1, 2] } // Visível para Admin e Aluno
   },
   {
-    title: "Eventos",
-    to: "/eventos",
-    icon: "mdi-chart-bar",
-    meta: { requiredTypeId: [1, 3] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+    title: 'Banco de Projetos',
+    to: '/banco-projetos',
+    icon: 'mdi-database-outline',
+    // Sem 'meta', visível para todos os usuários logados
   },
   {
-    title: "Aprovação de projetos",
-    to: "/avaliacoes",
-    icon: "mdi-chart-bar",
-    meta: { requiredTypeId: [1, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+    title: 'Meus Projetos Orientados',
+    to: '/projetos/orientados',
+    icon: 'mdi-human-male-board-outline',
+    meta: { requiredTypeId: [1, 3] } // Visível para Admin e Orientador
   },
-  // {
-  //   title: "Orientações",
-  //   to: "/projetos/orientados",
-  //   icon: "mdi-chart-bar",
-  //   meta: { requiredTypeId: [1, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
-  // },
+  {
+    title: 'Aprovações de projetos',
+    to: '/avaliacoes',
+    icon: 'mdi-clipboard-check-outline',
+    meta: { requiredTypeId: [1, 4] } // Visível para Admin e Avaliador
+  },
+  {
+    title: 'Eventos',
+    to: '/eventos',
+    icon: 'mdi-calendar-star-outline',
+    meta: { requiredTypeId: [1, 3, 4] } // Visível para Admin, Orientador e Avaliador
+  },
 ];
 
-const userDataString = sessionStorage.getItem('user_data');
-if (userDataString) {
-  const userData = JSON.parse(userDataString);
-  nomeUsuario.value = userData.user.nome;
-
-    if (userData.user.tipo_usuario) {
-    tipoUsuario.value = userData.user.tipo_usuario.id_tipo_usuario;
-  }
-  else if (userData.user.id_tipo_usuario) {
-    tipoUsuario.value = userData.user.id_tipo_usuario;
-  }
-}
-
+// Filtra os links de navegação baseado no tipo de usuário logado
 const visibleNavLinks = computed(() => {
   return allNavLinks.filter(link => {
+    // Se o link tem uma restrição de perfil
     if (link.meta && link.meta.requiredTypeId) {
-      return link.meta.requiredTypeId.includes(tipoUsuario.value);
+      // Retorna true se o ID do tipo de usuário estiver na lista de permissões do link
+      return link.meta.requiredTypeId.includes(authStore.user?.id_tipo_usuario);
     }
-    return true; // Se não há restrição, o link é visível para todos
+    // Se não há restrição, o link é visível para todos
+    return true;
   });
 });
 
+// Gera as iniciais do nome do usuário para o avatar
 const userInitials = computed(() => {
-  if (!nomeUsuario.value) return '';
-
-  const names = nomeUsuario.value.split(" ");
+  if (!authStore.userName) return '';
+  const names = authStore.userName.split(" ");
   if (names.length > 1) {
     return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
   }
   return names[0].substring(0, 2).toUpperCase();
 });
 
-function logout () {
-  console.log("Executando logout...");
-  sessionStorage.removeItem("user_data");
-  router.push('/login');
-};
+// Função de logout que chama a ação da store
+function logout() {
+  authStore.logout();
+}
 </script>
 
 <template>
@@ -122,16 +109,22 @@ function logout () {
 
       <v-menu offset-y>
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" text class="pa-20">
+          <v-btn v-bind="props" text class="pa-20 text-none">
             <v-avatar color="white" size="36" class="mr-2">
-              <span class="white--text text-h6">{{ userInitials }}</span>
+              <v-img
+                v-if="authStore.userPhotoUrl"
+                :src="authStore.userPhotoUrl"
+                alt="Foto do usuário"
+                cover
+              ></v-img>
+              <span v-else class="text-green-darken-4 font-weight-bold">{{ userInitials }}</span>
             </v-avatar>
-            <span class="d-none d-sm-flex text-capitalize text-white">{{
-              nomeUsuario
-            }}</span>
-            <v-icon class="d-none d-sm-flex">mdi-chevron-down</v-icon>
+            
+            <span class="d-none d-sm-flex text-capitalize text-white">{{ authStore.userName }}</span>
+            <v-icon class="d-none d-sm-flex ml-1">mdi-chevron-down</v-icon>
           </v-btn>
         </template>
+        
         <v-list density="compact">
           <v-list-item link to="/profile">
             <template v-slot:prepend>
@@ -166,18 +159,9 @@ function logout () {
 </template>
 
 <style scoped>
-/* Adicione este novo bloco de estilo */
 .centralizar-menu {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-}
-
-.user-menu-activator {
-  transition: background-color 0.2s ease-in-out;
-}
-
-.user-menu-activator:hover {
-  background-color: rgba(0, 0, 0, 0.05); /* Um cinza bem claro, padrão do Vuetify */
 }
 </style>

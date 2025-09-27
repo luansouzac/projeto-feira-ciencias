@@ -113,7 +113,7 @@ const projetosFiltrados = computed(() => {
 // --- FUNÇÕES DE AÇÃO ---
 
 const verDetalhesDoProjeto = (projeto) => {
-  router.push(`/projetos/orientados/${projeto.id}`);
+  router.push(`/projetos/${projeto.id}`);
 };
 </script>
 
