@@ -29,8 +29,7 @@ const feedbackError = ref(null)
 
 const newFeedbackText = ref('')
 const isSendingFeedback = ref(false)
-const isProfessor = computed(() => authStore.user?.id_tipo_usuario === 4 )
-
+const isProfessor = computed(() => authStore.user?.id_tipo_usuario === 4)
 
 // --- ESTADOS PARA O MODAL DE CRIAR/EDITAR TAREFA ---
 const isTaskModalOpen = ref(false)
@@ -132,24 +131,17 @@ const combinedFeedbacks = computed(() => {
 
 const getFullStorageUrl = (filePath) => {
   if (!filePath) {
-    return null;
+    return null
   }
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL
 
-  return `${baseUrl}/storage/${filePath}`;
-};
-/*************  ✨ Windsurf Command ⭐  *************/
-/**
- * Verifica se a extens o do arquivo  passado como par metro  uma imagem.
- * @param {string} filePath - Caminho do arquivo.
- * @returns {boolean} true se o arquivo for uma imagem, false caso contr rio.
- */
-/*******  f06cf191-6408-43b2-8dbb-6452468b3f1c  *******/
+  return `${baseUrl}/storage/${filePath}`
+}
 const isImage = (filePath) => {
-    if (!filePath) return false;
-    // Verifica se a extensão do arquivo é de imagem
-    return /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filePath);
+  if (!filePath) return false
+  // Verifica se a extensão do arquivo é de imagem
+  return /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filePath)
 }
 
 // --- Lógica de busca de dados (onMounted) ---
@@ -356,34 +348,34 @@ const confirmDeleteTask = async () => {
 // --- NOVO: FUNÇÕES PARA O MODAL DE SUBMISSÃO DE TAREFA ---
 
 const handleSendFeedback = async () => {
-  if (!newFeedbackText.value.trim() || !selectedTaskForFeedback.value) return;
+  if (!newFeedbackText.value.trim() || !selectedTaskForFeedback.value) return
 
-  isSendingFeedback.value = true;
+  isSendingFeedback.value = true
   try {
     const payload = {
       feedback: newFeedbackText.value,
-    };
+    }
 
     const response = await api.post(
       `/tarefas/${selectedTaskForFeedback.value.id_tarefa}/feedbacks`,
-      payload
-    );
+      payload,
+    )
 
-    const newFeedbackFromServer = response.data.data || response.data;
+    const newFeedbackFromServer = response.data.data || response.data
 
     // --- CORREÇÃO PRINCIPAL ESTÁ AQUI ---
 
     // 1. Atualiza a lista de feedbacks da tarefa na fonte de dados principal (tasks.value)
     // Isso garante que o feedback apareça no histórico geral do projeto.
     const taskInMainList = tasks.value.find(
-      (t) => t.id_tarefa === selectedTaskForFeedback.value.id_tarefa
-    );
+      (t) => t.id_tarefa === selectedTaskForFeedback.value.id_tarefa,
+    )
     if (taskInMainList) {
       // Garante que o array de feedbacks exista antes de adicionar
       if (!taskInMainList.feedbacks) {
-        taskInMainList.feedbacks = [];
+        taskInMainList.feedbacks = []
       }
-      taskInMainList.feedbacks.unshift(newFeedbackFromServer); // Adiciona no início
+      taskInMainList.feedbacks.unshift(newFeedbackFromServer) // Adiciona no início
     }
 
     // 2. Atualiza a lista de eventos do modal que está aberto.
@@ -392,20 +384,20 @@ const handleSendFeedback = async () => {
       ...newFeedbackFromServer,
       type: 'feedback',
       date: new Date(newFeedbackFromServer.created_at),
-    };
-    selectedTaskForFeedback.value.events.unshift(newFeedbackEvent);
+    }
+    selectedTaskForFeedback.value.events.unshift(newFeedbackEvent)
 
     // --- FIM DA CORREÇÃO ---
 
-    newFeedbackText.value = '';
-    notificationStore.showSuccess('Feedback enviado com sucesso!');
+    newFeedbackText.value = ''
+    notificationStore.showSuccess('Feedback enviado com sucesso!')
   } catch (err) {
-    console.error('Erro ao enviar feedback:', err);
-    notificationStore.showError('Não foi possível enviar o feedback.');
+    console.error('Erro ao enviar feedback:', err)
+    notificationStore.showError('Não foi possível enviar o feedback.')
   } finally {
-    isSendingFeedback.value = false;
+    isSendingFeedback.value = false
   }
-};
+}
 const openSubmitTaskModal = (task) => {
   taskToSubmit.value = task
   submissionData.value = { resultado: '', arquivo: null } // Reseta o formulário
@@ -419,57 +411,55 @@ const handleSubmissionFileChange = (file) => {
 }
 
 const handleSubmitTask = async () => {
-  if (!taskToSubmit.value) return;
-  isSubmitTaskLoading.value = true;
+  if (!taskToSubmit.value) return
+  isSubmitTaskLoading.value = true
 
   try {
-    const formData = new FormData();
-    formData.append('id_tarefa', taskToSubmit.value.id_tarefa);
-    formData.append('id_responsavel', authStore.user.id_usuario);
-    formData.append('resultado', submissionData.value.resultado || 'Tarefa concluída.');
-    formData.append('data_execucao', new Date().toISOString().split('T')[0]);
+    const formData = new FormData()
+    formData.append('id_tarefa', taskToSubmit.value.id_tarefa)
+    formData.append('id_responsavel', authStore.user.id_usuario)
+    formData.append('resultado', submissionData.value.resultado || 'Tarefa concluída.')
+    formData.append('data_execucao', new Date().toISOString().split('T')[0])
 
     if (submissionData.value.arquivo) {
-      formData.append('arquivo', submissionData.value.arquivo);
+      formData.append('arquivo', submissionData.value.arquivo)
     }
 
     // 1. Envia o registro e CAPTURA a resposta da API
     const response = await api.post('/registros_tarefas', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    })
 
     // O backend DEVE retornar o registro recém-criado
-    const newSubmissionRecord = response.data.data || response.data;
+    const newSubmissionRecord = response.data.data || response.data
 
     // 2. Atualiza o status da tarefa para "Concluído"
-    await api.put(`/tarefas/${taskToSubmit.value.id_tarefa}`, { id_situacao: 3 });
+    await api.put(`/tarefas/${taskToSubmit.value.id_tarefa}`, { id_situacao: 3 })
 
     // 3. Atualiza a interface (a fonte de dados principal)
-    const taskInMainList = tasks.value.find(
-      (t) => t.id_tarefa === taskToSubmit.value.id_tarefa
-    );
+    const taskInMainList = tasks.value.find((t) => t.id_tarefa === taskToSubmit.value.id_tarefa)
 
     if (taskInMainList) {
       // Move o card para a coluna "Concluído"
-      taskInMainList.id_situacao = 3;
+      taskInMainList.id_situacao = 3
 
       // --- ADICIONA O NOVO REGISTRO AO HISTÓRICO DA TAREFA ---
       // Isso garante que a entrega apareça no histórico geral e no modal da tarefa.
       if (!taskInMainList.registros) {
-        taskInMainList.registros = [];
+        taskInMainList.registros = []
       }
-      taskInMainList.registros.unshift(newSubmissionRecord); // Adiciona no início
+      taskInMainList.registros.unshift(newSubmissionRecord) // Adiciona no início
     }
 
-    notificationStore.showSuccess('Tarefa entregue com sucesso!');
-    isSubmitTaskModalOpen.value = false;
+    notificationStore.showSuccess('Tarefa entregue com sucesso!')
+    isSubmitTaskModalOpen.value = false
   } catch (err) {
-    console.error('Erro ao submeter a tarefa:', err);
-    notificationStore.showError('Não foi possível entregar a tarefa.');
+    console.error('Erro ao submeter a tarefa:', err)
+    notificationStore.showError('Não foi possível entregar a tarefa.')
   } finally {
-    isSubmitTaskLoading.value = false;
+    isSubmitTaskLoading.value = false
   }
-};
+}
 
 // --- Funções do Kanban (Drag and Drop) ---
 const handleDragStart = (event, task) => {
@@ -847,119 +837,118 @@ const formatDateSimple = (dateString) => {
     </v-dialog>
 
     <v-dialog v-model="isTaskFeedbackModalOpen" max-width="700px" persistent>
-      <v-card>
-        <v-card-title class="text-h5 bg-green-darken-3 text-white">
+      <v-card class="d-flex flex-column" style="max-height: 90vh">
+        <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
           <v-icon start>mdi-comment-multiple-outline</v-icon>
           Feedbacks da Tarefa
+          <v-spacer></v-spacer>
+          <v-btn icon="mdi-close" variant="text" @click="isTaskFeedbackModalOpen = false"></v-btn>
         </v-card-title>
-        <v-card-subtitle class="bg-green-darken-3 text-white pb-2">
+        <v-card-subtitle class="bg-green-darken-3 text-white pb-3">
           "{{ selectedTaskForFeedback?.descricao }}"
         </v-card-subtitle>
-        <v-card-text class="pt-6">
+
+        <v-card-text class="flex-grow-1 pt-6" style="overflow-y: auto">
           <div v-if="isFeedbackLoading" class="text-center py-8">
-            <v-progress-circular indeterminate color="green-darken-2"></v-progress-circular>
-            <p class="mt-3 text-grey-darken-1">Buscando feedbacks...</p>
+            <v-progress-circular
+              indeterminate
+              color="green-darken-2"
+              size="48"
+            ></v-progress-circular>
+            <p class="mt-3 text-grey-darken-1">Buscando histórico...</p>
           </div>
+
           <v-alert v-else-if="feedbackError" type="error" variant="tonal">
             {{ feedbackError }}
           </v-alert>
 
           <div v-else>
             <div
-              v-if="
-                !selectedTaskForFeedback?.feedbacks ||
-                selectedTaskForFeedback.feedbacks.length === 0
-              "
+              v-if="!selectedTaskForFeedback?.events || selectedTaskForFeedback.events.length === 0"
               class="text-center pa-8 text-grey-darken-1"
             >
               <v-icon size="48" class="mb-4">mdi-comment-remove-outline</v-icon>
-              <p>Nenhum feedback registrado para esta tarefa específica.</p>
+              <p>Nenhum feedback ou entrega registrada para esta tarefa.</p>
             </div>
+
             <v-timeline v-else side="end" align="start" density="compact">
-  <v-timeline-item
-    v-for="event in selectedTaskForFeedback.events"
-    :key="`${event.type}-${event.id_feedback || event.id_registro_tarefa}`"
-    :dot-color="event.type === 'submission' ? 'purple-darken-1' : 'green-darken-1'"
-    :icon="event.type === 'submission' ? 'mdi-upload' : 'mdi-comment-processing-outline'"
-    size="small"
-  >
-    <div class="feedback-item">
-      <p class="text-body-1 font-italic">"{{ event.feedback || 'Nenhum comentário.' }}"</p>
+              <v-timeline-item
+                v-for="event in selectedTaskForFeedback.events"
+                :key="`${event.type}-${event.id_feedback || event.id_registro_tarefa}`"
+                :dot-color="event.type === 'submission' ? 'purple-darken-1' : 'green-darken-1'"
+                :icon="
+                  event.type === 'submission' ? 'mdi-upload' : 'mdi-comment-processing-outline'
+                "
+                size="small"
+                class="pb-2"
+              >
+                <v-sheet rounded="lg" border class="pa-3 bg-grey-lighten-5">
+                  <p class="text-body-1 font-italic">
+                    "{{ event.feedback || 'Nenhum comentário.' }}"
+                  </p>
 
-      <div v-if="event.type === 'submission' && event.arquivo" class="mt-2">
+                  <div v-if="event.type === 'submission' && event.arquivo" class="mt-3">
+                    <v-img
+                      v-if="isImage(event.arquivo)"
+                      :src="getFullStorageUrl(event.arquivo)"
+                      max-width="300"
+                      class="rounded border"
+                      aspect-ratio="16/9"
+                      cover
+                    ></v-img>
+                    <v-btn
+                      :class="isImage(event.arquivo) ? 'mt-2' : ''"
+                      :href="getFullStorageUrl(event.arquivo)"
+                      target="_blank"
+                      prepend-icon="mdi-download-circle-outline"
+                      color="purple-darken-1"
+                      variant="tonal"
+                      size="small"
+                    >
+                      {{ isImage(event.arquivo) ? 'Abrir Imagem' : 'Ver Anexo' }}
+                    </v-btn>
+                  </div>
 
-        <v-img
-          v-if="isImage(event.arquivo)"
-          :src="getFullStorageUrl(event.arquivo)"
-          max-width="300"
-          class="rounded border"
-          aspect-ratio="16/9"
-          cover
-        >
-          <template v-slot:placeholder>
-            <v-row class="fill-height ma-0" align="center" justify="center">
-              <v-progress-circular indeterminate color="grey-lighten-5"></v-progress-circular>
-            </v-row>
-          </template>
-        </v-img>
-
-        <v-btn
-          class="mt-2"
-          :href="getFullStorageUrl(event.arquivo)"
-          target="_blank"
-          prepend-icon="mdi-download-circle-outline"
-          color="purple-darken-1"
-          variant="tonal"
-          size="small"
-        >
-          {{ isImage(event.arquivo) ? 'Abrir Imagem' : 'Ver Anexo' }}
-        </v-btn>
-      </div>
-
-      <div class="text-caption text-grey-darken-1 mt-2">
-        - {{ event.usuario?.nome || event.responsavel?.nome || 'Usuário' }} em {{ formatDate(event.date || event.created_at) }}
-      </div>
-    </div>
-  </v-timeline-item>
-</v-timeline>
-            <template v-if="isProfessor">
-  <v-divider></v-divider>
-  <v-card-text>
-    <h4 class="text-h6 font-weight-medium mb-4">Enviar Novo Feedback</h4>
-    <v-textarea
-      v-model="newFeedbackText"
-      label="Escreva seu feedback aqui"
-      variant="outlined"
-      rows="3"
-      auto-grow
-      :disabled="isSendingFeedback"
-    ></v-textarea>
-  </v-card-text>
-</template>
-<v-card-actions class="pa-4">
-  <v-spacer></v-spacer>
-  <v-btn color="grey-darken-1" variant="text" @click="isTaskFeedbackModalOpen = false">
-    Fechar
-  </v-btn>
-
-  <v-btn
-    v-if="isProfessor"
-    color="green-darken-2"
-    variant="flat"
-    @click="handleSendFeedback"
-    :loading="isSendingFeedback"
-    :disabled="!newFeedbackText.trim()"
-  >
-    Enviar Feedback
-  </v-btn>
-  </v-card-actions>
+                  <div class="text-caption text-grey-darken-1 mt-3 text-right">
+                    - {{ event.usuario?.nome || event.responsavel?.nome || 'Usuário' }} em
+                    {{ formatDate(event.date || event.created_at) }}
+                  </div>
+                </v-sheet>
+              </v-timeline-item>
+            </v-timeline>
           </div>
         </v-card-text>
-        <v-card-actions class="pa-4">
+
+        <template v-if="isProfessor">
+          <v-divider></v-divider>
+          <div class="pa-4 bg-grey-lighten-4">
+            <h4 class="text-subtitle-1 font-weight-medium mb-3">Enviar Novo Feedback</h4>
+            <v-textarea
+              v-model="newFeedbackText"
+              label="Escreva seu feedback aqui"
+              variant="outlined"
+              rows="2"
+              auto-grow
+              :disabled="isSendingFeedback"
+              bg-color="white"
+              hide-details
+            ></v-textarea>
+          </div>
+        </template>
+
+        <v-card-actions class="pa-4 bg-grey-lighten-5">
           <v-spacer></v-spacer>
-          <v-btn color="grey-darken-1" variant="text" @click="isTaskFeedbackModalOpen = false"
-            >Fechar</v-btn
+          <v-btn
+            v-if="isProfessor"
+            color="green-darken-2"
+            variant="flat"
+            @click="handleSendFeedback"
+            :loading="isSendingFeedback"
+            :disabled="!newFeedbackText.trim()"
+            prepend-icon="mdi-send"
           >
+            Enviar Feedback
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
