@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class UsuarioController extends Controller
 {
@@ -19,7 +20,7 @@ class UsuarioController extends Controller
         if ($request->has('id_tipo_usuario')) {
             $query->where('id_tipo_usuario', $request->input('id_tipo_usuario'));
         }
-        
+
         return response()->json($query->get(), 200);
     }
 
@@ -74,17 +75,27 @@ class UsuarioController extends Controller
             'id_tipo_usuario' => 'sometimes|integer|exists:tipo_usuarios,id_tipo_usuario',
             'telefone' => 'sometimes|string|max:20',
             'ano' => 'sometimes|string|max:50',
-            'photo' => 'sometimes|string',
+            'photo' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->all();
-        if (isset($data['senha_hash'])) {
-            $data['senha_hash'] = Hash::make($request->senha_hash);
+        $data = $validator->validated();
+
+        if ($request->hasFile('photo')) {
+
+            if ($item->photo) {
+                Storage::disk('public')->delete($item->photo);
+            }
+
+            $path = $request->file('photo')->store('photos/usuarios', 'public');
+
+            $data['photo'] = $path;
         }
+
+        unset($data['senha_hash']);
 
         $item->update($data);
         $item->load('tipoUsuario');
@@ -112,20 +123,20 @@ class UsuarioController extends Controller
     }
 
     // Atualizar dados do usuário logado
-    public function updateMe(Request $request)
-    {
-        $user = Auth::user();
+    // public function updateMe(Request $request)
+    // {
+    //     $user = Auth::user();
 
-        $request->validate([
-            'telefone' => 'nullable|string|max:20',
-            'ano' => 'nullable|string|max:50',
-            'photo' => 'nullable|string',
-        ]);
+    //     $request->validate([
+    //         'telefone' => 'nullable|string|max:20',
+    //         'ano' => 'nullable|string|max:50',
+    //         'photo' => 'nullable|string',
+    //     ]);
 
-        $user->update($request->only(['telefone', 'ano', 'photo']));
+    //     $user->update($request->only(['telefone', 'ano', 'photo']));
 
-        return response()->json($user);
-    }
+    //     return response()->json($user);
+    // }
 
     public function inserirLista(Request $request)
     {
@@ -153,7 +164,7 @@ class UsuarioController extends Controller
         })->all();
 
         try {
-            foreach ($dadosParaInserir as $dados){
+            foreach ($dadosParaInserir as $dados) {
                 Usuario::create($dados);
             }
             return response()->json(['mensagem' => 'Dados inseridos com sucesso!'], 201);
