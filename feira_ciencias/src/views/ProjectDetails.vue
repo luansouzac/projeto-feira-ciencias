@@ -308,9 +308,8 @@ const handleSubmitTask = async () => {
   // Anexa o arquivo apenas se ele foi selecionado
   if (submissionData.value.arquivo) {
     formData.append('arquivo', submissionData.value.arquivo)
-  
-
-  try {
+  }
+   try {
     // 1. Envia o registro da tarefa (a entrega)
     await api.post('/registros_tarefas', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -332,7 +331,6 @@ const handleSubmitTask = async () => {
     notificationStore.showError('Não foi possível entregar a tarefa.')
   } finally {
     isSubmitTaskLoading.value = false
-  }
   }
 }
 
