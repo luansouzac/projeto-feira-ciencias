@@ -176,6 +176,7 @@ const saveProfile = async () => {
                   variant="outlined"
                   density="compact"
                   color="green-darken-3" 
+                  disabled="true"
                 />
               </v-col>
 
