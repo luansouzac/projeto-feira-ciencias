@@ -39,7 +39,7 @@ const allNavLinks = [
     meta: { requiredTypeId: [1, 3] } // Visível para Admin e Orientador
   },
   {
-    title: 'Avaliações',
+    title: 'Aprovações de projetos',
     to: '/avaliacoes',
     icon: 'mdi-clipboard-check-outline',
     meta: { requiredTypeId: [1, 4] } // Visível para Admin e Avaliador
