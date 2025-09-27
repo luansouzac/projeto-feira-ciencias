@@ -397,44 +397,57 @@ const handleSubmissionFileChange = (file) => {
 }
 
 const handleSubmitTask = async () => {
-  if (!taskToSubmit.value) return
-  isSubmitTaskLoading.value = true
+  if (!taskToSubmit.value) return;
+  isSubmitTaskLoading.value = true;
 
-  // Usa FormData para enviar texto e arquivo juntos
-  const formData = new FormData()
-  formData.append('id_tarefa', taskToSubmit.value.id_tarefa)
-  formData.append('id_responsavel', authStore.user.id_usuario) // Pega o ID do usuário logado
-  formData.append('resultado', submissionData.value.resultado || 'Tarefa concluída.')
-  formData.append('data_execucao', new Date().toISOString().split('T')[0])
-
-  // Anexa o arquivo apenas se ele foi selecionado
-  if (submissionData.value.arquivo) {
-    formData.append('arquivo', submissionData.value.arquivo)
-  }
   try {
-    // 1. Envia o registro da tarefa (a entrega)
-    await api.post('/registros_tarefas', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const formData = new FormData();
+    formData.append('id_tarefa', taskToSubmit.value.id_tarefa);
+    formData.append('id_responsavel', authStore.user.id_usuario);
+    formData.append('resultado', submissionData.value.resultado || 'Tarefa concluída.');
+    formData.append('data_execucao', new Date().toISOString().split('T')[0]);
 
-    // 2. Atualiza o status da tarefa para "Concluído"
-    await api.put(`/tarefas/${taskToSubmit.value.id_tarefa}`, { id_situacao: 3 })
-
-    // 3. Atualiza a interface, movendo o card
-    const task = tasks.value.find((t) => t.id_tarefa === taskToSubmit.value.id_tarefa)
-    if (task) {
-      task.id_situacao = 3
+    if (submissionData.value.arquivo) {
+      formData.append('arquivo', submissionData.value.arquivo);
     }
 
-    notificationStore.showSuccess('Tarefa entregue com sucesso!')
-    isSubmitTaskModalOpen.value = false
+    // 1. Envia o registro e CAPTURA a resposta da API
+    const response = await api.post('/registros_tarefas', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    // O backend DEVE retornar o registro recém-criado
+    const newSubmissionRecord = response.data.data || response.data;
+
+    // 2. Atualiza o status da tarefa para "Concluído"
+    await api.put(`/tarefas/${taskToSubmit.value.id_tarefa}`, { id_situacao: 3 });
+
+    // 3. Atualiza a interface (a fonte de dados principal)
+    const taskInMainList = tasks.value.find(
+      (t) => t.id_tarefa === taskToSubmit.value.id_tarefa
+    );
+
+    if (taskInMainList) {
+      // Move o card para a coluna "Concluído"
+      taskInMainList.id_situacao = 3;
+
+      // --- ADICIONA O NOVO REGISTRO AO HISTÓRICO DA TAREFA ---
+      // Isso garante que a entrega apareça no histórico geral e no modal da tarefa.
+      if (!taskInMainList.registros) {
+        taskInMainList.registros = [];
+      }
+      taskInMainList.registros.unshift(newSubmissionRecord); // Adiciona no início
+    }
+
+    notificationStore.showSuccess('Tarefa entregue com sucesso!');
+    isSubmitTaskModalOpen.value = false;
   } catch (err) {
-    console.error('Erro ao submeter a tarefa:', err)
-    notificationStore.showError('Não foi possível entregar a tarefa.')
+    console.error('Erro ao submeter a tarefa:', err);
+    notificationStore.showError('Não foi possível entregar a tarefa.');
   } finally {
-    isSubmitTaskLoading.value = false
+    isSubmitTaskLoading.value = false;
   }
-}
+};
 
 // --- Funções do Kanban (Drag and Drop) ---
 const handleDragStart = (event, task) => {
