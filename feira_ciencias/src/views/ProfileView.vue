@@ -6,24 +6,25 @@ import { useNotificationStore } from '@/stores/notification';
 const notificationStore = useNotificationStore();
 
 // 1. ESTADO DO COMPONENTE
-const profileForm = ref(null); // Referência para o formulário
+const profileForm = ref(null);
 const carregando = ref(false);
 const defaultPhoto = 'https://cdn.vuetifyjs.com/images/avatars/avatar-2.jpg';
 
-// 'form' guarda os dados que serão editados
+// Pega a URL base do backend do arquivo .env
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
+
 const form = ref({
   nome: '',
   email: '',
   id_matricula: '',
   telefone: '',
   ano: '',
-  photo_url: null, // URL da foto para exibição
+  photo_url: null,
 });
 
-// 'photoFile' guarda o arquivo da nova foto para upload
 const photoFile = ref(null);
 
-// 2. REGRAS E FORMATAÇÃO
+
 const rules = {
   required: v => !!v || 'Campo obrigatório.',
   email: v => /.+@.+\..+/.test(v) || 'E-mail inválido.',
@@ -33,13 +34,12 @@ const formatPhone = (event) => {
   let value = event.target.value.replace(/\D/g, '');
   if (value.length > 11) value = value.substring(0, 11);
   value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
-  value = value.replace(/(\d{5})(\d{4})$/, '$1-$2'); // Ajustado para celular de 9 dígitos
+  value = value.replace(/(\d{5})(\d{4})$/, '$1-$2');
   form.value.telefone = value;
 };
 
 // 3. LÓGICA DE CARREGAMENTO E AÇÕES
 onMounted(() => {
-  // Carrega os dados do usuário logado do sessionStorage
   const userDataString = sessionStorage.getItem('user_data');
   if (userDataString) {
     const userData = JSON.parse(userDataString).user;
@@ -47,8 +47,11 @@ onMounted(() => {
     form.value.email = userData.email;
     form.value.id_matricula = userData.id_matricula;
     form.value.telefone = userData.telefone || '';
-    form.value.ano = userData.ano || ''; // <-- LINHA ADICIONADA AQUI
-    form.value.photo_url = userData.photo ? `/storage/${userData.photo}` : null;
+    form.value.ano = userData.ano || '';
+    
+    // CORRIGIDO: Usamos 'userData.photo' diretamente, que é a variável correta neste escopo.
+    form.value.photo_url = userData.photo ? `${backendUrl}/storage/${userData.photo}` : null;
+    console.log('URL da foto construída:', form.value.photo_url);
   }
 });
 
@@ -57,7 +60,6 @@ const handleFileChange = (e) => {
   if (!file) return;
 
   photoFile.value = file;
-  // Cria uma URL temporária para preview imediato da imagem
   form.value.photo_url = URL.createObjectURL(file);
 };
 
@@ -96,10 +98,22 @@ const saveProfile = async () => {
 
     notificationStore.showSuccess('Perfil atualizado com sucesso!');
     
+    // Recarrega a URL da foto do backend após o salvamento
+    form.value.photo_url = data.photo ? `${backendUrl}/storage/${data.photo}` : null;
+    photoFile.value = null; // Limpa o arquivo temporário
+
   } catch (error) {
     console.error('Erro ao salvar perfil:', error);
-    const message = error.response?.data?.message || 'Erro ao salvar o perfil.';
-    notificationStore.showError(message);
+    // Adicionado tratamento de erro de validação do Laravel
+    if (error.response && error.response.status === 422 && error.response.data.errors) {
+      const errors = error.response.data.errors;
+      const firstErrorKey = Object.keys(errors)[0];
+      const firstErrorMessage = errors[firstErrorKey][0];
+      notificationStore.showError(`Erro de Validação: ${firstErrorMessage}`);
+    } else {
+      const message = error.response?.data?.message || 'Erro inesperado ao salvar o perfil.';
+      notificationStore.showError(message);
+    }
   } finally {
     carregando.value = false;
   }
