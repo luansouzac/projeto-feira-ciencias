@@ -1,51 +1,53 @@
 <script setup>
-import { ref, computed } from "vue";
-import { useRouter } from "vue-router";
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 
-const router = useRouter();
+const router = useRouter()
 
 // Controle da gaveta de navegação mobile
-const drawer = ref(false);
+const drawer = ref(false)
 
-const nomeUsuario = ref("");
-const tipoUsuario = ref(null);
+const nomeUsuario = ref('')
+const tipoUsuario = ref(null)
+const photoUrl = ref(null);
+const backendUrl = import.meta.env.VITE_API_BASE_URL
 
 const allNavLinks = [
-  { title: "Home", to: "/home", icon: "mdi-view-dashboard-outline" },
-  { 
-    title: "Submeter Projetos", 
-    to: "/projetos", 
-    icon: "mdi-folder-account-outline",
-    meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
+  { title: 'Home', to: '/home', icon: 'mdi-view-dashboard-outline' },
+  {
+    title: 'Submeter Projetos',
+    to: '/projetos',
+    icon: 'mdi-folder-account-outline',
+    meta: { requiredTypeId: [1, 2] }, // Só admin(1), aluno(2) e orientador(4) podem ver
   },
   {
-    title: "Banco de Projetos Aprovados",
-    to: "/banco-projetos",
-    icon: "mdi-database",
+    title: 'Banco de Projetos Aprovados',
+    to: '/banco-projetos',
+    icon: 'mdi-database',
   },
-  // { 
-  //   title: "Projetos", 
-  //   to: "/projetos/inscritos", 
+  // {
+  //   title: "Projetos",
+  //   to: "/projetos/inscritos",
   //   icon: "mdi-folder-account-outline",
   //   meta: { requiredTypeId: [1, 2] } // Só admin(1), aluno(2) e orientador(4) podem ver
   // },
   {
-    title: "Projetos Orientados",
-    to: "/projetos/orientados",
-    icon: "mdi-star-outline",
-    meta: { requiredTypeId: [1, 3] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+    title: 'Projetos Orientados',
+    to: '/projetos/orientados',
+    icon: 'mdi-star-outline',
+    meta: { requiredTypeId: [1, 3] }, // Só admin(1), avaliador(3) e orientador(4) podem ver
   },
   {
-    title: "Eventos",
-    to: "/eventos",
-    icon: "mdi-chart-bar",
-    meta: { requiredTypeId: [1, 3] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+    title: 'Eventos',
+    to: '/eventos',
+    icon: 'mdi-chart-bar',
+    meta: { requiredTypeId: [1, 3] }, // Só admin(1), avaliador(3) e orientador(4) podem ver
   },
   {
-    title: "Aprovação de projetos",
-    to: "/avaliacoes",
-    icon: "mdi-chart-bar",
-    meta: { requiredTypeId: [1, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
+    title: 'Aprovação de projetos',
+    to: '/avaliacoes',
+    icon: 'mdi-chart-bar',
+    meta: { requiredTypeId: [1, 4] }, // Só admin(1), avaliador(3) e orientador(4) podem ver
   },
   // {
   //   title: "Orientações",
@@ -53,58 +55,56 @@ const allNavLinks = [
   //   icon: "mdi-chart-bar",
   //   meta: { requiredTypeId: [1, 4] } // Só admin(1), avaliador(3) e orientador(4) podem ver
   // },
-];
+]
 
-const userDataString = sessionStorage.getItem('user_data');
+const userDataString = sessionStorage.getItem('user_data')
 if (userDataString) {
-  const userData = JSON.parse(userDataString);
-  nomeUsuario.value = userData.user.nome;
+  const userData = JSON.parse(userDataString)
+  nomeUsuario.value = userData.user.nome
 
-    if (userData.user.tipo_usuario) {
-    tipoUsuario.value = userData.user.tipo_usuario.id_tipo_usuario;
+  if (userData.user.photo) {
+    photoUrl.value = `${backendUrl}/storage/${userData.user.photo}`
   }
-  else if (userData.user.id_tipo_usuario) {
-    tipoUsuario.value = userData.user.id_tipo_usuario;
+
+  if (userData.user.tipo_usuario) {
+    tipoUsuario.value = userData.user.tipo_usuario.id_tipo_usuario
+  } else if (userData.user.id_tipo_usuario) {
+    tipoUsuario.value = userData.user.id_tipo_usuario
   }
 }
 
 const visibleNavLinks = computed(() => {
-  return allNavLinks.filter(link => {
+  return allNavLinks.filter((link) => {
     if (link.meta && link.meta.requiredTypeId) {
-      return link.meta.requiredTypeId.includes(tipoUsuario.value);
+      return link.meta.requiredTypeId.includes(tipoUsuario.value)
     }
-    return true; // Se não há restrição, o link é visível para todos
-  });
-});
+    return true // Se não há restrição, o link é visível para todos
+  })
+})
 
 const userInitials = computed(() => {
-  if (!nomeUsuario.value) return '';
+  if (!nomeUsuario.value) return ''
 
-  const names = nomeUsuario.value.split(" ");
+  const names = nomeUsuario.value.split(' ')
   if (names.length > 1) {
-    return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
   }
-  return names[0].substring(0, 2).toUpperCase();
-});
+  return names[0].substring(0, 2).toUpperCase()
+})
 
-function logout () {
-  console.log("Executando logout...");
-  sessionStorage.removeItem("user_data");
-  router.push('/login');
-};
+function logout() {
+  console.log('Executando logout...')
+  sessionStorage.removeItem('user_data')
+  router.push('/login')
+}
 </script>
 
 <template>
   <div>
     <v-app-bar app color="green-darken-4" flat border>
-      <v-app-bar-nav-icon
-        class="d-md-none"
-        @click="drawer = !drawer"
-      ></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon class="d-md-none" @click="drawer = !drawer"></v-app-bar-nav-icon>
 
-      <v-toolbar-title class="font-weight-bold text-white">
-        Projetaí
-      </v-toolbar-title>
+      <v-toolbar-title class="font-weight-bold text-white"> Projetaí </v-toolbar-title>
 
       <div class="centralizar-menu d-none d-md-flex">
         <v-btn
@@ -124,11 +124,10 @@ function logout () {
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" text class="pa-20">
             <v-avatar color="white" size="36" class="mr-2">
-              <span class="white--text text-h6">{{ userInitials }}</span>
+              <v-img v-if="photoUrl" :src="photoUrl" alt="Foto do usuário" cover></v-img>
+              <span v-else class="text-green-darken-4 font-weight-bold">{{ userInitials }}</span>
             </v-avatar>
-            <span class="d-none d-sm-flex text-capitalize text-white">{{
-              nomeUsuario
-            }}</span>
+            <span class="d-none d-sm-flex text-capitalize text-white">{{ nomeUsuario }}</span>
             <v-icon class="d-none d-sm-flex">mdi-chevron-down</v-icon>
           </v-btn>
         </template>
