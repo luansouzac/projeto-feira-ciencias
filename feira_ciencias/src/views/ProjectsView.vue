@@ -267,7 +267,7 @@ function goToProjectDetails(id){
   router.push(`/projetos/${id}`)
 }
 function goToApprovedProjects() {
-  router.push('/projetos/aprovados')
+  router.push('/projetos/inscritos')
 }
 
 function handleApprovedCardClick() {
