@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue';
 import api from '../assets/plugins/axios.js'; // Usando sua instância configurada
 import { useNotificationStore } from '@/stores/notification';
+import { useAuthStore } from '@/stores/authStore';
+const authStore = useAuthStore();
 
 const notificationStore = useNotificationStore();
 
@@ -94,7 +96,7 @@ const saveProfile = async () => {
     
     const storedData = JSON.parse(userDataString);
     storedData.user = data;
-    sessionStorage.setItem('user_data', JSON.stringify(storedData));
+    authStore.setUserData({ user: data, token: authStore.token });
 
     notificationStore.showSuccess('Perfil atualizado com sucesso!');
     
