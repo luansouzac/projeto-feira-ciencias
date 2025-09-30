@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../assets/plugins/axios.js'
 import { useNotificationStore } from '@/stores/notification'
@@ -55,6 +55,14 @@ const submissionData = ref({
   resultado: '', // Comentário da entrega
   arquivo: null, // Arquivo da entrega
 })
+
+//estados para modal de adicionar membros
+const isAddMemberModalOpen = ref(false)
+const searchQuery = ref('')
+const searchResults = ref([])
+const isSearching = ref(false)
+const searchError = ref(null)
+let searchTimeout = null
 
 // --- Mapas de Status ---
 const statusMap = {
@@ -150,12 +158,12 @@ onMounted(async () => {
   loading.value = true
   error.value = null
   try {
-    const [projectResponse, tasksResponse, avaliacoesResponse, membrosResponse] = await Promise.all(
+    const [projectResponse, membrosResponse, tasksResponse, avaliacoesResponse] = await Promise.all(
       [
         api.get(`/projetos/${projectId}`),
+        api.get(`/membros_projeto/${projectId}`),
         api.get(`/projetos/${projectId}/tarefas`),
         api.get(`/projetos/${projectId}/avaliacoes`),
-        api.get(`/membros_projeto/${projectId}`),
       ],
     )
 
@@ -467,6 +475,8 @@ const handleDragStart = (event, task) => {
   event.dataTransfer.dropEffect = 'move'
 }
 const handleDrop = async (event, newStatus) => {
+  if (!canCreateTasks.value) return
+
   const taskId = event.dataTransfer.getData('text/plain')
   const task = tasks.value.find((t) => t.id_tarefa == taskId)
   if (task && task.id_situacao !== newStatus) {
@@ -501,6 +511,106 @@ const formatDateSimple = (dateString) => {
   const userTimezoneOffset = date.getTimezoneOffset() * 60000
   return new Date(date.getTime() - userTimezoneOffset).toISOString().split('T')[0]
 }
+
+const canCreateTasks = computed(() => {
+  if (!authStore.user || !project.value) {
+    return false
+  }
+
+  const isResponsavel = authStore.user.id_usuario === project.value.id_responsavel
+
+  const isMembroDaEquipe = membros.value.some(
+    (membro) => membro.id_usuario === authStore.user.id_usuario,
+  )
+
+  return isResponsavel || isMembroDaEquipe
+})
+
+const filteredSearchResults = computed(() => {
+  if (!searchResults.value || searchResults.value.length === 0) {
+    return []
+  }
+  const memberIds = membros.value.map((membro) => membro.id_usuario)
+
+  return searchResults.value.filter((user) => !memberIds.includes(user.id_usuario))
+})
+
+// Abre o modal e reseta os estados
+const openAddMemberModal = () => {
+  isAddMemberModalOpen.value = true
+  searchQuery.value = ''
+  searchResults.value = []
+  searchError.value = null
+}
+
+// Função para adicionar um membro ao projeto
+const handleAddMember = async (user) => {
+  notificationStore.showInfo(`Adicionando ${user.nome}...`)
+  try {
+    const payload = {
+      id_usuario: user.id_usuario,
+    }
+    const response = await api.post(`/projetos/${project.value.id_projeto}/inscrever`, payload)
+
+    const newMember = response.data.data || response.data
+
+    membros.value.push(newMember)
+
+    notificationStore.showSuccess(`${user.nome} foi adicionado à equipe!`)
+    isAddMemberModalOpen.value = false
+  } catch (err) {
+    console.error('Erro ao adicionar membro:', err)
+    notificationStore.showError(
+      err.response?.data?.message || 'Não foi possível adicionar o membro.',
+    )
+  }
+}
+
+// Função para remover um membro do projeto
+const handleRemoveMember = async (memberToRemove) => {
+  if (!confirm(`Tem certeza que deseja remover ${memberToRemove.usuario.nome} da equipe?`)) {
+    return
+  }
+
+  notificationStore.showInfo(`Removendo ${memberToRemove.usuario.nome}...`)
+  try {
+    const equipeId = project.value.equipe.id_equipe
+    const usuarioId = memberToRemove.id_usuario
+
+    await api.post(`/projetos/desinscrever/${equipeId}/${usuarioId}`)
+
+    membros.value = membros.value.filter((membro) => membro.id_membro !== memberToRemove.id_membro)
+
+    notificationStore.showSuccess(`${memberToRemove.usuario.nome} foi removido da equipe.`)
+  } catch (err) {
+    console.error('Erro ao remover membro:', err)
+    notificationStore.showError(err.response?.data?.message || 'Não foi possível remover o membro.')
+  }
+}
+
+watch(searchQuery, (newQuery) => {
+  clearTimeout(searchTimeout)
+  searchResults.value = []
+  searchError.value = null
+
+  if (newQuery.length < 3) {
+    return
+  }
+
+  isSearching.value = true
+
+  searchTimeout = setTimeout(async () => {
+    try {
+      const response = await api.get(`/usuarios?search=${newQuery}`)
+      searchResults.value = response.data.data || response.data
+    } catch (err) {
+      console.error('Erro ao buscar usuários:', err)
+      searchError.value = 'Não foi possível buscar usuários.'
+    } finally {
+      isSearching.value = false
+    }
+  }, 500)
+})
 </script>
 
 <template>
@@ -611,23 +721,49 @@ const formatDateSimple = (dateString) => {
           </v-window-item>
 
           <v-window-item value="equipe">
+            <v-card-title class="d-flex justify-space-between align-center">
+              <span>Membros da Equipe</span>
+              <v-btn
+                v-if="canCreateTasks"
+                color="green"
+                variant="flat"
+                @click="openAddMemberModal"
+                prepend-icon="mdi-account-plus-outline"
+              >
+                Adicionar Membro
+              </v-btn>
+            </v-card-title>
+
             <div v-if="membros.length === 0" class="text-center pa-8 text-grey-darken-1">
               <v-icon size="48" class="mb-4">mdi-account-group-outline</v-icon>
               <p>Nenhum membro foi registrado para este projeto ainda.</p>
             </div>
+
             <v-card-text v-else class="pa-0">
               <v-list lines="two">
-                <v-list-subheader>Membros da Equipe</v-list-subheader>
                 <v-list-item
                   v-for="membro in membros"
-                  :key="membro.id_usuario"
-                  :title="membro.usuario.nome"
-                  :subtitle="membro.usuario.email"
+                  :key="membro.id_membro"
+                  :title="membro.usuario?.nome"
+                  :subtitle="membro.usuario?.email"
                 >
                   <template v-slot:prepend>
                     <v-avatar color="green-darken-4">
-                      <span class="text-h6">{{ membro.usuario.nome.charAt(0) }}</span>
+                      <span class="text-h6">{{ membro.usuario?.nome.charAt(0) }}</span>
                     </v-avatar>
+                  </template>
+
+                  <template v-slot:append>
+                    <v-btn
+                      v-if="canCreateTasks && authStore.user.id_usuario !== membro.id_usuario"
+                      icon="mdi-delete-outline"
+                      color="red-lighten-1"
+                      variant="text"
+                      size="small"
+                      @click="handleRemoveMember(membro)"
+                    >
+                      <v-tooltip activator="parent" location="top">Remover Membro</v-tooltip>
+                    </v-btn>
                   </template>
                 </v-list-item>
               </v-list>
@@ -638,6 +774,7 @@ const formatDateSimple = (dateString) => {
             <v-card-title class="d-flex justify-space-between align-center">
               <span>Quadro de Tarefas</span>
               <v-btn
+                v-if="canCreateTasks"
                 color="green"
                 variant="flat"
                 @click="openCreateTaskModal"
@@ -670,7 +807,8 @@ const formatDateSimple = (dateString) => {
                       class="mb-3 task-card"
                       theme="light"
                       variant="flat"
-                      draggable="true"
+                      :class="{ 'not-draggable': !canCreateTasks }"
+                      :draggable="canCreateTasks"
                       @dragstart="handleDragStart($event, task)"
                     >
                       <v-card-text class="font-weight-medium text-grey-darken-4 pb-1">
@@ -719,20 +857,30 @@ const formatDateSimple = (dateString) => {
                           {{ getMemberName(task.id_usuario_atribuido) }}
                         </v-chip>
                         <v-spacer></v-spacer>
-                        <v-btn
-                          icon="mdi-pencil"
-                          variant="text"
-                          size="x-small"
-                          @click.stop="openEditTaskModal(task)"
-                        ></v-btn>
-                        <v-btn
-                          icon="mdi-delete-outline"
-                          color="red"
-                          variant="text"
-                          size="x-small"
-                          @click.stop="openDeleteTaskModal(task)"
-                        ></v-btn>
-
+                        <template v-if="canCreateTasks">
+                          <v-btn
+                            icon="mdi-pencil"
+                            variant="text"
+                            size="x-small"
+                            @click.stop="openEditTaskModal(task)"
+                          ></v-btn>
+                          <v-btn
+                            icon="mdi-delete-outline"
+                            color="red"
+                            variant="text"
+                            size="x-small"
+                            @click.stop="openDeleteTaskModal(task)"
+                          ></v-btn>
+                          <v-btn
+                            v-if="task.id_situacao !== 3"
+                            color="green"
+                            variant="text"
+                            size="small"
+                            @click.stop="openSubmitTaskModal(task)"
+                          >
+                            Entregar
+                          </v-btn>
+                        </template>
                         <v-btn
                           color="primary"
                           variant="text"
@@ -740,15 +888,6 @@ const formatDateSimple = (dateString) => {
                           @click.stop="openTaskFeedbackModal(task)"
                           >Feedbacks</v-btn
                         >
-                        <v-btn
-                          v-if="task.id_situacao !== 3"
-                          color="green"
-                          variant="text"
-                          size="small"
-                          @click.stop="openSubmitTaskModal(task)"
-                        >
-                          Entregar
-                        </v-btn>
                       </v-card-actions>
                     </v-card>
                   </div>
@@ -1029,6 +1168,67 @@ const formatDateSimple = (dateString) => {
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="isAddMemberModalOpen" persistent max-width="600px">
+      <v-card>
+        <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
+          <v-icon start>mdi-account-search-outline</v-icon>
+          Adicionar Membro à Equipe
+          <v-spacer></v-spacer>
+          <v-btn icon="mdi-close" variant="text" @click="isAddMemberModalOpen = false"></v-btn>
+        </v-card-title>
+
+        <v-card-text class="pt-6">
+          <v-text-field
+            v-model="searchQuery"
+            label="Buscar por nome, matrícula ou e-mail"
+            placeholder="Digite pelo menos 3 caracteres"
+            variant="outlined"
+            prepend-inner-icon="mdi-magnify"
+            autofocus
+            clearable
+          ></v-text-field>
+
+          <div class="mt-4" style="min-height: 200px">
+            <div v-if="isSearching" class="text-center py-8">
+              <v-progress-circular indeterminate color="green-darken-2"></v-progress-circular>
+              <p class="mt-3 text-grey-darken-1">Buscando usuários...</p>
+            </div>
+
+            <v-alert v-else-if="searchError" type="error" variant="tonal">
+              {{ searchError }}
+            </v-alert>
+
+            <div
+              v-else-if="searchResults.length === 0 && searchQuery.length >= 3"
+              class="text-center py-8 text-grey-darken-1"
+            >
+              <v-icon size="48" class="mb-4">mdi-account-off-outline</v-icon>
+              <p>Nenhum usuário encontrado com o termo "{{ searchQuery }}".</p>
+            </div>
+
+            <v-list v-else-if="filteredSearchResults.length > 0">
+              <v-list-item
+                v-for="user in filteredSearchResults"
+                :key="user.id_usuario"
+                :title="user.nome"
+                :subtitle="user.email"
+              >
+                <template v-slot:append>
+                  <v-btn
+                    color="green"
+                    variant="outlined"
+                    size="small"
+                    @click="handleAddMember(user)"
+                  >
+                    Adicionar
+                  </v-btn>
+                </template>
+              </v-list-item>
+            </v-list>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -1046,5 +1246,8 @@ const formatDateSimple = (dateString) => {
 .feedback-item {
   border-left: 3px solid #e0e0e0;
   padding-left: 16px;
+}
+.task-card.not-draggable {
+  cursor: not-allowed;
 }
 </style>

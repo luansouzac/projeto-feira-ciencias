@@ -9,6 +9,7 @@ use App\Models\MembroEquipe;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class ProjetoController extends Controller
 {
@@ -106,9 +107,11 @@ class ProjetoController extends Controller
         // 1. Encontra a equipe do projeto ou cria uma nova se não existir.
         $equipe = Equipe::firstOrCreate(['id_projeto' => $projeto->id_projeto]);
 
+        $usuarioIdParaAdicionar = $request->input('id_usuario', Auth::id());
+
         // 2. Verifica se o usuário já é membro desta equipe.
         $jaInscrito = MembroEquipe::where('id_equipe', $equipe->id_equipe)
-                                  ->where('id_usuario', $usuario->id_usuario)
+                                  ->where('id_usuario', $usuarioIdParaAdicionar)
                                   ->exists();
 
         if ($jaInscrito) {
@@ -128,7 +131,7 @@ class ProjetoController extends Controller
         // Você pode precisar criar uma tabela 'funcoes' e definir um ID padrão.
         $membro = MembroEquipe::create([
             'id_equipe' => $equipe->id_equipe,
-            'id_usuario' => $usuario->id_usuario,
+            'id_usuario' => $usuarioIdParaAdicionar,
             'id_funcao' => 2, // Assumindo que '2' é o ID para a função de 'Membro'
         ]);
 
@@ -146,7 +149,7 @@ class ProjetoController extends Controller
      */
     public function show(string $id)
     {
-        $item = Projeto ::with(['responsavel', 'orientador', 'coorientador'])->find($id);
+        $item = Projeto ::with(['responsavel', 'orientador', 'coorientador', 'equipe.membroEquipe.usuario', 'equipe.membroEquipe.funcao'])->find($id);
 
         if ($item) {
             return response()->json($item, 200);
