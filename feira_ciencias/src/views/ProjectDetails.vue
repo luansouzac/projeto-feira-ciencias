@@ -6,6 +6,8 @@ import { useNotificationStore } from '@/stores/notification'
 import { useEventoStore } from '@/stores/eventoStore'
 import { useAuthStore } from '@/stores/authStore'
 import TeamManagementTab from '../components/project/TeamManagementTab.vue'
+import KanbanBoardTab from '@/components/project/KanbanBoardTab.vue'
+import TaskFormModal from '@/components/modals/TaskFormModal.vue'
 
 const authStore = useAuthStore()
 
@@ -285,11 +287,11 @@ const openEditTaskModal = (task) => {
   taskFormData.value = { ...task }
   isTaskModalOpen.value = true
 }
-const handleSaveTask = async () => {
+const handleSaveTask = async (taskDataFromModal) => {
   isTaskModalLoading.value = true
   try {
     let savedTaskData
-    const { id_usuario_atribuido, ...coreTaskData } = taskFormData.value
+    const { id_usuario_atribuido, ...coreTaskData } = taskDataFromModal;
 
     if (currentTask.value) {
       const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, coreTaskData)
@@ -476,19 +478,15 @@ const handleDragStart = (event, task) => {
   event.dataTransfer.setData('text/plain', task.id_tarefa)
   event.dataTransfer.dropEffect = 'move'
 }
-const handleDrop = async (event, newStatus) => {
-  if (!canCreateTasks.value) return
-
-  const taskId = event.dataTransfer.getData('text/plain')
-  const task = tasks.value.find((t) => t.id_tarefa == taskId)
-  if (task && task.id_situacao !== newStatus) {
-    const originalStatus = task.id_situacao
-    task.id_situacao = newStatus // Otimista
-    try {
-      await api.put(`/tarefas/${taskId}`, { id_situacao: newStatus })
-    } catch (err) {
-      task.id_situacao = originalStatus // Reverte
-    }
+// Na página principal <script setup>
+const handleTaskStatusUpdate = async ({ taskId, newStatus, task }) => {
+  const originalStatus = task.id_situacao
+  task.id_situacao = newStatus // Atualização otimista
+  try {
+    await api.put(`/tarefas/${taskId}`, { id_situacao: newStatus })
+  } catch (err) {
+    task.id_situacao = originalStatus // Reverte em caso de erro
+    notificationStore.showError('Não foi possível mover a tarefa.')
   }
 }
 const filterTasksByStatus = (status) => {
@@ -750,129 +748,17 @@ const isTeamFull = computed(() => {
           </v-window-item>
 
           <v-window-item value="tarefas">
-            <v-card-title class="d-flex justify-space-between align-center">
-              <span>Quadro de Tarefas</span>
-              <v-btn
-                v-if="canCreateTasks"
-                color="green"
-                variant="flat"
-                @click="openCreateTaskModal"
-                prepend-icon="mdi-plus"
-              >
-                Nova Tarefa
-              </v-btn>
-            </v-card-title>
-            <v-card-text class="bg-grey-lighten-4">
-              <v-row>
-                <v-col
-                  v-for="column in kanbanColumns"
-                  :key="column.status"
-                  cols="12"
-                  md="4"
-                  @dragover.prevent
-                  @drop="handleDrop($event, column.status)"
-                >
-                  <div class="pa-4 rounded-lg fill-height" :class="`bg-${column.color}-lighten-5`">
-                    <div class="d-flex align-center mb-4">
-                      <v-icon :color="column.color" class="mr-2">mdi-circle-medium</v-icon>
-                      <span class="font-weight-bold text-grey-darken-3">{{ column.title }}</span>
-                      <v-chip size="small" :color="column.color" class="ml-2">{{
-                        filterTasksByStatus(column.status).length
-                      }}</v-chip>
-                    </div>
-                    <v-card
-                      v-for="task in filterTasksByStatus(column.status)"
-                      :key="task.id_tarefa"
-                      class="mb-3 task-card"
-                      theme="light"
-                      variant="flat"
-                      :class="{ 'not-draggable': !canCreateTasks }"
-                      :draggable="canCreateTasks"
-                      @dragstart="handleDragStart($event, task)"
-                    >
-                      <v-card-text class="font-weight-medium text-grey-darken-4 pb-1">
-                        {{ task.descricao }}
-                        <p
-                          v-if="task.detalhe"
-                          class="text-caption font-weight-regular text-grey-darken-1 mt-1"
-                        >
-                          {{ task.detalhe }}
-                        </p>
-                        <div
-                          v-if="task.data_inicio_prevista || task.data_fim_prevista"
-                          class="mt-3 d-flex flex-wrap ga-2"
-                        >
-                          <v-chip
-                            v-if="task.data_inicio_prevista"
-                            size="x-small"
-                            color="blue-grey"
-                            variant="tonal"
-                          >
-                            <v-icon start icon="mdi-calendar-arrow-right"></v-icon>
-                            {{ formatDateSimple(task.data_inicio_prevista) }}
-                            <v-tooltip activator="parent" location="top">Início Previsto</v-tooltip>
-                          </v-chip>
-                          <v-chip
-                            v-if="task.data_fim_prevista"
-                            size="x-small"
-                            color="blue-grey"
-                            variant="tonal"
-                          >
-                            <v-icon start icon="mdi-calendar-arrow-left"></v-icon>
-                            {{ formatDateSimple(task.data_fim_prevista) }}
-                            <v-tooltip activator="parent" location="top">Fim Previsto</v-tooltip>
-                          </v-chip>
-                        </div>
-                      </v-card-text>
-                      <v-card-actions class="pt-0 px-4 pb-2">
-                        <v-chip
-                          v-if="task.id_usuario_atribuido"
-                          size="small"
-                          color="green"
-                          variant="tonal"
-                          label
-                        >
-                          <v-icon start icon="mdi-account-outline"></v-icon>
-                          {{ getMemberName(task.id_usuario_atribuido) }}
-                        </v-chip>
-                        <v-spacer></v-spacer>
-                        <template v-if="canCreateTasks">
-                          <v-btn
-                            icon="mdi-pencil"
-                            variant="text"
-                            size="x-small"
-                            @click.stop="openEditTaskModal(task)"
-                          ></v-btn>
-                          <v-btn
-                            icon="mdi-delete-outline"
-                            color="red"
-                            variant="text"
-                            size="x-small"
-                            @click.stop="openDeleteTaskModal(task)"
-                          ></v-btn>
-                          <v-btn
-                            v-if="task.id_situacao !== 3"
-                            color="green"
-                            variant="text"
-                            size="small"
-                            @click.stop="openSubmitTaskModal(task)"
-                          >
-                            Entregar
-                          </v-btn>
-                        </template>
-                        <v-btn
-                          color="primary"
-                          variant="text"
-                          size="small"
-                          @click.stop="openTaskFeedbackModal(task)"
-                          >Feedbacks</v-btn
-                        >
-                      </v-card-actions>
-                    </v-card>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
+            <KanbanBoardTab
+              :tasks="tasks"
+              :membros="membros"
+              :can-create-tasks="canCreateTasks"
+              @open-create-task="openCreateTaskModal"
+              @open-edit-task="openEditTaskModal"
+              @open-delete-task="openDeleteTaskModal"
+              @open-feedback-task="openTaskFeedbackModal"
+              @open-submit-task="openSubmitTaskModal"
+              @update-task-status="handleTaskStatusUpdate"
+            />
           </v-window-item>
         </v-window>
       </v-card>
@@ -1095,6 +981,13 @@ const isTeamFull = computed(() => {
       </v-card>
     </v-dialog>
 
+
+    <TaskFormModal
+  v-model="isTaskModalOpen"
+  :task-to-edit="currentTask"
+  :membros="membros"
+  @save="handleSaveTask"
+/>
     <v-dialog v-model="isSubmitTaskModalOpen" persistent max-width="700px">
       <v-card>
         <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
