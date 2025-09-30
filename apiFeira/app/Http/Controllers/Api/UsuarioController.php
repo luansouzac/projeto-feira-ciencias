@@ -21,7 +21,18 @@ class UsuarioController extends Controller
             $query->where('id_tipo_usuario', $request->input('id_tipo_usuario'));
         }
 
-        return response()->json($query->get(), 200);
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('nome', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('email', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('id_matricula', 'LIKE', "%{$searchTerm}%");
+            });
+        }
+
+        $usuarios = $query->limit(20)->get();
+        return response()->json($usuarios, 200);
     }
 
     // Criar novo usuário
