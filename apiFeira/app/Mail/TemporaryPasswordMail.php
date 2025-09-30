@@ -28,7 +28,7 @@ class TemporaryPasswordMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Temporary Password Mail',
+            subject: 'Redefinição de senha',
         );
     }
 
@@ -38,7 +38,7 @@ class TemporaryPasswordMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'emails.temporary_password',
         );
     }
 
