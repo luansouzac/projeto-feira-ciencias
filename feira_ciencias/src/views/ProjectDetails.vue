@@ -550,7 +550,7 @@ const handleAddMember = async (user) => {
     const payload = {
       id_usuario: user.id_usuario,
     }
-    const response = await api.post(`/projetos/${project.value.id_projeto}/inscrever`, )
+    const response = await api.post(`/projetos/${project.value.id_projeto}/inscrever`, payload)
 
     const newMember = response.data.data || response.data
 
