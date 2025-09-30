@@ -718,7 +718,7 @@ const isTeamFull = computed(() => {
 
                     <div v-if="fb.arquivo" class="mt-3">
                       <v-btn
-                        :href="`http://SUA_API.com/storage/${fb.arquivo}`"
+                        :href="`${apiUrl}/storage/${fb.arquivo}`"
                         target="_blank"
                         prepend-icon="mdi-download-circle-outline"
                         color="purple-darken-1"
