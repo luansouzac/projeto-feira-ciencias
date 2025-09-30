@@ -611,6 +611,21 @@ watch(searchQuery, (newQuery) => {
     }
   }, 500)
 })
+const isTeamFull = computed(() => {
+  if (!project.value) {
+    return false
+  }
+
+  const maxMembers = project.value.max_pessoas ?? 0
+
+  if (maxMembers === 0) {
+    return false
+  }
+
+  const currentMembers = membros.value.length
+
+  return currentMembers >= maxMembers
+})
 </script>
 
 <template>
@@ -721,17 +736,44 @@ watch(searchQuery, (newQuery) => {
           </v-window-item>
 
           <v-window-item value="equipe">
-            <v-card-title class="d-flex justify-space-between align-center">
+            <v-card-title class="d-flex justify-space-between align-center flex-wrap">
               <span>Membros da Equipe</span>
-              <v-btn
-                v-if="canCreateTasks"
-                color="green"
-                variant="flat"
-                @click="openAddMemberModal"
-                prepend-icon="mdi-account-plus-outline"
-              >
-                Adicionar Membro
-              </v-btn>
+
+              <div class="d-flex align-center ga-4">
+                <v-chip
+                  v-if="project.max_pessoas > 0"
+                  :color="isTeamFull ? 'red' : 'green-darken-1'"
+                  variant="tonal"
+                  label
+                >
+                  <v-icon start>mdi-account-multiple</v-icon>
+                  Vagas: {{ membros.length }} / {{ project.max_pessoas }}
+                </v-chip>
+
+                <v-tooltip
+                  :text="
+                    isTeamFull
+                      ? 'A equipe atingiu o limite máximo de membros'
+                      : 'Adicionar novo membro'
+                  "
+                  location="top"
+                >
+                  <template v-slot:activator="{ props }">
+                    <div v-bind="props">
+                      <v-btn
+                        v-if="canCreateTasks"
+                        :disabled="isTeamFull"
+                        color="green"
+                        variant="flat"
+                        @click="openAddMemberModal"
+                        prepend-icon="mdi-account-plus-outline"
+                      >
+                        Adicionar Membro
+                      </v-btn>
+                    </div>
+                  </template>
+                </v-tooltip>
+              </div>
             </v-card-title>
 
             <div v-if="membros.length === 0" class="text-center pa-8 text-grey-darken-1">
