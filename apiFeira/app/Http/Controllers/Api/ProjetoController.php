@@ -146,7 +146,7 @@ class ProjetoController extends Controller
      */
     public function show(string $id)
     {
-        $item = Projeto ::with(['responsavel', 'orientador', 'coorientador'])->find($id);
+        $item = Projeto ::with(['responsavel', 'orientador', 'coorientador', 'equipe.membroEquipe.usuario', 'equipe.membroEquipe.funcao'])->find($id);
 
         if ($item) {
             return response()->json($item, 200);

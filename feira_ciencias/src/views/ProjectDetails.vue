@@ -150,12 +150,12 @@ onMounted(async () => {
   loading.value = true
   error.value = null
   try {
-    const [projectResponse, tasksResponse, avaliacoesResponse, membrosResponse] = await Promise.all(
+    const [projectResponse, membrosResponse, tasksResponse, avaliacoesResponse] = await Promise.all(
       [
         api.get(`/projetos/${projectId}`),
+        api.get(`/membros_projeto/${projectId}`),
         api.get(`/projetos/${projectId}/tarefas`),
         api.get(`/projetos/${projectId}/avaliacoes`),
-        api.get(`/membros_projeto/${projectId}`),
       ],
     )
 
@@ -163,6 +163,8 @@ onMounted(async () => {
     const initialTasks = tasksResponse.data.data || tasksResponse.data || []
     avaliacoes.value = avaliacoesResponse.data.data || avaliacoesResponse.data || []
     membros.value = membrosResponse.data.data || membrosResponse.data || []
+
+    console.log('Membros carregados:', membros.value) 
 
     if (Array.isArray(initialTasks) && initialTasks.length > 0) {
       // Para cada tarefa, busca seus detalhes (registros de atribuição e feedbacks) em paralelo
@@ -467,6 +469,9 @@ const handleDragStart = (event, task) => {
   event.dataTransfer.dropEffect = 'move'
 }
 const handleDrop = async (event, newStatus) => {
+
+  if (!canCreateTasks.value) return; 
+  
   const taskId = event.dataTransfer.getData('text/plain')
   const task = tasks.value.find((t) => t.id_tarefa == taskId)
   if (task && task.id_situacao !== newStatus) {
@@ -501,6 +506,20 @@ const formatDateSimple = (dateString) => {
   const userTimezoneOffset = date.getTimezoneOffset() * 60000
   return new Date(date.getTime() - userTimezoneOffset).toISOString().split('T')[0]
 }
+
+const canCreateTasks = computed(() => {
+  if (!authStore.user || !project.value) {
+    return false;
+  }
+
+  const isResponsavel = authStore.user.id_usuario === project.value.id_responsavel;
+
+  const isMembroDaEquipe = membros.value.some(
+    (membro) => membro.id_usuario === authStore.user.id_usuario
+  );
+
+  return isResponsavel || isMembroDaEquipe;
+});
 </script>
 
 <template>
@@ -626,7 +645,7 @@ const formatDateSimple = (dateString) => {
                 >
                   <template v-slot:prepend>
                     <v-avatar color="green-darken-4">
-                      <span class="text-h6">{{ membro.usuario.nome.charAt(0) }}</span>
+                      <span class="text-h6">{{ membro.usuario?.nome.charAt(0) }}</span>
                     </v-avatar>
                   </template>
                 </v-list-item>
@@ -638,6 +657,7 @@ const formatDateSimple = (dateString) => {
             <v-card-title class="d-flex justify-space-between align-center">
               <span>Quadro de Tarefas</span>
               <v-btn
+                v-if="canCreateTasks"
                 color="green"
                 variant="flat"
                 @click="openCreateTaskModal"
@@ -670,7 +690,8 @@ const formatDateSimple = (dateString) => {
                       class="mb-3 task-card"
                       theme="light"
                       variant="flat"
-                      draggable="true"
+                      :class="{ 'not-draggable': !canCreateTasks }" 
+                      :draggable="canCreateTasks"
                       @dragstart="handleDragStart($event, task)"
                     >
                       <v-card-text class="font-weight-medium text-grey-darken-4 pb-1">
@@ -719,7 +740,8 @@ const formatDateSimple = (dateString) => {
                           {{ getMemberName(task.id_usuario_atribuido) }}
                         </v-chip>
                         <v-spacer></v-spacer>
-                        <v-btn
+                        <template v-if="canCreateTasks">
+                          <v-btn
                           icon="mdi-pencil"
                           variant="text"
                           size="x-small"
@@ -732,14 +754,6 @@ const formatDateSimple = (dateString) => {
                           size="x-small"
                           @click.stop="openDeleteTaskModal(task)"
                         ></v-btn>
-
-                        <v-btn
-                          color="primary"
-                          variant="text"
-                          size="small"
-                          @click.stop="openTaskFeedbackModal(task)"
-                          >Feedbacks</v-btn
-                        >
                         <v-btn
                           v-if="task.id_situacao !== 3"
                           color="green"
@@ -749,6 +763,14 @@ const formatDateSimple = (dateString) => {
                         >
                           Entregar
                         </v-btn>
+                        </template>
+                        <v-btn
+                          color="primary"
+                          variant="text"
+                          size="small"
+                          @click.stop="openTaskFeedbackModal(task)"
+                          >Feedbacks</v-btn
+                        >
                       </v-card-actions>
                     </v-card>
                   </div>
@@ -1046,5 +1068,8 @@ const formatDateSimple = (dateString) => {
 .feedback-item {
   border-left: 3px solid #e0e0e0;
   padding-left: 16px;
+}
+.task-card.not-draggable {
+  cursor: not-allowed;
 }
 </style>
