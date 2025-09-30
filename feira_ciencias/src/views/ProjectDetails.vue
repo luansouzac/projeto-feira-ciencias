@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../assets/plugins/axios.js'
 import { useNotificationStore } from '@/stores/notification'
@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/authStore'
 import TeamManagementTab from '../components/project/TeamManagementTab.vue'
 import KanbanBoardTab from '@/components/project/KanbanBoardTab.vue'
 import TaskFormModal from '@/components/modals/TaskFormModal.vue'
+import AddMemberModal from '@/components/modals/AddMemberModal.vue'
 
 const authStore = useAuthStore()
 
@@ -62,11 +63,6 @@ const submissionData = ref({
 
 //estados para modal de adicionar membros
 const isAddMemberModalOpen = ref(false)
-const searchQuery = ref('')
-const searchResults = ref([])
-const isSearching = ref(false)
-const searchError = ref(null)
-let searchTimeout = null
 
 // --- Mapas de Status ---
 const statusMap = {
@@ -526,15 +522,6 @@ const canCreateTasks = computed(() => {
   return isResponsavel || isMembroDaEquipe
 })
 
-const filteredSearchResults = computed(() => {
-  if (!searchResults.value || searchResults.value.length === 0) {
-    return []
-  }
-  const memberIds = membros.value.map((membro) => membro.id_usuario)
-
-  return searchResults.value.filter((user) => !memberIds.includes(user.id_usuario))
-})
-
 // Abre o modal e reseta os estados
 const openAddMemberModal = () => {
   isAddMemberModalOpen.value = true
@@ -588,29 +575,6 @@ const handleRemoveMember = async (memberToRemove) => {
   }
 }
 
-watch(searchQuery, (newQuery) => {
-  clearTimeout(searchTimeout)
-  searchResults.value = []
-  searchError.value = null
-
-  if (newQuery.length < 3) {
-    return
-  }
-
-  isSearching.value = true
-
-  searchTimeout = setTimeout(async () => {
-    try {
-      const response = await api.get(`/usuarios?search=${newQuery}`)
-      searchResults.value = response.data.data || response.data
-    } catch (err) {
-      console.error('Erro ao buscar usuários:', err)
-      searchError.value = 'Não foi possível buscar usuários.'
-    } finally {
-      isSearching.value = false
-    }
-  }, 500)
-})
 const isTeamFull = computed(() => {
   if (!project.value) {
     return false
@@ -1040,67 +1004,11 @@ const isTeamFull = computed(() => {
         </v-card-actions>
       </v-card>
     </v-dialog>
-    <v-dialog v-model="isAddMemberModalOpen" persistent max-width="600px">
-      <v-card>
-        <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
-          <v-icon start>mdi-account-search-outline</v-icon>
-          Adicionar Membro à Equipe
-          <v-spacer></v-spacer>
-          <v-btn icon="mdi-close" variant="text" @click="isAddMemberModalOpen = false"></v-btn>
-        </v-card-title>
-
-        <v-card-text class="pt-6">
-          <v-text-field
-            v-model="searchQuery"
-            label="Buscar por nome, matrícula ou e-mail"
-            placeholder="Digite pelo menos 3 caracteres"
-            variant="outlined"
-            prepend-inner-icon="mdi-magnify"
-            autofocus
-            clearable
-          ></v-text-field>
-
-          <div class="mt-4" style="min-height: 200px">
-            <div v-if="isSearching" class="text-center py-8">
-              <v-progress-circular indeterminate color="green-darken-2"></v-progress-circular>
-              <p class="mt-3 text-grey-darken-1">Buscando usuários...</p>
-            </div>
-
-            <v-alert v-else-if="searchError" type="error" variant="tonal">
-              {{ searchError }}
-            </v-alert>
-
-            <div
-              v-else-if="searchResults.length === 0 && searchQuery.length >= 3"
-              class="text-center py-8 text-grey-darken-1"
-            >
-              <v-icon size="48" class="mb-4">mdi-account-off-outline</v-icon>
-              <p>Nenhum usuário encontrado com o termo "{{ searchQuery }}".</p>
-            </div>
-
-            <v-list v-else-if="filteredSearchResults.length > 0">
-              <v-list-item
-                v-for="user in filteredSearchResults"
-                :key="user.id_usuario"
-                :title="user.nome"
-                :subtitle="user.email"
-              >
-                <template v-slot:append>
-                  <v-btn
-                    color="green"
-                    variant="outlined"
-                    size="small"
-                    @click="handleAddMember(user)"
-                  >
-                    Adicionar
-                  </v-btn>
-                </template>
-              </v-list-item>
-            </v-list>
-          </div>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+    <AddMemberModal
+  v-model="isAddMemberModalOpen"
+  :membros-atuais="membros"
+  @add-member="handleAddMember"
+/>
   </v-container>
 </template>
 
