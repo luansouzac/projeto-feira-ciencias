@@ -49,6 +49,21 @@ const modalConfig = {
       defaultValue: '',
     },
     {
+      key: 'inicio_inscricao',
+      label: 'Início da Inscrição', 
+      type: 'date',
+      cols: 12, md: 6, // Lado a lado em telas médias
+      rules: [v => !!v || 'O início é obrigatório'],
+      defaultValue: '',
+    },
+    {
+      key: 'fim_inscricao',
+      label: 'Fim da Inscrição', 
+      type: 'date',
+      cols: 12, md: 6,
+      defaultValue: '',
+    },
+    {
       key: 'min_pessoas',
       label: 'Mínimo de Pessoas', 
       type: 'number',
@@ -116,25 +131,34 @@ const eventosFiltrados = computed(() => {
   
 const handleSave = async (formData) => {
   isModalLoading.value = true;
+
   try {
-    if (currentItem.value.id_evento) {
-      if( eventoStore.updateEvento(currentItem.value.id_evento, formData) )
-        notificationStore.showSuccess('Evento alterado com sucesso!');
-      else
-        console.error("Erro ao salvar o evento:", error);    
+    const isEditing = currentItem.value && currentItem.value.id_evento;
+    let success = false;
+    let successMessage = '';
+
+    if (isEditing) {
+      success = await eventoStore.updateEvento(currentItem.value.id_evento, formData);
+      successMessage = 'Evento alterado com sucesso!';
     } else {
-      if( eventoStore.createEvento(formData) )
-        notificationStore.showSuccess('Evento criado com sucesso!');
-      else
-        console.error("Erro ao salvar o evento:", error);
+      success = await eventoStore.createEvento(formData);
+      successMessage = 'Evento criado com sucesso!';
     }
-    isModalOpen.value = false; 
+
+    if (success) {
+      notificationStore.showSuccess(successMessage);
+      isModalOpen.value = false; 
+      currentItem.value = null; 
+    } else {
+      notificationStore.showError('Falha ao salvar o evento: ' + eventoStore.getEventErrors);
+    }
+
   } catch (error) {
-    console.error("Erro ao salvar o evento:", error);
+    console.error("Erro crítico ao salvar o evento:", error);
+    notificationStore.showError('Ocorreu um erro inesperado. Tente novamente.');
   } finally {
     isModalLoading.value = false;
   }
-  currentItem.value = null;
 };
 
 const opcoesAtivo = [

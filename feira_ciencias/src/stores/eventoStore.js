@@ -1,6 +1,17 @@
 import { defineStore } from 'pinia';
 import api from '@/assets/plugins/axios';
 
+
+const formatarDataParaAPI = (dateString) => {
+  if (!dateString || typeof dateString !== 'string') return null;
+  
+  const parts = dateString.split('/');
+  if (parts.length !== 3) return dateString; 
+
+  const [day, month, year] = parts;
+  return `${year}-${month}-${day}`;
+};
+
 export const useEventoStore = defineStore('evento', {
   // `state` é onde você define os dados reativos do seu store.
   state: () => ({
@@ -52,6 +63,8 @@ export const useEventoStore = defineStore('evento', {
           data_evento: evento.data_evento,
           inicio_submissao: evento.inicio_submissao,
           fim_submissao:evento.fim_submissao,
+      inicio_inscricao: formatarDataParaAPI(evento.inicio_inscricao),
+      fim_inscricao: formatarDataParaAPI(evento.fim_inscricao),
           min_pessoas:evento.min_pessoas,
           max_pessoas:evento.max_pessoas	
         });
@@ -69,18 +82,18 @@ export const useEventoStore = defineStore('evento', {
       }
     },
 
-    // Ação para atualizar um evento existente via API
     async updateEvento(id_evento, updated) {
       this.loading = true;
       this.error = null;
       try {
-        // Atualizando os dados na API
         const response = await api.put(`/eventos/${id_evento}`, {
           nome: updated.nome,
           ativo: updated.ativo==1 ? "1" : "0",
           data_evento: updated.data_evento,
           inicio_submissao: updated.inicio_submissao,
           fim_submissao:updated.fim_submissao,
+          inicio_inscricao: formatarDataParaAPI(updated.inicio_inscricao),
+          fim_inscricao: formatarDataParaAPI(updated.fim_inscricao),
           min_pessoas:updated.min_pessoas,
           max_pessoas:updated.max_pessoas	
         });
