@@ -18,6 +18,8 @@ class Evento extends Model
         'data_evento',
         'inicio_submissao',
         'fim_submissao',
+        'inicio_inscricao',
+        'fim_inscricao',
         'min_pessoas',
         'max_pessoas'
     ];
