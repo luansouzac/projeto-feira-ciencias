@@ -14,7 +14,7 @@ import TaskFormModal from '@/components/modals/TaskFormModal.vue'
 import AddMemberModal from '@/components/modals/AddMemberModal.vue'
 import TaskFeedbackModal from '@/components/modals/TaskFeedbackModal.vue'
 import ConfirmDeleteDialog from '@/components/dialogs/ConfirmDeleteDialog.vue'
-// import SubmitTaskModal from '@/components/modals/SubmitTaskModal.vue'
+import SubmitTaskModal from '@/components/modals/SubmitTaskModal.vue'
 
 // --- Instâncias e Stores ---
 const authStore = useAuthStore()
@@ -46,6 +46,8 @@ const taskToDelete = ref(null)
 
 const isSubmitTaskModalOpen = ref(false)
 const taskToSubmit = ref(null)
+
+const isSubmitTaskLoading = ref(false)
 
 // --- PROPRIEDADES COMPUTADAS PRINCIPAIS ---
 
@@ -310,6 +312,49 @@ const openSubmitTaskModal = (task) => {
   taskToSubmit.value = task
   isSubmitTaskModalOpen.value = true
 }
+
+const handleSubmitTask = async (submissionDataFromModal) => {
+  if (!taskToSubmit.value) return
+  isSubmitTaskLoading.value = true
+
+  try {
+    const formData = new FormData()
+    formData.append('id_tarefa', taskToSubmit.value.id_tarefa)
+    formData.append('id_responsavel', authStore.user.id_usuario)
+    
+    formData.append('resultado', submissionDataFromModal.resultado || 'Tarefa concluída.')
+    if (submissionDataFromModal.arquivo) {
+      formData.append('arquivo', submissionDataFromModal.arquivo)
+    }
+
+    formData.append('data_execucao', new Date().toISOString().split('T')[0])
+    
+    const response = await api.post('/registros_tarefas', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+
+    const newSubmissionRecord = response.data.data || response.data
+    
+    await api.put(`/tarefas/${taskToSubmit.value.id_tarefa}`, { id_situacao: 3 })
+
+    const taskInMainList = tasks.value.find((t) => t.id_tarefa === taskToSubmit.value.id_tarefa)
+    if (taskInMainList) {
+      taskInMainList.id_situacao = 3
+      if (!taskInMainList.registros) {
+        taskInMainList.registros = []
+      }
+      taskInMainList.registros.unshift(newSubmissionRecord)
+    }
+
+    notificationStore.showSuccess('Tarefa entregue com sucesso!')
+    isSubmitTaskModalOpen.value = false
+  } catch (err) {
+    console.error('Erro ao submeter a tarefa:', err)
+    notificationStore.showError('Não foi possível entregar a tarefa.')
+  } finally {
+    isSubmitTaskLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -419,6 +464,13 @@ const openSubmitTaskModal = (task) => {
       v-model="isDeleteTaskDialogOpen"
       :item-name="taskToDelete?.descricao"
       @confirm="confirmDeleteTask"
+    />
+
+    <SubmitTaskModal
+      v-model="isSubmitTaskModalOpen"
+      :task="taskToSubmit"
+      :is-loading="isSubmitTaskLoading"
+      @submit="handleSubmitTask"
     />
   </v-container>
 </template>
