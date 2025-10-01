@@ -7,7 +7,7 @@ import NavBar from '@/components/NavBar.vue';
 const route = useRoute();
 
 const showNavbar = computed(() => {
-  const rotasSemNavbar = ['login', 'registrar']; 
+  const rotasSemNavbar = ['login', 'registrar', 'recuperar']; 
   return !rotasSemNavbar.includes(route.name);
 });
 </script>
