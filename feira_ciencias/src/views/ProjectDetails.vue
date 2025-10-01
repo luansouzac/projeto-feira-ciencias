@@ -11,6 +11,7 @@ import TaskFormModal from '@/components/modals/TaskFormModal.vue'
 import AddMemberModal from '@/components/modals/AddMemberModal.vue'
 import FeedbackTimelineTab from '@/components/project/FeedbackTimelineTab.vue'
 import TaskFeedbackModal from '@/components/modals/TaskFeedbackModal.vue'
+import ProjectDetailsTab from '@/components/project/ProjectDetailsTab.vue'
 
 import ConfirmDeleteDialog from '@/components/dialogs/ConfirmDeleteDialog.vue'
 
@@ -551,22 +552,7 @@ const isTeamFull = computed(() => {
 
         <v-window v-model="activeTab">
           <v-window-item value="detalhes">
-            <v-card-text class="pa-4 pa-md-6">
-              <v-list lines="two" bg-color="transparent">
-                <v-list-item
-                  prepend-icon="mdi-lightbulb-on-outline"
-                  title="Problema a ser Resolvido"
-                  :subtitle="project.problema"
-                  class="mb-4"
-                ></v-list-item>
-                <v-list-item
-                  prepend-icon="mdi-bullseye-arrow"
-                  title="Relevância e Justificativa"
-                  :subtitle="project.relevancia"
-                  class="mb-4"
-                ></v-list-item>
-              </v-list>
-            </v-card-text>
+            <ProjectDetailsTab :project="project" />
           </v-window-item>
 
           <v-window-item value="feedback">
