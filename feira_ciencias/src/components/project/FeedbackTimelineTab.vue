@@ -1,17 +1,10 @@
 <script setup>
 import { defineProps } from 'vue'
+const { getFullStorageUrl, isImage } = useFileUtils()
 
 const props = defineProps({
   feedbacks: { type: Array, required: true },
 })
-
-// Funções utilitárias que antes estavam no componente principal.
-// Agora elas pertencem apenas a quem as usa.
-const getFullStorageUrl = (filePath) => {
-  if (!filePath) return null
-  const baseUrl = import.meta.env.VITE_API_BASE_URL
-  return `${baseUrl}/storage/${filePath}`
-}
 </script>
 
 <template>
