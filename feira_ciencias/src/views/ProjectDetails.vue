@@ -553,8 +553,7 @@ const handleAddMember = async (user) => {
     const response = await api.post(`/projetos/${project.value.id_projeto}/inscrever`, payload)
 
     const newMember = response.data.data || response.data
-
-    membros.value.push(newMember)
+    membros.value.push(newMember.membro)
 
     notificationStore.showSuccess(`${user.nome} foi adicionado à equipe!`)
     isAddMemberModalOpen.value = false
