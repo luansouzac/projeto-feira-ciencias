@@ -9,6 +9,7 @@ import TeamManagementTab from '../components/project/TeamManagementTab.vue'
 import KanbanBoardTab from '@/components/project/KanbanBoardTab.vue'
 import TaskFormModal from '@/components/modals/TaskFormModal.vue'
 import AddMemberModal from '@/components/modals/AddMemberModal.vue'
+import FeedbackTimelineTab from '@/components/project/FeedbackTimelineTab.vue'
 
 const authStore = useAuthStore()
 
@@ -137,15 +138,6 @@ const combinedFeedbacks = computed(() => {
   )
 })
 
-const getFullStorageUrl = (filePath) => {
-  if (!filePath) {
-    return null
-  }
-
-  const baseUrl = import.meta.env.VITE_API_BASE_URL
-
-  return `${baseUrl}/storage/${filePath}`
-}
 const isImage = (filePath) => {
   if (!filePath) return false
   // Verifica se a extensão do arquivo é de imagem
@@ -287,7 +279,7 @@ const handleSaveTask = async (taskDataFromModal) => {
   isTaskModalLoading.value = true
   try {
     let savedTaskData
-    const { id_usuario_atribuido, ...coreTaskData } = taskDataFromModal;
+    const { id_usuario_atribuido, ...coreTaskData } = taskDataFromModal
 
     if (currentTask.value) {
       const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, coreTaskData)
@@ -659,44 +651,7 @@ const isTeamFull = computed(() => {
           </v-window-item>
 
           <v-window-item value="feedback">
-            <v-card-text class="pa-4 pa-md-6">
-              <div
-                v-if="combinedFeedbacks.length === 0"
-                class="text-center pa-8 text-grey-darken-1"
-              >
-                <v-icon size="48" class="mb-4">mdi-comment-processing-outline</v-icon>
-                <p>Nenhum feedback foi registrado para este projeto ainda.</p>
-              </div>
-              <v-timeline v-else side="end" align="start">
-                <v-timeline-item
-                  v-for="fb in combinedFeedbacks"
-                  :key="fb.id"
-                  :dot-color="fb.color"
-                  :icon="fb.icon"
-                  size="small"
-                >
-                  <template v-slot:opposite> </template>
-                  <div class="feedback-item">
-                    <div class="font-weight-bold">{{ fb.title }}</div>
-                    <p class="text-body-2 mt-2 font-italic">"{{ fb.feedbackText }}"</p>
-
-                    <div v-if="fb.arquivo" class="mt-3">
-                      <v-btn
-                        :href="`${apiUrl}/storage/${fb.arquivo}`"
-                        target="_blank"
-                        prepend-icon="mdi-download-circle-outline"
-                        color="purple-darken-1"
-                        variant="tonal"
-                        size="small"
-                      >
-                        Ver Anexo
-                      </v-btn>
-                    </div>
-                    <div class="text-caption opacity-75 mt-3">Por: {{ fb.author }}</div>
-                  </div>
-                </v-timeline-item>
-              </v-timeline>
-            </v-card-text>
+            <FeedbackTimelineTab :feedbacks="combinedFeedbacks" />
           </v-window-item>
 
           <v-window-item value="equipe">
@@ -945,13 +900,12 @@ const isTeamFull = computed(() => {
       </v-card>
     </v-dialog>
 
-
     <TaskFormModal
-  v-model="isTaskModalOpen"
-  :task-to-edit="currentTask"
-  :membros="membros"
-  @save="handleSaveTask"
-/>
+      v-model="isTaskModalOpen"
+      :task-to-edit="currentTask"
+      :membros="membros"
+      @save="handleSaveTask"
+    />
     <v-dialog v-model="isSubmitTaskModalOpen" persistent max-width="700px">
       <v-card>
         <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
@@ -1005,10 +959,10 @@ const isTeamFull = computed(() => {
       </v-card>
     </v-dialog>
     <AddMemberModal
-  v-model="isAddMemberModalOpen"
-  :membros-atuais="membros"
-  @add-member="handleAddMember"
-/>
+      v-model="isAddMemberModalOpen"
+      :membros-atuais="membros"
+      @add-member="handleAddMember"
+    />
   </v-container>
 </template>
 
