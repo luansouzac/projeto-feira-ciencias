@@ -10,6 +10,7 @@ import KanbanBoardTab from '@/components/project/KanbanBoardTab.vue'
 import TaskFormModal from '@/components/modals/TaskFormModal.vue'
 import AddMemberModal from '@/components/modals/AddMemberModal.vue'
 import FeedbackTimelineTab from '@/components/project/FeedbackTimelineTab.vue'
+import TaskFeedbackModal from '@/components/modals/TaskFeedbackModal.vue'
 
 import ConfirmDeleteDialog from '@/components/dialogs/ConfirmDeleteDialog.vue'
 
@@ -32,11 +33,7 @@ const activeTab = ref('detalhes')
 // --- ESTADOS PARA O MODAL DE FEEDBACK DA TAREFA ---
 const isTaskFeedbackModalOpen = ref(false)
 const selectedTaskForFeedback = ref(null)
-const isFeedbackLoading = ref(false)
-const feedbackError = ref(null)
 
-const newFeedbackText = ref('')
-const isSendingFeedback = ref(false)
 const isProfessor = computed(() => authStore.user?.id_tipo_usuario === 4)
 
 // --- ESTADOS PARA O MODAL DE CRIAR/EDITAR TAREFA ---
@@ -215,48 +212,19 @@ const getMemberName = (userId) => {
   return membro ? membro.usuario.nome : 'Não atribuído'
 }
 
-// --- FUNÇÕES PARA MODAIS ---
-const openTaskFeedbackModal = async (task) => {
-  // Usaremos um array genérico 'events' para feedbacks e entregas
-  selectedTaskForFeedback.value = { ...task, events: [] }
+const openTaskFeedbackModal = (task) => {
+  selectedTaskForFeedback.value = task
   isTaskFeedbackModalOpen.value = true
-  isFeedbackLoading.value = true
-  feedbackError.value = null
+}
 
-  try {
-    // Busca feedbacks e registros de entrega em paralelo
-    const [feedbackResponse, registrationResponse] = await Promise.all([
-      api.get(`/tarefas/${task.id_tarefa}/feedbacks`),
-      api.get(`/registros_tarefas?id_tarefa=${task.id_tarefa}`),
-    ])
-
-    const feedbacks = (feedbackResponse.data.data || feedbackResponse.data || []).map((fb) => ({
-      ...fb,
-      type: 'feedback', // Identificador para o template
-      date: new Date(fb.created_at),
-    }))
-
-    const submissions = (registrationResponse.data.data || registrationResponse.data || [])
-      .filter((reg) => reg.resultado || reg.arquivo)
-      .map((reg) => ({
-        ...reg,
-        type: 'submission', // Identificador para o template
-        date: new Date(reg.data_execucao),
-        feedback: reg.resultado, // Normaliza o campo para o template
-        usuario: { nome: getMemberName(reg.id_responsavel) }, // Normaliza para o template
-      }))
-
-    if (selectedTaskForFeedback.value) {
-      // Junta os dois tipos de evento e ordena por data
-      selectedTaskForFeedback.value.events = [...feedbacks, ...submissions].sort(
-        (a, b) => new Date(b.date) - new Date(a.date),
-      )
+const handleFeedbackSent = (newFeedback) => {
+  notificationStore.showSuccess('Feedback enviado com sucesso!')
+  const taskInMainList = tasks.value.find((t) => t.id_tarefa === newFeedback.id_tarefa)
+  if (taskInMainList) {
+    if (!taskInMainList.feedbacks) {
+      taskInMainList.feedbacks = []
     }
-  } catch (err) {
-    console.error('Erro ao buscar histórico da tarefa:', err)
-    feedbackError.value = 'Não foi possível carregar o histórico. Tente novamente.'
-  } finally {
-    isFeedbackLoading.value = false
+    taskInMainList.feedbacks.unshift(newFeedback)
   }
 }
 
@@ -349,57 +317,6 @@ const confirmDeleteTask = async () => {
 
 // --- NOVO: FUNÇÕES PARA O MODAL DE SUBMISSÃO DE TAREFA ---
 
-const handleSendFeedback = async () => {
-  if (!newFeedbackText.value.trim() || !selectedTaskForFeedback.value) return
-
-  isSendingFeedback.value = true
-  try {
-    const payload = {
-      feedback: newFeedbackText.value,
-    }
-
-    const response = await api.post(
-      `/tarefas/${selectedTaskForFeedback.value.id_tarefa}/feedbacks`,
-      payload,
-    )
-
-    const newFeedbackFromServer = response.data.data || response.data
-
-    // --- CORREÇÃO PRINCIPAL ESTÁ AQUI ---
-
-    // 1. Atualiza a lista de feedbacks da tarefa na fonte de dados principal (tasks.value)
-    // Isso garante que o feedback apareça no histórico geral do projeto.
-    const taskInMainList = tasks.value.find(
-      (t) => t.id_tarefa === selectedTaskForFeedback.value.id_tarefa,
-    )
-    if (taskInMainList) {
-      // Garante que o array de feedbacks exista antes de adicionar
-      if (!taskInMainList.feedbacks) {
-        taskInMainList.feedbacks = []
-      }
-      taskInMainList.feedbacks.unshift(newFeedbackFromServer) // Adiciona no início
-    }
-
-    // 2. Atualiza a lista de eventos do modal que está aberto.
-    // Isso garante que o feedback apareça instantaneamente no modal.
-    const newFeedbackEvent = {
-      ...newFeedbackFromServer,
-      type: 'feedback',
-      date: new Date(newFeedbackFromServer.created_at),
-    }
-    selectedTaskForFeedback.value.events.unshift(newFeedbackEvent)
-
-    // --- FIM DA CORREÇÃO ---
-
-    newFeedbackText.value = ''
-    notificationStore.showSuccess('Feedback enviado com sucesso!')
-  } catch (err) {
-    console.error('Erro ao enviar feedback:', err)
-    notificationStore.showError('Não foi possível enviar o feedback.')
-  } finally {
-    isSendingFeedback.value = false
-  }
-}
 const openSubmitTaskModal = (task) => {
   taskToSubmit.value = task
   submissionData.value = { resultado: '', arquivo: null } // Reseta o formulário
@@ -761,122 +678,12 @@ const isTeamFull = computed(() => {
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="isTaskFeedbackModalOpen" max-width="700px" persistent>
-      <v-card class="d-flex flex-column" style="max-height: 90vh">
-        <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
-          <v-icon start>mdi-comment-multiple-outline</v-icon>
-          Feedbacks da Tarefa
-          <v-spacer></v-spacer>
-          <v-btn icon="mdi-close" variant="text" @click="isTaskFeedbackModalOpen = false"></v-btn>
-        </v-card-title>
-        <v-card-subtitle class="bg-green-darken-3 text-white pb-3">
-          "{{ selectedTaskForFeedback?.descricao }}"
-        </v-card-subtitle>
-
-        <v-card-text class="flex-grow-1 pt-6" style="overflow-y: auto">
-          <div v-if="isFeedbackLoading" class="text-center py-8">
-            <v-progress-circular
-              indeterminate
-              color="green-darken-2"
-              size="48"
-            ></v-progress-circular>
-            <p class="mt-3 text-grey-darken-1">Buscando histórico...</p>
-          </div>
-
-          <v-alert v-else-if="feedbackError" type="error" variant="tonal">
-            {{ feedbackError }}
-          </v-alert>
-
-          <div v-else>
-            <div
-              v-if="!selectedTaskForFeedback?.events || selectedTaskForFeedback.events.length === 0"
-              class="text-center pa-8 text-grey-darken-1"
-            >
-              <v-icon size="48" class="mb-4">mdi-comment-remove-outline</v-icon>
-              <p>Nenhum feedback ou entrega registrada para esta tarefa.</p>
-            </div>
-
-            <v-timeline v-else side="end" align="start" density="compact">
-              <v-timeline-item
-                v-for="event in selectedTaskForFeedback.events"
-                :key="`${event.type}-${event.id_feedback || event.id_registro_tarefa}`"
-                :dot-color="event.type === 'submission' ? 'purple-darken-1' : 'green-darken-1'"
-                :icon="
-                  event.type === 'submission' ? 'mdi-upload' : 'mdi-comment-processing-outline'
-                "
-                size="small"
-                class="pb-2"
-              >
-                <v-sheet rounded="lg" border class="pa-3 bg-grey-lighten-5">
-                  <p class="text-body-1 font-italic">
-                    "{{ event.feedback || 'Nenhum comentário.' }}"
-                  </p>
-
-                  <div v-if="event.type === 'submission' && event.arquivo" class="mt-3">
-                    <v-img
-                      v-if="isImage(event.arquivo)"
-                      :src="getFullStorageUrl(event.arquivo)"
-                      max-width="300"
-                      class="rounded border"
-                      aspect-ratio="16/9"
-                      cover
-                    ></v-img>
-                    <v-btn
-                      :class="isImage(event.arquivo) ? 'mt-2' : ''"
-                      :href="getFullStorageUrl(event.arquivo)"
-                      target="_blank"
-                      prepend-icon="mdi-download-circle-outline"
-                      color="purple-darken-1"
-                      variant="tonal"
-                      size="small"
-                    >
-                      {{ isImage(event.arquivo) ? 'Abrir Imagem' : 'Ver Anexo' }}
-                    </v-btn>
-                  </div>
-
-                  <div class="text-caption text-grey-darken-1 mt-3 text-right">
-                    - {{ event.usuario?.nome || event.responsavel?.nome || 'Usuário' }} em
-                    {{ formatDate(event.date || event.created_at) }}
-                  </div>
-                </v-sheet>
-              </v-timeline-item>
-            </v-timeline>
-          </div>
-        </v-card-text>
-
-        <template v-if="isProfessor">
-          <v-divider></v-divider>
-          <div class="pa-4 bg-grey-lighten-4">
-            <h4 class="text-subtitle-1 font-weight-medium mb-3">Enviar Novo Feedback</h4>
-            <v-textarea
-              v-model="newFeedbackText"
-              label="Escreva seu feedback aqui"
-              variant="outlined"
-              rows="2"
-              auto-grow
-              :disabled="isSendingFeedback"
-              bg-color="white"
-              hide-details
-            ></v-textarea>
-          </div>
-        </template>
-
-        <v-card-actions class="pa-4 bg-grey-lighten-5">
-          <v-spacer></v-spacer>
-          <v-btn
-            v-if="isProfessor"
-            color="green-darken-2"
-            variant="flat"
-            @click="handleSendFeedback"
-            :loading="isSendingFeedback"
-            :disabled="!newFeedbackText.trim()"
-            prepend-icon="mdi-send"
-          >
-            Enviar Feedback
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <TaskFeedbackModal
+      v-model="isTaskFeedbackModalOpen"
+      :task="selectedTaskForFeedback"
+      :is-professor="isProfessor"
+      @feedback-sent="handleFeedbackSent"
+    />
 
     <!-- DIÁLOGO DE CONFIRMAÇÃO PARA APAGAR TAREFA -->
     <ConfirmDeleteDialog
