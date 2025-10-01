@@ -14,9 +14,9 @@
     
     <h2 style="color: #1B5E20;">{{ $password }}</h2>
     
-    <p>Caso deseje, faça login e altere sua senha.</p>
+    <p>Se preferir, você pode fazer login e atualizar sua senha.</p>
     
       
-    <p>Atenciosamente,<br>Equipe de Suporte</p>
+    <p>Atenciosamente,<br>Equipe de Suporte.</p>
 </body>
 </html>
