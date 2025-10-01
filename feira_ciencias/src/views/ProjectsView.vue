@@ -3,16 +3,15 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../assets/plugins/axios.js'
 import { useNotificationStore } from '@/stores/notification'
-import CrudModal from '@/components/CrudModal.vue';
+import CrudModal from '@/components/CrudModal.vue'
 import { useEventoStore } from '@/stores/eventoStore'
 import { storeToRefs } from 'pinia'
 import ProjectCard from '@/components/ProjectCard.vue'
 
-
-const router = useRouter();
-const notificationStore = useNotificationStore();
-const eventoStore = useEventoStore();
-const { eventos } = storeToRefs(eventoStore);
+const router = useRouter()
+const notificationStore = useNotificationStore()
+const eventoStore = useEventoStore()
+const { eventos } = storeToRefs(eventoStore)
 
 // --- ESTADO DA PÁGINA ---
 const carregando = ref(true)
@@ -20,8 +19,8 @@ const erro = ref(null)
 const todosProjetos = ref([])
 const filtroStatus = ref('Todos')
 const nomeUsuario = ref('')
-let userId = null;
-const avaliadores = ref([]);
+let userId = null
+const avaliadores = ref([])
 const totalProjetosAprovados = ref(0)
 
 // --- ESTADO PARA O MODAL ---
@@ -35,18 +34,18 @@ const getInitialFormData = () => ({
   relevancia: '',
   id_orientador: null,
   id_coorientador: null,
-});
+})
 const currentItem = ref(getInitialFormData())
 
 // --- ESTADO PARA O MODAL DE EXCLUSÃO ---
-const isDeleteModalOpen = ref(false);
-const projectToDelete = ref(null);
+const isDeleteModalOpen = ref(false)
+const projectToDelete = ref(null)
 
-const userDataString = sessionStorage.getItem('user_data');
+const userDataString = sessionStorage.getItem('user_data')
 if (userDataString) {
-  const userData = JSON.parse(userDataString);
-  nomeUsuario.value = userData.user.nome;
-  userId = userData.user.id_usuario;
+  const userData = JSON.parse(userDataString)
+  nomeUsuario.value = userData.user.nome
+  userId = userData.user.id_usuario
 }
 
 const modalConfig = computed(() => ({
@@ -61,57 +60,66 @@ const modalConfig = computed(() => ({
       key: 'id_evento',
       label: 'Evento Associado',
       type: 'select',
-      items: eventos.value.map(evento => ({
-        title: evento.nome,
-        value: evento.id_evento,
-      })),
-      rules: [v => !!v || 'É necessário selecionar um evento'],
+      items: eventItemsParaSelecao.value,
+      rules: [
+        (v) => !!v || 'É necessário selecionar um evento',
+        (v) => {
+          const eventoSelecionado = eventos.value.find((e) => e.id_evento === v)
+          if (!eventoSelecionado) return true
+          const fimSubmissao = new Date(eventoSelecionado.fim_submissao)
+          return (
+            new Date() <= fimSubmissao ||
+            v === currentItem.value?.id_evento ||
+            'O período de submissão para este evento já encerrou.'
+          )
+        },
+      ],
     },
     {
       key: 'titulo',
       label: 'Título do Projeto',
       type: 'text',
-      rules: [v => !!v || 'O título é obrigatório'],
+      rules: [(v) => !!v || 'O título é obrigatório'],
     },
     {
       key: 'problema',
       label: 'Problema a ser Resolvido',
       type: 'textarea',
-      rules: [v => !!v || 'A descrição do problema é obrigatória'],
+      rules: [(v) => !!v || 'A descrição do problema é obrigatória'],
     },
     {
       key: 'relevancia',
       label: 'Relevância do Projeto',
       type: 'textarea',
-      rules: [v => !!v || 'A relevância é obrigatória'],
+      rules: [(v) => !!v || 'A relevância é obrigatória'],
     },
     {
       key: 'max_pessoas',
       label: 'Nº Máximo de Participantes',
       type: 'text',
-      rules: [v => !!v || 'O número máximo de participantes é obrigatório'],
+      rules: [(v) => !!v || 'O número máximo de participantes é obrigatório'],
     },
     {
       key: 'id_orientador',
       label: 'Professor orientador',
       type: 'select',
-      items: avaliadores.value.map(avaliador => ({
+      items: avaliadores.value.map((avaliador) => ({
         title: avaliador.nome,
         value: avaliador.id_usuario,
       })),
-      rules: [v => !!v || 'O Orientador é obrigatório'],
+      rules: [(v) => !!v || 'O Orientador é obrigatório'],
     },
     {
       key: 'id_coorientador',
       label: 'Professor Coorientador (Opcional)',
       type: 'select',
-      items: avaliadores.value.map(avaliador => ({
+      items: avaliadores.value.map((avaliador) => ({
         title: avaliador.nome,
         value: avaliador.id_usuario,
-      }))
+      })),
     },
   ],
-}));
+}))
 
 const opcoesStatus = [
   { title: 'Todos', value: 'Todos' },
@@ -127,81 +135,78 @@ const statusMap = {
 // --- MÉTODOS ---
 onMounted(async () => {
   if (!userId) {
-    erro.value = "Usuário não encontrado. Por favor, faça o login novamente.";
-    carregando.value = false;
-    return;
+    erro.value = 'Usuário não encontrado. Por favor, faça o login novamente.'
+    carregando.value = false
+    return
   }
 
-  const fetchProjetosPromise = api.get(`/projetos?id_responsavel=${userId}&situacao_not=2`);
-  const fetchEventosPromise = eventoStore.fetchEventos();
-  const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=4`);
-  const fetchAprovadosCountPromise = api.get(`/projetos?id_responsavel=${userId}&id_situacao=2`);
+  const fetchProjetosPromise = api.get(`/projetos?id_responsavel=${userId}&situacao_not=2`)
+  const fetchEventosPromise = eventoStore.fetchEventos()
+  const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=4`)
+  const fetchAprovadosCountPromise = api.get(`/projetos?id_responsavel=${userId}&id_situacao=2`)
 
-    try {
-
+  try {
     const results = await Promise.allSettled([
       fetchProjetosPromise,
       fetchAvaliadoresPromise,
       fetchEventosPromise,
-      fetchAprovadosCountPromise
-    ]);
+      fetchAprovadosCountPromise,
+    ])
 
-    const [projetosResult, avaliadoresResult, eventosResult, aprovadosCountResult] = results;
+    const [projetosResult, avaliadoresResult, eventosResult, aprovadosCountResult] = results
 
     if (projetosResult.status === 'fulfilled') {
-      todosProjetos.value = projetosResult.value.data;
+      todosProjetos.value = projetosResult.value.data
     } else {
-      console.error("Erro ao buscar projetos:", projetosResult.reason);
-      todosProjetos.value = [];
+      console.error('Erro ao buscar projetos:', projetosResult.reason)
+      todosProjetos.value = []
     }
 
     if (avaliadoresResult.status === 'fulfilled') {
-      avaliadores.value = avaliadoresResult.value.data;
+      avaliadores.value = avaliadoresResult.value.data
     } else {
-        console.error("Erro ao buscar avaliadores:", avaliadoresResult.reason);
+      console.error('Erro ao buscar avaliadores:', avaliadoresResult.reason)
     }
     if (aprovadosCountResult.status === 'fulfilled') {
-      totalProjetosAprovados.value = aprovadosCountResult.value.data.length;
+      totalProjetosAprovados.value = aprovadosCountResult.value.data.length
     } else {
-      console.error("Erro ao buscar contagem de aprovados:", aprovadosCountResult.reason);
+      console.error('Erro ao buscar contagem de aprovados:', aprovadosCountResult.reason)
     }
 
     if (eventosResult.status === 'rejected') {
-        console.error("Erro ao buscar eventos:", eventosResult.reason);
+      console.error('Erro ao buscar eventos:', eventosResult.reason)
     }
-
   } catch (geralError) {
-    console.error("Ocorreu um erro inesperado:", geralError);
-    erro.value = "Não foi possível carregar os dados da página.";
+    console.error('Ocorreu um erro inesperado:', geralError)
+    erro.value = 'Não foi possível carregar os dados da página.'
   } finally {
-    carregando.value = false;
+    carregando.value = false
   }
-});
+})
 
 // --- MÉTODOS PARA MODAIS ---
 
 const openCreateModal = () => {
   // ✅ ALTERAÇÃO 4: Garante que o formulário está limpo ao abrir o modal de criação
-  currentItem.value = getInitialFormData();
-  isModalOpen.value = true;
-};
+  currentItem.value = getInitialFormData()
+  isModalOpen.value = true
+}
 
 const openEditModal = (projeto) => {
-  currentItem.value = { ...projeto }; // Copia o objeto para evitar mutação direta
-  isModalOpen.value = true;
-};
+  currentItem.value = { ...projeto } // Copia o objeto para evitar mutação direta
+  isModalOpen.value = true
+}
 
 const openDeleteModal = (projeto) => {
-  projectToDelete.value = projeto; 
-  isDeleteModalOpen.value = true;
-};
-
+  projectToDelete.value = projeto
+  isDeleteModalOpen.value = true
+}
 
 const handleSave = async (formData) => {
-  isModalLoading.value = true;
-  console.log(formData);
+  isModalLoading.value = true
+  console.log(formData)
   // A lógica para adicionar o id_responsavel e id_situacao foi movida para dentro da verificação de "criação"
-  const isCreating = !formData.id_projeto;
+  const isCreating = !formData.id_projeto
 
   try {
     if (isCreating) {
@@ -210,70 +215,92 @@ const handleSave = async (formData) => {
         ...formData,
         id_responsavel: userId,
         id_situacao: 1,
-      };
-      const { data } = await api.post('/projetos', payload);
-      todosProjetos.value.push(data);
+      }
+      const { data } = await api.post('/projetos', payload)
+      todosProjetos.value.push(data)
       //Adicionar a equipe assim que o projeto for armazenado
-      const { dataEquipe } = await api.post('/equipes', {"id_projeto":data.id_projeto});
-      notificationStore.showSuccess('Projeto criado com sucesso!');
+      const { dataEquipe } = await api.post('/equipes', { id_projeto: data.id_projeto })
+      notificationStore.showSuccess('Projeto criado com sucesso!')
     } else {
       const payload = {
         ...formData,
         id_responsavel: userId,
         id_situacao: 1,
-      };
-      const { data } = await api.put(`/projetos/${formData.id_projeto}`, payload);
-      const index = todosProjetos.value.findIndex(p => p.id_projeto === data.id_projeto);
-      if (index !== -1) todosProjetos.value.splice(index, 1, data);
-      notificationStore.showSuccess('Projeto alterado com sucesso!');
+      }
+      const { data } = await api.put(`/projetos/${formData.id_projeto}`, payload)
+      const index = todosProjetos.value.findIndex((p) => p.id_projeto === data.id_projeto)
+      if (index !== -1) todosProjetos.value.splice(index, 1, data)
+      notificationStore.showSuccess('Projeto alterado com sucesso!')
     }
-    isModalOpen.value = false;
+    isModalOpen.value = false
   } catch (error) {
-    console.error("Erro ao salvar o projeto:", error);
-    notificationStore.showError('Ocorreu um erro ao salvar o projeto.');
+    console.error('Erro ao salvar o projeto:', error)
+    notificationStore.showError('Ocorreu um erro ao salvar o projeto.')
   } finally {
-    isModalLoading.value = false;
+    isModalLoading.value = false
   }
-};
+}
 
 const handleDelete = async () => {
-  if (!projectToDelete.value) return;
+  if (!projectToDelete.value) return
 
-  isModalLoading.value = true;
+  isModalLoading.value = true
   try {
-    await api.delete(`/equipesProjeto/${projectToDelete.value.id_projeto}`);
-    await api.delete(`/projetos/${projectToDelete.value.id_projeto}`);
-    
-    const index = todosProjetos.value.findIndex(p => p.id_projeto === projectToDelete.value.id_projeto);
+    await api.delete(`/equipesProjeto/${projectToDelete.value.id_projeto}`)
+    await api.delete(`/projetos/${projectToDelete.value.id_projeto}`)
+
+    const index = todosProjetos.value.findIndex(
+      (p) => p.id_projeto === projectToDelete.value.id_projeto,
+    )
     if (index !== -1) {
-      todosProjetos.value.splice(index, 1);
+      todosProjetos.value.splice(index, 1)
     }
-    
-    notificationStore.showSuccess('Projeto excluído com sucesso!');
-    isDeleteModalOpen.value = false;
-    projectToDelete.value = null; 
 
+    notificationStore.showSuccess('Projeto excluído com sucesso!')
+    isDeleteModalOpen.value = false
+    projectToDelete.value = null
   } catch (err) {
-    console.error("Erro ao excluir o projeto:", err);
-    notificationStore.showError('Ocorreu um erro ao excluir o projeto.');
+    console.error('Erro ao excluir o projeto:', err)
+    notificationStore.showError('Ocorreu um erro ao excluir o projeto.')
   } finally {
-    isModalLoading.value = false;
+    isModalLoading.value = false
   }
-};
-
+}
 
 // --- COMPUTED PROPERTIES ---
+
+const eventItemsParaSelecao = computed(() => {
+  const agora = new Date()
+
+  return eventos.value.map((evento) => {
+    const fimSubmissao = new Date(evento.fim_submissao)
+    const prazoEncerrado = agora > fimSubmissao
+
+    const isCurrentItem = currentItem.value?.id_evento === evento.id_evento
+
+    return {
+      title: `${evento.nome} ${prazoEncerrado ? '(Submissões Encerradas)' : ''}`,
+      value: evento.id_evento,
+      disabled: prazoEncerrado && !isCurrentItem,
+    }
+  })
+})
+
+const existemEventosAbertos = computed(() => {
+  const agora = new Date()
+  return eventos.value.some((evento) => new Date(evento.fim_submissao) >= agora)
+})
 
 const projetosFiltrados = computed(() => {
   if (filtroStatus.value === 'Todos' || !filtroStatus.value) {
     return todosProjetos.value
   }
-  return todosProjetos.value.filter(p => p.id_situacao === filtroStatus.value)
+  return todosProjetos.value.filter((p) => p.id_situacao === filtroStatus.value)
 })
 
 const totalProjetos = computed(() => todosProjetos.value.length)
 
-function goToProjectDetails(id){
+function goToProjectDetails(id) {
   router.push(`/projetos/${id}`)
 }
 function goToApprovedProjects() {
@@ -282,12 +309,12 @@ function goToApprovedProjects() {
 
 function handleApprovedCardClick() {
   if (totalProjetosAprovados.value > 0) {
-    goToApprovedProjects();
+    goToApprovedProjects()
   } else {
     notificationStore.showNotification({
       message: 'É necessário ter um projeto aprovado para acessar esta área.',
-      type: 'info'
-    });
+      type: 'info',
+    })
   }
 }
 </script>
@@ -309,7 +336,24 @@ function handleApprovedCardClick() {
           </v-card-text>
           <v-spacer></v-spacer>
           <v-card-actions>
-            <v-btn variant="outlined" block @click="openCreateModal">Criar agora</v-btn>
+            <v-tooltip
+              text="Não há eventos com período de submissão aberto no momento."
+              location="top"
+              :disabled="existemEventosAbertos"
+            >
+              <template v-slot:activator="{ props }">
+                <div v-bind="props" class="d-block w-100">
+                  <v-btn
+                    variant="outlined"
+                    block
+                    @click="openCreateModal"
+                    :disabled="!existemEventosAbertos"
+                  >
+                    Criar agora
+                  </v-btn>
+                </div>
+              </template>
+            </v-tooltip>
           </v-card-actions>
         </v-card>
       </v-col>
@@ -342,11 +386,15 @@ function handleApprovedCardClick() {
             <div class="d-flex align-center">
               <v-icon size="48" class="mr-4">mdi-check-decagram-outline</v-icon>
               <div>
-                <div class="text-h4 font-weight-bold text-green-darken-4">{{ totalProjetosAprovados }}</div>
+                <div class="text-h4 font-weight-bold text-green-darken-4">
+                  {{ totalProjetosAprovados }}
+                </div>
                 <div class="text-subtitle-2 text-green-darken-3">Projetos Aprovados</div>
               </div>
               <v-spacer></v-spacer>
-              <v-icon v-if="totalProjetosAprovados > 0" size="36" class="icon-arrow">mdi-arrow-right-circle-outline</v-icon>
+              <v-icon v-if="totalProjetosAprovados > 0" size="36" class="icon-arrow"
+                >mdi-arrow-right-circle-outline</v-icon
+              >
             </div>
           </v-card-text>
           <template v-if="totalProjetosAprovados > 0">
@@ -363,7 +411,9 @@ function handleApprovedCardClick() {
     <v-row align="center" class="mb-4">
       <v-col cols="12" md="6">
         <h2 class="text-h5 font-weight-bold text-grey-darken-4">Projetos submetidos</h2>
-        <p class="text-subtitle-2 text-grey-darken-1">Aguarde a aprovação do professor em algum projeto submetido.</p>
+        <p class="text-subtitle-2 text-grey-darken-1">
+          Aguarde a aprovação do professor em algum projeto submetido.
+        </p>
       </v-col>
       <v-col cols="12" md="6" class="d-flex justify-md-end">
         <v-select
@@ -374,11 +424,11 @@ function handleApprovedCardClick() {
           density="compact"
           hide-details
           clearable
-          style="max-width: 280px;"
+          style="max-width: 280px"
         ></v-select>
       </v-col>
     </v-row>
-    
+
     <v-row v-if="carregando">
       <v-col v-for="n in 3" :key="n" cols="12" sm="6" lg="4">
         <v-skeleton-loader type="image, article, actions"></v-skeleton-loader>
@@ -395,13 +445,21 @@ function handleApprovedCardClick() {
 
     <v-row v-else>
       <v-col v-for="projeto in projetosFiltrados" :key="projeto.id_projeto" cols="12" sm="6" lg="4">
-        <ProjectCard
-          :projeto="projeto"
-          @ver-detalhes="goToProjectDetails"
-        >
+        <ProjectCard :projeto="projeto" @ver-detalhes="goToProjectDetails">
           <template #actions>
-            <v-btn icon="mdi-pencil" variant="text" size="small" @click="openEditModal(projeto)"></v-btn>
-            <v-btn icon="mdi-delete" variant="text" color="grey" size="small" @click="openDeleteModal(projeto)"></v-btn>
+            <v-btn
+              icon="mdi-pencil"
+              variant="text"
+              size="small"
+              @click="openEditModal(projeto)"
+            ></v-btn>
+            <v-btn
+              icon="mdi-delete"
+              variant="text"
+              color="grey"
+              size="small"
+              @click="openDeleteModal(projeto)"
+            ></v-btn>
           </template>
         </ProjectCard>
       </v-col>
@@ -415,16 +473,23 @@ function handleApprovedCardClick() {
       :loading="isModalLoading"
       @save="handleSave"
     />
-    
+
     <v-dialog v-model="isDeleteModalOpen" max-width="450">
       <v-card prepend-icon="mdi-alert-circle-outline" title="Confirmar Exclusão">
         <v-card-text>
-          Você tem certeza que deseja excluir o projeto <strong>{{ projectToDelete?.titulo }}</strong>? Esta ação não pode ser desfeita.
+          Você tem certeza que deseja excluir o projeto
+          <strong>{{ projectToDelete?.titulo }}</strong
+          >? Esta ação não pode ser desfeita.
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn @click="isDeleteModalOpen = false" :disabled="isModalLoading">Cancelar</v-btn>
-          <v-btn color="red-darken-2" variant="flat" @click="handleDelete" :loading="isModalLoading">
+          <v-btn
+            color="red-darken-2"
+            variant="flat"
+            @click="handleDelete"
+            :loading="isModalLoading"
+          >
             Excluir
           </v-btn>
         </v-card-actions>
@@ -445,12 +510,14 @@ function handleApprovedCardClick() {
 
 .card-clicavel {
   cursor: pointer;
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  transition:
+    transform 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out;
 }
 
 .card-clicavel:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .icon-arrow {
@@ -467,4 +534,3 @@ function handleApprovedCardClick() {
   opacity: 0.75;
 }
 </style>
-
