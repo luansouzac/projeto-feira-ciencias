@@ -1,28 +1,28 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import api from '../assets/plugins/axios.js'
+import api from '@/assets/plugins/axios.js'
 import { useNotificationStore } from '@/stores/notification'
-import { useEventoStore } from '@/stores/eventoStore'
 import { useAuthStore } from '@/stores/authStore'
-import TeamManagementTab from '../components/project/TeamManagementTab.vue'
+
+// Importação dos novos componentes de abas e modais
+import TeamManagementTab from '@/components/project/TeamManagementTab.vue'
 import KanbanBoardTab from '@/components/project/KanbanBoardTab.vue'
+import FeedbackTimelineTab from '@/components/project/FeedbackTimelineTab.vue'
+import ProjectDetailsTab from '@/components/project/ProjectDetailsTab.vue'
 import TaskFormModal from '@/components/modals/TaskFormModal.vue'
 import AddMemberModal from '@/components/modals/AddMemberModal.vue'
-import FeedbackTimelineTab from '@/components/project/FeedbackTimelineTab.vue'
 import TaskFeedbackModal from '@/components/modals/TaskFeedbackModal.vue'
-import ProjectDetailsTab from '@/components/project/ProjectDetailsTab.vue'
-
 import ConfirmDeleteDialog from '@/components/dialogs/ConfirmDeleteDialog.vue'
+// import SubmitTaskModal from '@/components/modals/SubmitTaskModal.vue'
 
+// --- Instâncias e Stores ---
 const authStore = useAuthStore()
-
 const route = useRoute()
 const router = useRouter()
-const eventoStore = useEventoStore()
 const notificationStore = useNotificationStore()
 
-// --- Estado do Componente ---
+// --- ESTADO PRINCIPAL DA PÁGINA ---
 const project = ref(null)
 const tasks = ref([])
 const avaliacoes = ref([])
@@ -31,68 +31,61 @@ const loading = ref(true)
 const error = ref(null)
 const activeTab = ref('detalhes')
 
-// --- ESTADOS PARA O MODAL DE FEEDBACK DA TAREFA ---
+// --- ESTADO PARA CONTROLE DOS MODAIS (A LÓGICA INTERNA FICA NOS FILHOS) ---
+const isTaskModalOpen = ref(false)
+const isTaskModalLoading = ref(false)
+const currentTask = ref(null) // Usado para saber qual tarefa editar
+
+const isAddMemberModalOpen = ref(false)
+
 const isTaskFeedbackModalOpen = ref(false)
 const selectedTaskForFeedback = ref(null)
 
-const isProfessor = computed(() => authStore.user?.id_tipo_usuario === 4)
-
-// --- ESTADOS PARA O MODAL DE CRIAR/EDITAR TAREFA ---
-const isTaskModalOpen = ref(false)
-const isTaskModalLoading = ref(false)
-const currentTask = ref(null)
-const taskFormData = ref({
-  descricao: '',
-  detalhe: '',
-  data_inicio_prevista: null,
-  data_fim_prevista: null,
-  data_conclusao: null,
-  id_usuario_atribuido: null,
-})
-
-// --- ESTADOS PARA O MODAL DE APAGAR TAREFA ---
 const isDeleteTaskDialogOpen = ref(false)
 const taskToDelete = ref(null)
-// --- NOVO: ESTADOS PARA O MODAL DE SUBMISSÃO DE TAREFA ---
+
 const isSubmitTaskModalOpen = ref(false)
-const isSubmitTaskLoading = ref(false)
 const taskToSubmit = ref(null)
-const submissionData = ref({
-  resultado: '', // Comentário da entrega
-  arquivo: null, // Arquivo da entrega
+
+// --- PROPRIEDADES COMPUTADAS PRINCIPAIS ---
+
+const projectStatus = computed(() => {
+  const statusMap = {
+    1: { text: 'Em Elaboração', color: 'white-darken-2', icon: 'mdi-pencil-ruler' },
+    2: { text: 'Aprovado', color: 'green-darken-2', icon: 'mdi-check-decagram' },
+    3: { text: 'Reprovado', color: 'red-darken-2', icon: 'mdi-close-octagon' },
+    4: { text: 'Com Ressalvas', color: 'orange-darken-2', icon: 'mdi-alert-circle-outline' },
+  }
+  return statusMap[project.value?.id_situacao] || {}
 })
 
-//estados para modal de adicionar membros
-const isAddMemberModalOpen = ref(false)
-
-// --- Mapas de Status ---
-const statusMap = {
-  1: { text: 'Em Elaboração', color: 'white-darken-2', icon: 'mdi-pencil-ruler' },
-  2: { text: 'Aprovado', color: 'green-darken-2', icon: 'mdi-check-decagram' },
-  3: { text: 'Reprovado', color: 'red-darken-2', icon: 'mdi-close-octagon' },
-  4: { text: 'Com Ressalvas', color: 'orange-darken-2', icon: 'mdi-alert-circle-outline' },
-}
-const projectStatus = computed(() => statusMap[project.value?.id_situacao] || {})
-
-const avaliacaoStatusMap = {
-  2: { text: 'Aprovado', color: 'green', icon: 'mdi-check-circle' },
-  3: { text: 'Reprovado', color: 'red', icon: 'mdi-close-circle' },
-  4: { text: 'Reprovado com Ressalvas', color: 'orange', icon: 'mdi-alert-circle' },
-}
-
-// --- Config Kanban ---
-const kanbanColumns = [
-  { title: 'A Fazer', status: 1, color: 'grey' },
-  { title: 'Em Andamento', status: 2, color: 'blue' },
-  { title: 'Concluído', status: 3, color: 'green' },
-]
-
-const taskModalTitle = computed(() => {
-  return currentTask.value ? 'Editar Tarefa' : 'Nova Tarefa'
+const canCreateTasks = computed(() => {
+  if (!authStore.user || !project.value) return false
+  const isResponsavel = authStore.user.id_usuario === project.value.id_responsavel
+  const isMembroDaEquipe = membros.value.some((m) => m.id_usuario === authStore.user.id_usuario)
+  return isResponsavel || isMembroDaEquipe
 })
 
-// --- COMPUTED PARA JUNTAR TODOS OS FEEDBACKS (AVALIAÇÃO + TAREFAS) ---
+const isTeamFull = computed(() => {
+  if (!project.value) return false
+  const maxMembers = project.value.max_pessoas ?? 0
+  if (maxMembers === 0) return false
+  return membros.value.length >= maxMembers
+})
+
+const isProfessor = computed(() => authStore.user?.id_tipo_usuario === 4)
+
 const combinedFeedbacks = computed(() => {
+  const getMemberName = (userId) => {
+    if (!userId || !membros.value || membros.value.length === 0) return 'Não atribuído'
+    const membro = membros.value.find((m) => m.id_usuario === userId)
+    return membro ? membro.usuario.nome : 'Não atribuído'
+  }
+  const avaliacaoStatusMap = {
+    2: { text: 'Aprovado', color: 'green', icon: 'mdi-check-circle' },
+    3: { text: 'Reprovado', color: 'red', icon: 'mdi-close-circle' },
+    4: { text: 'Reprovado com Ressalvas', color: 'orange', icon: 'mdi-alert-circle' },
+  }
   const evaluationFeedbacks = (avaliacoes.value || []).map((ava) => ({
     id: `ava-${ava.id_projeto_avaliacao}`,
     date: new Date(ava.created_at),
@@ -103,7 +96,6 @@ const combinedFeedbacks = computed(() => {
     color: avaliacaoStatusMap[ava.id_situacao]?.color || 'grey',
     icon: avaliacaoStatusMap[ava.id_situacao]?.icon || 'mdi-comment-question-outline',
   }))
-
   const taskFeedbacks = (tasks.value || []).flatMap((task) =>
     (task.feedbacks || []).map((fb) => ({
       id: `task-${fb.id_feedback}`,
@@ -118,10 +110,9 @@ const combinedFeedbacks = computed(() => {
   )
   const submissionFeedbacks = (tasks.value || []).flatMap((task) =>
     (task.registros || [])
-      // Filtra apenas registros que são entregas (têm comentário ou arquivo)
       .filter((reg) => reg.resultado || reg.arquivo)
       .map((reg) => ({
-        id: `sub-${reg.id_registro_tarefa}`, // Use uma chave única do seu registro
+        id: `sub-${reg.id_registro_tarefa}`,
         date: new Date(reg.data_execucao),
         type: 'Entrega de Tarefa',
         title: `Entrega da tarefa: "${task.descricao}"`,
@@ -129,22 +120,15 @@ const combinedFeedbacks = computed(() => {
         author: getMemberName(reg.id_responsavel) || 'Usuário desconhecido',
         color: 'purple-darken-1',
         icon: 'mdi-upload',
-        arquivo: reg.arquivo, // <-- A propriedade chave!
+        arquivo: reg.arquivo,
       })),
   )
-
   return [...evaluationFeedbacks, ...taskFeedbacks, ...submissionFeedbacks].sort(
     (a, b) => b.date - a.date,
   )
 })
 
-const isImage = (filePath) => {
-  if (!filePath) return false
-  // Verifica se a extensão do arquivo é de imagem
-  return /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filePath)
-}
-
-// --- Lógica de busca de dados (onMounted) ---
+// --- LÓGICA DE BUSCA DE DADOS ---
 onMounted(async () => {
   const projectId = route.params.id
   loading.value = true
@@ -165,7 +149,6 @@ onMounted(async () => {
     membros.value = membrosResponse.data.data || membrosResponse.data || []
 
     if (Array.isArray(initialTasks) && initialTasks.length > 0) {
-      // Para cada tarefa, busca seus detalhes (registros de atribuição e feedbacks) em paralelo
       const taskDetailPromises = initialTasks.map((task) => {
         const registrationsPromise = api
           .get(`/registros_tarefas?id_tarefa=${task.id_tarefa}`)
@@ -175,28 +158,16 @@ onMounted(async () => {
           .catch(() => ({ data: [] }))
         return Promise.all([registrationsPromise, feedbacksPromise])
       })
-
       const allTaskDetails = await Promise.all(taskDetailPromises)
-
-      // Associa os detalhes buscados de volta a cada tarefa
       initialTasks.forEach((task, index) => {
         const [registrationResponse, feedbackResponse] = allTaskDetails[index]
-
-        // Processa os registros para encontrar o responsável
-        const registrations = registrationResponse.data.data || registrationResponse.data || []
-
-        task.registros = registrations
-
-        if (registrations.length > 0) {
-          task.id_usuario_atribuido = registrations[registrations.length - 1].id_responsavel
+        task.registros = registrationResponse.data.data || registrationResponse.data || []
+        if (task.registros.length > 0) {
+          task.id_usuario_atribuido = task.registros[task.registros.length - 1].id_responsavel
         }
-
-        // Associa os feedbacks
         task.feedbacks = feedbackResponse.data.data || feedbackResponse.data || []
       })
-      tasks.value = initialTasks
     }
-
     tasks.value = initialTasks
   } catch (err) {
     console.error('Erro ao buscar detalhes do projeto:', err)
@@ -206,255 +177,17 @@ onMounted(async () => {
   }
 })
 
-// --- FUNÇÕES DE NAVEGAÇÃO E AUXILIARES ---
-const getMemberName = (userId) => {
-  if (!userId || !membros.value || membros.value.length === 0) return 'Não atribuído'
-  const membro = membros.value.find((m) => m.id_usuario === userId)
-  return membro ? membro.usuario.nome : 'Não atribuído'
-}
+// --- FUNÇÕES DE MANIPULAÇÃO DE EVENTOS (HANDLERS) ---
 
-const openTaskFeedbackModal = (task) => {
-  selectedTaskForFeedback.value = task
-  isTaskFeedbackModalOpen.value = true
-}
+// -- Handlers da Equipe --
+const openAddMemberModal = () => (isAddMemberModalOpen.value = true)
 
-const handleFeedbackSent = (newFeedback) => {
-  notificationStore.showSuccess('Feedback enviado com sucesso!')
-  const taskInMainList = tasks.value.find((t) => t.id_tarefa === newFeedback.id_tarefa)
-  if (taskInMainList) {
-    if (!taskInMainList.feedbacks) {
-      taskInMainList.feedbacks = []
-    }
-    taskInMainList.feedbacks.unshift(newFeedback)
-  }
-}
-
-const openCreateTaskModal = () => {
-  currentTask.value = null
-  taskFormData.value = {
-    descricao: '',
-    detalhe: '',
-    data_inicio_prevista: null,
-    data_fim_prevista: null,
-    data_conclusao: null,
-    id_usuario_atribuido: null,
-  }
-  isTaskModalOpen.value = true
-}
-const openEditTaskModal = (task) => {
-  currentTask.value = task
-  taskFormData.value = { ...task }
-  isTaskModalOpen.value = true
-}
-const handleSaveTask = async (taskDataFromModal) => {
-  isTaskModalLoading.value = true
-  try {
-    let savedTaskData
-    const { id_usuario_atribuido, ...coreTaskData } = taskDataFromModal
-
-    if (currentTask.value) {
-      const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, coreTaskData)
-      savedTaskData = data
-    } else {
-      const payload = {
-        id_projeto: project.value.id_projeto,
-        id_situacao: 1, // 'A Fazer'
-        ...coreTaskData,
-      }
-      const { data } = await api.post('/tarefas', payload)
-      savedTaskData = data
-    }
-
-    if (id_usuario_atribuido) {
-      await api.post('/registros_tarefas', {
-        id_tarefa: savedTaskData.id_tarefa,
-        id_responsavel: id_usuario_atribuido,
-        descricao_atividade: `Tarefa atribuída ao responsável.`,
-        resultado: null,
-        data_execucao: new Date().toISOString().split('T')[0],
-        arquivo: null,
-      })
-    }
-
-    savedTaskData.id_usuario_atribuido = id_usuario_atribuido
-
-    if (currentTask.value) {
-      const index = tasks.value.findIndex((t) => t.id_tarefa === savedTaskData.id_tarefa)
-      if (index !== -1) tasks.value[index] = { ...tasks.value[index], ...savedTaskData }
-    } else {
-      tasks.value.push(savedTaskData)
-    }
-
-    notificationStore.showSuccess('Tarefa salva com sucesso!')
-    isTaskModalOpen.value = false
-  } catch (err) {
-    console.error('Erro ao salvar a tarefa:', err)
-    notificationStore.showError('Não foi possível salvar a tarefa.')
-  } finally {
-    isTaskModalLoading.value = false
-  }
-}
-
-const openDeleteTaskModal = (task) => {
-  taskToDelete.value = task
-  isDeleteTaskDialogOpen.value = true
-}
-
-const confirmDeleteTask = async () => {
-  if (!taskToDelete.value) return
-  notificationStore.showInfo('Apagando tarefa...')
-  try {
-    await api.delete(`/tarefas/${taskToDelete.value.id_tarefa}`)
-    tasks.value = tasks.value.filter((t) => t.id_tarefa !== taskToDelete.value.id_tarefa)
-    notificationStore.showSuccess('Tarefa apagada com sucesso!')
-  } catch (err) {
-    console.error('Erro ao apagar tarefa:', err)
-    notificationStore.showError('Não foi possível apagar a tarefa.')
-  } finally {
-    isDeleteTaskDialogOpen.value = false
-    taskToDelete.value = null
-  }
-}
-
-// --- NOVO: FUNÇÕES PARA O MODAL DE SUBMISSÃO DE TAREFA ---
-
-const openSubmitTaskModal = (task) => {
-  taskToSubmit.value = task
-  submissionData.value = { resultado: '', arquivo: null } // Reseta o formulário
-  isSubmitTaskModalOpen.value = true
-}
-
-const handleSubmissionFileChange = (file) => {
-  submissionData.value.arquivo = file || null
-
-  console.log('Arquivo capturado pela função:', submissionData.value.arquivo)
-}
-
-const handleSubmitTask = async () => {
-  if (!taskToSubmit.value) return
-  isSubmitTaskLoading.value = true
-
-  try {
-    const formData = new FormData()
-    formData.append('id_tarefa', taskToSubmit.value.id_tarefa)
-    formData.append('id_responsavel', authStore.user.id_usuario)
-    formData.append('resultado', submissionData.value.resultado || 'Tarefa concluída.')
-    formData.append('data_execucao', new Date().toISOString().split('T')[0])
-
-    if (submissionData.value.arquivo) {
-      formData.append('arquivo', submissionData.value.arquivo)
-    }
-
-    // 1. Envia o registro e CAPTURA a resposta da API
-    const response = await api.post('/registros_tarefas', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-
-    // O backend DEVE retornar o registro recém-criado
-    const newSubmissionRecord = response.data.data || response.data
-
-    // 2. Atualiza o status da tarefa para "Concluído"
-    await api.put(`/tarefas/${taskToSubmit.value.id_tarefa}`, { id_situacao: 3 })
-
-    // 3. Atualiza a interface (a fonte de dados principal)
-    const taskInMainList = tasks.value.find((t) => t.id_tarefa === taskToSubmit.value.id_tarefa)
-
-    if (taskInMainList) {
-      // Move o card para a coluna "Concluído"
-      taskInMainList.id_situacao = 3
-
-      // --- ADICIONA O NOVO REGISTRO AO HISTÓRICO DA TAREFA ---
-      // Isso garante que a entrega apareça no histórico geral e no modal da tarefa.
-      if (!taskInMainList.registros) {
-        taskInMainList.registros = []
-      }
-      taskInMainList.registros.unshift(newSubmissionRecord) // Adiciona no início
-    }
-
-    notificationStore.showSuccess('Tarefa entregue com sucesso!')
-    isSubmitTaskModalOpen.value = false
-  } catch (err) {
-    console.error('Erro ao submeter a tarefa:', err)
-    notificationStore.showError('Não foi possível entregar a tarefa.')
-  } finally {
-    isSubmitTaskLoading.value = false
-  }
-}
-
-// --- Funções do Kanban (Drag and Drop) ---
-const handleDragStart = (event, task) => {
-  event.dataTransfer.setData('text/plain', task.id_tarefa)
-  event.dataTransfer.dropEffect = 'move'
-}
-// Na página principal <script setup>
-const handleTaskStatusUpdate = async ({ taskId, newStatus, task }) => {
-  const originalStatus = task.id_situacao
-  task.id_situacao = newStatus // Atualização otimista
-  try {
-    await api.put(`/tarefas/${taskId}`, { id_situacao: newStatus })
-  } catch (err) {
-    task.id_situacao = originalStatus // Reverte em caso de erro
-    notificationStore.showError('Não foi possível mover a tarefa.')
-  }
-}
-const filterTasksByStatus = (status) => {
-  return tasks.value.filter((task) => task.id_situacao === status)
-}
-
-// --- Funções para formatação de data ---
-const formatDate = (dateString) => {
-  if (!dateString) return 'Data indefinida'
-  return new Date(dateString).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-const formatDateSimple = (dateString) => {
-  if (!dateString) return null
-  const date = new Date(dateString)
-  const userTimezoneOffset = date.getTimezoneOffset() * 60000
-  return new Date(date.getTime() - userTimezoneOffset).toISOString().split('T')[0]
-}
-
-const canCreateTasks = computed(() => {
-  if (!authStore.user || !project.value) {
-    return false
-  }
-
-  const isResponsavel = authStore.user.id_usuario === project.value.id_responsavel
-
-  const isMembroDaEquipe = membros.value.some(
-    (membro) => membro.id_usuario === authStore.user.id_usuario,
-  )
-
-  return isResponsavel || isMembroDaEquipe
-})
-
-// Abre o modal e reseta os estados
-const openAddMemberModal = () => {
-  isAddMemberModalOpen.value = true
-  searchQuery.value = ''
-  searchResults.value = []
-  searchError.value = null
-}
-
-// Função para adicionar um membro ao projeto
 const handleAddMember = async (user) => {
   notificationStore.showInfo(`Adicionando ${user.nome}...`)
   try {
-    const payload = {
-      id_usuario: user.id_usuario,
-    }
+    const payload = { id_usuario: user.id_usuario }
     const response = await api.post(`/projetos/${project.value.id_projeto}/inscrever`, payload)
-
-    const newMember = response.data.data || response.data
-
-    membros.value.push(newMember)
-
+    membros.value.push(response.data.data || response.data)
     notificationStore.showSuccess(`${user.nome} foi adicionado à equipe!`)
     isAddMemberModalOpen.value = false
   } catch (err) {
@@ -465,21 +198,16 @@ const handleAddMember = async (user) => {
   }
 }
 
-// Função para remover um membro do projeto
 const handleRemoveMember = async (memberToRemove) => {
-  if (!confirm(`Tem certeza que deseja remover ${memberToRemove.usuario.nome} da equipe?`)) {
-    return
-  }
-
+  if (!confirm(`Tem certeza que deseja remover ${memberToRemove.usuario.nome} da equipe?`)) return
   notificationStore.showInfo(`Removendo ${memberToRemove.usuario.nome}...`)
   try {
-    const equipeId = project.value.equipe.id_equipe
+    const equipeId = project.value.equipe[0]?.id_equipe
+    if (!equipeId) throw new Error('ID da equipe não encontrado no projeto.')
+
     const usuarioId = memberToRemove.id_usuario
-
     await api.post(`/projetos/desinscrever/${equipeId}/${usuarioId}`)
-
-    membros.value = membros.value.filter((membro) => membro.id_membro !== memberToRemove.id_membro)
-
+    membros.value = membros.value.filter((m) => m.id_membro !== memberToRemove.id_membro)
     notificationStore.showSuccess(`${memberToRemove.usuario.nome} foi removido da equipe.`)
   } catch (err) {
     console.error('Erro ao remover membro:', err)
@@ -487,21 +215,101 @@ const handleRemoveMember = async (memberToRemove) => {
   }
 }
 
-const isTeamFull = computed(() => {
-  if (!project.value) {
-    return false
+// -- Handlers das Tarefas --
+const openCreateTaskModal = () => {
+  currentTask.value = null
+  isTaskModalOpen.value = true
+}
+const openEditTaskModal = (task) => {
+  currentTask.value = task
+  isTaskModalOpen.value = true
+}
+const handleSaveTask = async (taskDataFromModal) => {
+  isTaskModalLoading.value = true
+  try {
+    const { id_usuario_atribuido, ...coreTaskData } = taskDataFromModal
+    let savedTaskData
+    if (currentTask.value) {
+      const { data } = await api.put(`/tarefas/${currentTask.value.id_tarefa}`, coreTaskData)
+      savedTaskData = data
+    } else {
+      const payload = { id_projeto: project.value.id_projeto, id_situacao: 1, ...coreTaskData }
+      const { data } = await api.post('/tarefas', payload)
+      savedTaskData = data
+    }
+
+    if (id_usuario_atribuido && id_usuario_atribuido !== currentTask.value?.id_usuario_atribuido) {
+      await api.post('/registros_tarefas', {
+        id_tarefa: savedTaskData.id_tarefa,
+        id_responsavel: id_usuario_atribuido,
+        descricao_atividade: `Tarefa atribuída.`,
+        data_execucao: new Date().toISOString().split('T')[0],
+      })
+    }
+    savedTaskData.id_usuario_atribuido = id_usuario_atribuido
+    if (currentTask.value) {
+      const index = tasks.value.findIndex((t) => t.id_tarefa === savedTaskData.id_tarefa)
+      if (index !== -1) tasks.value[index] = { ...tasks.value[index], ...savedTaskData }
+    } else {
+      tasks.value.push(savedTaskData)
+    }
+    notificationStore.showSuccess('Tarefa salva com sucesso!')
+    isTaskModalOpen.value = false
+  } catch (err) {
+    console.error('Erro ao salvar a tarefa:', err)
+    notificationStore.showError('Não foi possível salvar a tarefa.')
+  } finally {
+    isTaskModalLoading.value = false
   }
-
-  const maxMembers = project.value.max_pessoas ?? 0
-
-  if (maxMembers === 0) {
-    return false
+}
+const openDeleteTaskModal = (task) => {
+  taskToDelete.value = task
+  isDeleteTaskDialogOpen.value = true
+}
+const confirmDeleteTask = async () => {
+  if (!taskToDelete.value) return
+  try {
+    await api.delete(`/tarefas/${taskToDelete.value.id_tarefa}`)
+    tasks.value = tasks.value.filter((t) => t.id_tarefa !== taskToDelete.value.id_tarefa)
+    notificationStore.showSuccess('Tarefa apagada com sucesso!')
+  } catch (err) {
+    notificationStore.showError('Não foi possível apagar a tarefa.')
+  } finally {
+    isDeleteTaskDialogOpen.value = false
+    taskToDelete.value = null
   }
+}
 
-  const currentMembers = membros.value.length
+const handleTaskStatusUpdate = async ({ taskId, newStatus, task }) => {
+  const originalStatus = task.id_situacao
+  task.id_situacao = newStatus
+  try {
+    await api.put(`/tarefas/${taskId}`, { id_situacao: newStatus })
+  } catch (err) {
+    task.id_situacao = originalStatus
+    notificationStore.showError('Não foi possível mover a tarefa.')
+  }
+}
 
-  return currentMembers >= maxMembers
-})
+// -- Handlers de Feedback --
+const openTaskFeedbackModal = (task) => {
+  selectedTaskForFeedback.value = task
+  isTaskFeedbackModalOpen.value = true
+}
+const handleFeedbackSent = (newFeedback) => {
+  notificationStore.showSuccess('Feedback enviado com sucesso!')
+  const taskInMainList = tasks.value.find((t) => t.id_tarefa === newFeedback.id_tarefa)
+  if (taskInMainList) {
+    if (!taskInMainList.feedbacks) taskInMainList.feedbacks = []
+    taskInMainList.feedbacks.unshift(newFeedback)
+  }
+}
+
+// -- Handlers de Submissão de Tarefa --
+const openSubmitTaskModal = (task) => {
+  taskToSubmit.value = task
+  isSubmitTaskModalOpen.value = true
+}
 </script>
 
 <template>
@@ -541,9 +349,7 @@ const isTeamFull = computed(() => {
           <v-tab value="detalhes"
             ><v-icon start>mdi-text-box-search-outline</v-icon> Detalhes</v-tab
           >
-          <v-tab value="feedback"
-            ><v-icon start>mdi-comment-quote-outline</v-icon> Histórico de Feedbacks</v-tab
-          >
+          <v-tab value="feedback"><v-icon start>mdi-comment-quote-outline</v-icon> Histórico</v-tab>
           <v-tab value="equipe"><v-icon start>mdi-account-group-outline</v-icon> Equipe</v-tab>
           <v-tab value="tarefas" :disabled="project.id_situacao !== 2"
             ><v-icon start>mdi-view-dashboard-outline</v-icon> Tarefas</v-tab
@@ -588,81 +394,19 @@ const isTeamFull = computed(() => {
       </v-card>
     </div>
 
-    <!-- MODAL CRIAR/EDITAR TAREFA -->
-    <v-dialog v-model="isTaskModalOpen" persistent max-width="700px">
-      <v-card>
-        <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
-          {{ taskModalTitle }}
-          <v-spacer></v-spacer>
-          <v-btn icon="mdi-close" variant="text" @click="isTaskModalOpen = false"></v-btn>
-        </v-card-title>
-        <v-card-text class="pt-6">
-          <v-form>
-            <v-text-field
-              v-model="taskFormData.descricao"
-              label="Título da Tarefa"
-              variant="outlined"
-              :rules="[(v) => !!v || 'O título é obrigatório']"
-              autofocus
-            ></v-text-field>
-            <v-textarea
-              v-model="taskFormData.detalhe"
-              label="Descrição Detalhada (Opcional)"
-              variant="outlined"
-              rows="3"
-              class="mt-4"
-            ></v-textarea>
+    <TaskFormModal
+      v-model="isTaskModalOpen"
+      :task-to-edit="currentTask"
+      :membros="membros"
+      :is-loading="isTaskModalLoading"
+      @save="handleSaveTask"
+    />
 
-            <v-select
-              v-model="taskFormData.id_usuario_atribuido"
-              :items="membros"
-              item-title="usuario.nome"
-              item-value="id_usuario"
-              label="Atribuir a (Opcional)"
-              variant="outlined"
-              class="mt-4"
-              clearable
-            ></v-select>
-
-            <v-row class="mt-2">
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="taskFormData.data_inicio_prevista"
-                  label="Início Previsto"
-                  type="date"
-                  variant="outlined"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="taskFormData.data_fim_prevista"
-                  label="Fim Previsto"
-                  type="date"
-                  variant="outlined"
-                ></v-text-field>
-              </v-col>
-            </v-row>
-          </v-form>
-        </v-card-text>
-        <v-card-actions class="pa-4">
-          <v-spacer></v-spacer>
-          <v-btn
-            color="grey-darken-1"
-            variant="text"
-            @click="isTaskModalOpen = false"
-            :disabled="isTaskModalLoading"
-            >Cancelar</v-btn
-          >
-          <v-btn
-            color="green-darken-2"
-            variant="flat"
-            @click="handleSaveTask"
-            :loading="isTaskModalLoading"
-            >Salvar</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <AddMemberModal
+      v-model="isAddMemberModalOpen"
+      :membros-atuais="membros"
+      @add-member="handleAddMember"
+    />
 
     <TaskFeedbackModal
       v-model="isTaskFeedbackModalOpen"
@@ -671,75 +415,10 @@ const isTeamFull = computed(() => {
       @feedback-sent="handleFeedbackSent"
     />
 
-    <!-- DIÁLOGO DE CONFIRMAÇÃO PARA APAGAR TAREFA -->
     <ConfirmDeleteDialog
       v-model="isDeleteTaskDialogOpen"
       :item-name="taskToDelete?.descricao"
       @confirm="confirmDeleteTask"
-    />
-
-    <TaskFormModal
-      v-model="isTaskModalOpen"
-      :task-to-edit="currentTask"
-      :membros="membros"
-      @save="handleSaveTask"
-    />
-    <v-dialog v-model="isSubmitTaskModalOpen" persistent max-width="700px">
-      <v-card>
-        <v-card-title class="d-flex align-center text-h5 bg-green-darken-3 text-white">
-          <v-icon start>mdi-check-circle-outline</v-icon>
-          Entregar Tarefa
-          <v-spacer></v-spacer>
-          <v-btn icon="mdi-close" variant="text" @click="isSubmitTaskModalOpen = false"></v-btn>
-        </v-card-title>
-        <v-card-subtitle class="bg-green-darken-3 text-white pb-2">
-          "{{ taskToSubmit?.descricao }}"
-        </v-card-subtitle>
-        <v-card-text class="pt-6">
-          <v-form @submit.prevent="handleSubmitTask">
-            <v-textarea
-              v-model="submissionData.resultado"
-              label="Comentário da Entrega (Opcional)"
-              placeholder="Descreva o que foi feito ou deixe um comentário para o orientador."
-              variant="outlined"
-              rows="4"
-              autofocus
-            ></v-textarea>
-            <v-file-input
-              @update:modelValue="handleSubmissionFileChange"
-              label="Anexar Arquivo (Opcional)"
-              variant="outlined"
-              prepend-icon="mdi-paperclip"
-              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
-              class="mt-4"
-              clearable
-            ></v-file-input>
-          </v-form>
-        </v-card-text>
-        <v-card-actions class="pa-4">
-          <v-spacer></v-spacer>
-          <v-btn
-            color="grey-darken-1"
-            variant="text"
-            @click="isSubmitTaskModalOpen = false"
-            :disabled="isSubmitTaskLoading"
-            >Cancelar</v-btn
-          >
-          <v-btn
-            color="green-darken-2"
-            variant="flat"
-            @click="handleSubmitTask"
-            :loading="isSubmitTaskLoading"
-          >
-            Confirmar Entrega
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-    <AddMemberModal
-      v-model="isAddMemberModalOpen"
-      :membros-atuais="membros"
-      @add-member="handleAddMember"
     />
   </v-container>
 </template>

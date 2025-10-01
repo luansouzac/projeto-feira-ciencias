@@ -1,6 +1,8 @@
 <script setup>
 import { defineProps } from 'vue'
+import { useFileUtils } from '@/composables/useFileUtils'
 const { getFullStorageUrl, isImage } = useFileUtils()
+
 
 const props = defineProps({
   feedbacks: { type: Array, required: true },
