@@ -16,17 +16,21 @@ const submissionData = ref({
 })
 
 // Reseta o formulário quando o modal abre
-watch(() => props.modelValue, (isOpen) => {
-  if (isOpen) {
-    submissionData.value = { resultado: '', arquivo: null }
-  }
-})
+watch(
+  () => props.modelValue,
+  (isOpen) => {
+    if (isOpen) {
+      submissionData.value = { resultado: '', arquivo: null }
+    }
+  },
+)
 
-const handleFileChange = (files) => {
-  submissionData.value.arquivo = files[0] || null
-}
+// Em SubmitTaskModal.vue
 
 const submit = () => {
+  // ADICIONE ESTA LINHA:
+  console.log('1. DADOS NO MODAL ANTES DE EMITIR:', submissionData.value);
+  
   // Emite o evento 'submit' com os dados para o pai
   emit('submit', submissionData.value)
 }
@@ -34,7 +38,6 @@ const submit = () => {
 const close = () => {
   emit('update:modelValue', false)
 }
-
 </script>
 
 <template>
@@ -60,7 +63,7 @@ const close = () => {
             autofocus
           ></v-textarea>
           <v-file-input
-            @update:modelValue="handleFileChange"
+            v-model="submissionData.arquivo"
             label="Anexar Arquivo (Opcional)"
             variant="outlined"
             prepend-icon="mdi-paperclip"
@@ -72,7 +75,9 @@ const close = () => {
       </v-card-text>
       <v-card-actions class="pa-4">
         <v-spacer></v-spacer>
-        <v-btn color="grey-darken-1" variant="text" @click="close" :disabled="isLoading">Cancelar</v-btn>
+        <v-btn color="grey-darken-1" variant="text" @click="close" :disabled="isLoading"
+          >Cancelar</v-btn
+        >
         <v-btn color="green-darken-2" variant="flat" @click="submit" :loading="isLoading">
           Confirmar Entrega
         </v-btn>

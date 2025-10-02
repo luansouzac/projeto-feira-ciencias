@@ -321,25 +321,29 @@ const handleSubmitTask = async (submissionDataFromModal) => {
     const formData = new FormData()
     formData.append('id_tarefa', taskToSubmit.value.id_tarefa)
     formData.append('id_responsavel', authStore.user.id_usuario)
-    
     formData.append('resultado', submissionDataFromModal.resultado || 'Tarefa concluída.')
-    if (submissionDataFromModal.arquivo) {
-      formData.append('arquivo', submissionDataFromModal.arquivo)
+
+    const arquivo = submissionDataFromModal.arquivo
+    if (arquivo) {
+      formData.append('arquivo', arquivo)
     }
 
     formData.append('data_execucao', new Date().toISOString().split('T')[0])
-    
+
     const response = await api.post('/registros_tarefas', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
 
     const newSubmissionRecord = response.data.data || response.data
-    
+
     await api.put(`/tarefas/${taskToSubmit.value.id_tarefa}`, { id_situacao: 3 })
 
     const taskInMainList = tasks.value.find((t) => t.id_tarefa === taskToSubmit.value.id_tarefa)
     if (taskInMainList) {
+      // Atualiza o status na interface para mover o card
       taskInMainList.id_situacao = 3
+
+      // Adiciona o novo registro ao histórico da tarefa na interface
       if (!taskInMainList.registros) {
         taskInMainList.registros = []
       }
@@ -350,6 +354,7 @@ const handleSubmitTask = async (submissionDataFromModal) => {
     isSubmitTaskModalOpen.value = false
   } catch (err) {
     console.error('Erro ao submeter a tarefa:', err)
+    // Se qualquer uma das chamadas falhar, o erro será capturado aqui.
     notificationStore.showError('Não foi possível entregar a tarefa.')
   } finally {
     isSubmitTaskLoading.value = false
