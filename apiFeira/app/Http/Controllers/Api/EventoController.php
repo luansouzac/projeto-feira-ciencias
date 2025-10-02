@@ -26,6 +26,8 @@ class EventoController extends Controller
             'data_evento' => 'nullable|date',
             'inicio_submissao' => 'nullable|date',
             'fim_submissao' => 'nullable|date',
+            'inicio_inscricao' => 'nullable|date',
+            'fim_inscricao' => 'nullable|date',
             'min_pessoas' => 'required|integer|min:1',
             'max_pessoas' => 'required|integer|min:1',
         ]);
