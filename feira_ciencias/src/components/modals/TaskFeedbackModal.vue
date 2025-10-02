@@ -17,11 +17,16 @@ const error = ref(null)
 const newFeedbackText = ref('')
 const isSendingFeedback = ref(false)
 
+const feedbackRules = [
+  (v) => !!v || 'O feedback não pode ficar em branco.',
+  (v) => (v && v.length >= 5) || 'O feedback deve ter no mínimo 5 caracteres.',
+]
+
 // --- Funções Utilitárias ---
 const getMemberNameById = (userId) => {
   // A prop 'task' pode conter a equipe, mas é mais seguro assumir que não
   // Idealmente, o backend deveria retornar o nome do autor
-  return `Usuário ID: ${userId}` 
+  return `Usuário ID: ${userId}`
 }
 const getFullStorageUrl = (filePath) => {
   if (!filePath) return null
@@ -43,17 +48,21 @@ const fetchHistory = async () => {
       api.get(`/registros_tarefas?id_tarefa=${props.task.id_tarefa}`),
     ])
 
-    const feedbacks = (feedbackResponse.data.data || feedbackResponse.data || []).map(fb => ({
-      ...fb, type: 'feedback', date: new Date(fb.created_at)
+    const feedbacks = (feedbackResponse.data.data || feedbackResponse.data || []).map((fb) => ({
+      ...fb,
+      type: 'feedback',
+      date: new Date(fb.created_at),
     }))
-    
+
     const submissions = (registrationResponse.data.data || registrationResponse.data || [])
-      .filter(reg => reg.resultado || reg.arquivo)
-      .map(reg => ({
-        ...reg, type: 'submission', date: new Date(reg.data_execucao),
+      .filter((reg) => reg.resultado || reg.arquivo)
+      .map((reg) => ({
+        ...reg,
+        type: 'submission',
+        date: new Date(reg.data_execucao),
         feedback: reg.resultado,
         // O backend idealmente já retornaria o nome do usuário
-        usuario: { nome: reg.responsavel?.nome || getMemberNameById(reg.id_responsavel) }
+        usuario: { nome: reg.responsavel?.nome || getMemberNameById(reg.id_responsavel) },
       }))
 
     events.value = [...feedbacks, ...submissions].sort((a, b) => b.date - a.date)
@@ -71,9 +80,9 @@ const handleSendFeedback = async () => {
   try {
     const payload = { feedback: newFeedbackText.value }
     const response = await api.post(`/tarefas/${props.task.id_tarefa}/feedbacks`, payload)
-    
+
     const newFeedbackFromServer = response.data.data || response.data
-    
+
     // Emite um evento para o pai saber que um novo feedback foi adicionado
     emit('feedback-sent', newFeedbackFromServer)
 
@@ -81,7 +90,7 @@ const handleSendFeedback = async () => {
     events.value.unshift({
       ...newFeedbackFromServer,
       type: 'feedback',
-      date: new Date(newFeedbackFromServer.created_at)
+      date: new Date(newFeedbackFromServer.created_at),
     })
     newFeedbackText.value = ''
   } catch (err) {
@@ -93,15 +102,18 @@ const handleSendFeedback = async () => {
 }
 
 // Observa a abertura do modal para buscar o histórico
-watch(() => props.modelValue, (isOpen) => {
-  if (isOpen) {
-    fetchHistory()
-  } else {
-    // Limpa o estado quando o modal fecha
-    events.value = []
-    newFeedbackText.value = ''
-  }
-})
+watch(
+  () => props.modelValue,
+  (isOpen) => {
+    if (isOpen) {
+      fetchHistory()
+    } else {
+      // Limpa o estado quando o modal fecha
+      events.value = []
+      newFeedbackText.value = ''
+    }
+  },
+)
 
 const close = () => emit('update:modelValue', false)
 </script>
@@ -140,7 +152,9 @@ const close = () => emit('update:modelValue', false)
               class="pb-2"
             >
               <v-sheet rounded="lg" border class="pa-3 bg-grey-lighten-5">
-                <p class="text-body-1 font-italic">"{{ event.feedback || 'Nenhum comentário.' }}"</p>
+                <p class="text-body-1 font-italic">
+                  "{{ event.feedback || 'Nenhum comentário.' }}"
+                </p>
                 <div v-if="event.type === 'submission' && event.arquivo" class="mt-3">
                   <v-btn :href="getFullStorageUrl(event.arquivo)" target="_blank">Ver Anexo</v-btn>
                 </div>
@@ -157,7 +171,19 @@ const close = () => emit('update:modelValue', false)
         <v-divider></v-divider>
         <div class="pa-4 bg-grey-lighten-4">
           <h4 class="text-subtitle-1 font-weight-medium mb-3">Enviar Novo Feedback</h4>
-          <v-textarea v-model="newFeedbackText" ></v-textarea>
+          <v-textarea
+            v-model="newFeedbackText"
+            label="Escreva seu feedback aqui"
+            variant="outlined"
+            rows="3"
+            auto-grow
+            counter
+            hint="Mínimo de 5 caracteres"
+            persistent-hint
+            :rules="feedbackRules"
+            :disabled="isSendingFeedback"
+            bg-color="white"
+          ></v-textarea>
         </div>
       </template>
 
@@ -169,7 +195,7 @@ const close = () => emit('update:modelValue', false)
           variant="flat"
           @click="handleSendFeedback"
           :loading="isSendingFeedback"
-          :disabled="!newFeedbackText.trim()"
+          :disabled="newFeedbackText.trim().length < 5"
           prepend-icon="mdi-send"
         >
           Enviar Feedback
