@@ -174,6 +174,8 @@ const transformarProjeto = (apiProjeto) => {
   let statusInscricao = 'INDISPONIVEL'
   let mensagemInscricao = 'Período de inscrição não definido para este evento.'
 
+  const nomeEvento = eventoDoProjeto ? eventoDoProjeto.nome : 'Evento não associado';
+
   if (eventoDoProjeto && eventoDoProjeto.inicio_inscricao && eventoDoProjeto.fim_inscricao) {
     const agora = new Date()
     const inicio = new Date(eventoDoProjeto.inicio_inscricao)
@@ -203,6 +205,7 @@ const transformarProjeto = (apiProjeto) => {
     alunoInscrito,
     statusInscricao,
     mensagemInscricao,
+    nomeEvento
   }
 }
 
@@ -478,7 +481,7 @@ const confirmDialog = async () => {
                   <div class="info-item mt-1">
                     <v-icon start color="grey-darken-1" size="small"
                       >mdi-lightbulb-on-outline</v-icon
-                    ><span class="text-body-2">{{ projeto.area }}</span>
+                    ><span class="text-body-2">{{ projeto.nomeEvento }}</span>
                   </div>
                 </div>
                 <div class="mt-4">
