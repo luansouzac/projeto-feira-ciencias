@@ -135,6 +135,9 @@ class ProjetoController extends Controller
             'id_funcao' => 2, // Assumindo que '2' é o ID para a função de 'Membro'
         ]);
 
+        // Carregando os dados do usuário
+        $membro->load('usuario');
+
         return response()->json([
             'message' => 'Inscrição realizada com sucesso!',
             'membro' => $membro

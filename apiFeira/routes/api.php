@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\EventoController;
 use App\Http\Controllers\Api\AvaliacaoController;
 use App\Http\Controllers\Api\EquipeController;
 use App\Http\Controllers\Api\TarefaFeedbackController;
+use App\Http\Controllers\Api\PasswordResetController;
 
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
@@ -202,3 +203,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::post('register', [UserAuthController::class, 'register']);
 Route::post('login', [UserAuthController::class, 'login']);
+
+Route::post('/recuperar_senha', [PasswordResetController::class, 'generateAndSend']);

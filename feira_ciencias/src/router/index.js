@@ -24,6 +24,11 @@ const router = createRouter({
       component: () => import('../views/RegisterView.vue'),
     },
     {
+      path: '/recuperar-senha',
+      name: 'recuperar',
+      component: () => import('../views/RecuperarSenhaView.vue'),
+    },
+    {
       path: '/projetos',
       name: 'projetos',
       component: () => import('../views/ProjectsView.vue'),
