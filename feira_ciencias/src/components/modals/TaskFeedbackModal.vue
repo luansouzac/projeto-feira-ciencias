@@ -78,10 +78,10 @@ const handleSend = async () => {
     const response = await api.post(`/tarefas/${props.task.id_tarefa}/feedbacks`, payload)
 
     
-    emit('message-sent', response.data.data || response.data)
+    emit('message-sent', response.data || response.data)
     notificationStore.showSuccess('Sua mensagem foi enviada!')
     
-    const newItem = response.data.data || response.data
+    const newItem = response.data || response.data
 
     events.value.unshift({
       ...newItem,

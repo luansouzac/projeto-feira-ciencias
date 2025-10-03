@@ -78,12 +78,23 @@ const isTeamFull = computed(() => {
 const isProfessor = computed(() => authStore.user?.id_tipo_usuario === 4)
 
 const combinedFeedbacks = computed(() => {
-  const getMemberName = (userId) => {
-    if (!userId || !membros.value || membros.value.length === 0) return 'Não atribuído'
-    const membro = membros.value.find((m) => m.id_usuario === userId)
-    return membro ? membro.usuario.nome : 'Não atribuído'
+  const createAuthorObject = (userObject) => {
+    if (!userObject) return { name: 'Usuário desconhecido', photo: null }
+    return { name: userObject.nome, photo: userObject.photo }
   }
+
+  const findAuthorObject = (userId) => {
+    if (!userId || !membros.value || membros.value.length === 0) {
+      return { name: 'Não atribuído', photo: null }
+    }
+    const membro = membros.value.find((m) => m.id_usuario === userId)
+    return membro
+      ? createAuthorObject(membro.usuario)
+      : { name: 'Usuário desconhecido', photo: null }
+  }
+
   const avaliacaoStatusMap = {
+    1: { text: 'Análise', color: 'grey', icon: 'mdi-check-circle' },
     2: { text: 'Aprovado', color: 'green', icon: 'mdi-check-circle' },
     3: { text: 'Reprovado', color: 'red', icon: 'mdi-close-circle' },
     4: { text: 'Reprovado com Ressalvas', color: 'orange', icon: 'mdi-alert-circle' },
@@ -94,10 +105,11 @@ const combinedFeedbacks = computed(() => {
     type: 'Avaliação do Projeto',
     title: avaliacaoStatusMap[ava.id_situacao]?.text || 'Avaliação',
     feedbackText: ava.feedback || 'Nenhum comentário adicional.',
-    author: ava.avaliador?.nome || 'Avaliador desconhecido',
+    author: createAuthorObject(ava.avaliador),
     color: avaliacaoStatusMap[ava.id_situacao]?.color || 'grey',
     icon: avaliacaoStatusMap[ava.id_situacao]?.icon || 'mdi-comment-question-outline',
   }))
+
   const taskFeedbacks = (tasks.value || []).flatMap((task) =>
     (task.feedbacks || []).map((fb) => ({
       id: `task-${fb.id_feedback}`,
@@ -105,11 +117,12 @@ const combinedFeedbacks = computed(() => {
       type: 'Feedback de Tarefa',
       title: `Na tarefa: "${task.descricao}"`,
       feedbackText: fb.feedback,
-      author: fb.usuario?.nome || 'Usuário desconhecido',
+      author: createAuthorObject(fb.usuario),
       color: 'blue-darken-1',
       icon: 'mdi-comment-processing-outline',
     })),
   )
+
   const submissionFeedbacks = (tasks.value || []).flatMap((task) =>
     (task.registros || [])
       .filter((reg) => reg.resultado || reg.arquivo)
@@ -119,14 +132,15 @@ const combinedFeedbacks = computed(() => {
         type: 'Entrega de Tarefa',
         title: `Entrega da tarefa: "${task.descricao}"`,
         feedbackText: reg.resultado || 'Tarefa entregue sem comentários.',
-        author: getMemberName(reg.id_responsavel) || 'Usuário desconhecido',
+        author: findAuthorObject(reg.id_responsavel),
         color: 'purple-darken-1',
         icon: 'mdi-upload',
         arquivo: reg.arquivo,
       })),
   )
+
   return [...evaluationFeedbacks, ...taskFeedbacks, ...submissionFeedbacks].sort(
-    (a, b) => b.date - a.date,
+    (a, b) => new Date(b.date) - new Date(a.date),
   )
 })
 
