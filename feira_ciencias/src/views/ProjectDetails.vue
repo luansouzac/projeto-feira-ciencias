@@ -461,8 +461,8 @@ const handleSubmitTask = async (submissionDataFromModal) => {
     <TaskFeedbackModal
       v-model="isTaskFeedbackModalOpen"
       :task="selectedTaskForFeedback"
-      :is-professor="isProfessor"
-      @feedback-sent="handleFeedbackSent"
+      :can-interact="canCreateTasks"
+      @message-sent="handleFeedbackSent"
     />
 
     <ConfirmDeleteDialog

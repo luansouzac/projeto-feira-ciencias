@@ -1,11 +1,13 @@
 <script setup>
 import { ref, watch, defineProps, defineEmits } from 'vue'
 import api from '@/assets/plugins/axios.js'
+import { useNotificationStore } from '@/stores/notification';
+const notificationStore = useNotificationStore()
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false }, // para v-model
   task: { type: Object, default: null },
-  isProfessor: { type: Boolean, default: false },
+  canInteract: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:modelValue', 'feedback-sent'])
@@ -14,8 +16,8 @@ const emit = defineEmits(['update:modelValue', 'feedback-sent'])
 const events = ref([])
 const isLoading = ref(false)
 const error = ref(null)
-const newFeedbackText = ref('')
-const isSendingFeedback = ref(false)
+const newText = ref('')
+const isSending = ref(false)
 
 const feedbackRules = [
   (v) => !!v || 'O feedback não pode ficar em branco.',
@@ -48,22 +50,16 @@ const fetchHistory = async () => {
       api.get(`/registros_tarefas?id_tarefa=${props.task.id_tarefa}`),
     ])
 
-    const feedbacks = (feedbackResponse.data.data || feedbackResponse.data || []).map((fb) => ({
+    const feedbacks = (feedbackResponse.data || []).map(fb => ({
       ...fb,
-      type: 'feedback',
-      date: new Date(fb.created_at),
-    }))
-
-    const submissions = (registrationResponse.data.data || registrationResponse.data || [])
-      .filter((reg) => reg.resultado || reg.arquivo)
-      .map((reg) => ({
-        ...reg,
-        type: 'submission',
-        date: new Date(reg.data_execucao),
-        feedback: reg.resultado,
-        // O backend idealmente já retornaria o nome do usuário
-        usuario: { nome: reg.responsavel?.nome || getMemberNameById(reg.id_responsavel) },
-      }))
+      type: fb.usuario?.id_tipo_usuario === 4 ? 'feedback' : 'comment',
+      date: new Date(fb.created_at)
+    }));
+    
+    const submissions = (registrationResponse.data || []).filter(reg => reg.resultado || reg.arquivo).map(reg => ({
+      ...reg, type: 'submission', date: new Date(reg.data_execucao), feedback: reg.resultado,
+      usuario: { nome: reg.responsavel?.nome || 'Usuário desconhecido' }
+    }));
 
     events.value = [...feedbacks, ...submissions].sort((a, b) => b.date - a.date)
   } catch (err) {
@@ -74,30 +70,29 @@ const fetchHistory = async () => {
   }
 }
 
-const handleSendFeedback = async () => {
-  if (!newFeedbackText.value.trim() || !props.task) return
-  isSendingFeedback.value = true
+const handleSend = async () => {
+  if (!newText.value.trim() || !props.task) return
+  isSending.value = true
   try {
-    const payload = { feedback: newFeedbackText.value }
+    const payload = { feedback: newText.value }
     const response = await api.post(`/tarefas/${props.task.id_tarefa}/feedbacks`, payload)
 
-    const newFeedbackFromServer = response.data.data || response.data
+    
+    emit('message-sent', response.data.data || response.data)
+    notificationStore.showSuccess('Sua mensagem foi enviada!')
+    
+    const newItem = response.data.data || response.data
 
-    // Emite um evento para o pai saber que um novo feedback foi adicionado
-    emit('feedback-sent', newFeedbackFromServer)
-
-    // Adiciona o novo feedback instantaneamente à lista do modal
     events.value.unshift({
-      ...newFeedbackFromServer,
-      type: 'feedback',
-      date: new Date(newFeedbackFromServer.created_at),
+      ...newItem,
+      type: newItem.usuario?.id_tipo_usuario === 4 ? 'feedback' : 'comment',
+      date: new Date(newItem.created_at)
     })
-    newFeedbackText.value = ''
+    newText.value = ''
   } catch (err) {
-    console.error('Erro ao enviar feedback:', err)
-    // idealmente, mostrar erro com a store de notificação
+    notificationStore.showError('Não foi possível enviar a mensagem.')
   } finally {
-    isSendingFeedback.value = false
+    isSending.value = false
   }
 }
 
@@ -110,7 +105,7 @@ watch(
     } else {
       // Limpa o estado quando o modal fecha
       events.value = []
-      newFeedbackText.value = ''
+      newText.value = ''
     }
   },
 )
@@ -167,12 +162,12 @@ const close = () => emit('update:modelValue', false)
         </div>
       </v-card-text>
 
-      <template v-if="isProfessor">
+      <template v-if="canInteract">
         <v-divider></v-divider>
         <div class="pa-4 bg-grey-lighten-4">
           <h4 class="text-subtitle-1 font-weight-medium mb-3">Enviar Novo Feedback</h4>
           <v-textarea
-            v-model="newFeedbackText"
+            v-model="newText"
             label="Escreva seu feedback aqui"
             variant="outlined"
             rows="3"
@@ -181,7 +176,7 @@ const close = () => emit('update:modelValue', false)
             hint="Mínimo de 5 caracteres"
             persistent-hint
             :rules="feedbackRules"
-            :disabled="isSendingFeedback"
+            :disabled="isSending"
             bg-color="white"
           ></v-textarea>
         </div>
@@ -190,12 +185,12 @@ const close = () => emit('update:modelValue', false)
       <v-card-actions class="pa-4 bg-grey-lighten-5">
         <v-spacer></v-spacer>
         <v-btn
-          v-if="isProfessor"
+          v-if="canInteract"
           color="green-darken-2"
           variant="flat"
-          @click="handleSendFeedback"
-          :loading="isSendingFeedback"
-          :disabled="newFeedbackText.trim().length < 5"
+          @click="handleSend"
+          :loading="isSending"
+          :disabled="newText.trim().length < 5"
           prepend-icon="mdi-send"
         >
           Enviar Feedback
