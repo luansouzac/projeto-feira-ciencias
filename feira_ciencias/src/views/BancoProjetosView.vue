@@ -281,7 +281,11 @@ const gerenciarProjeto = (id) => router.push(`/gerenciar-projeto/${id}`)
         <v-card-text>
           <v-row v-if="viewMode === 'grid'">
             <v-col v-for="projeto in grupo.projetos" :key="projeto.id" cols="12" md="6" lg="4">
-              <ProjectCard :projeto="projeto" @ver-detalhes="verDetalhes(projeto.id)">
+              <ProjectCard
+               :projeto="projeto"
+                contexto= "inscricao"
+                :inscrito="projeto.alunoInscrito"
+                @ver-detalhes="verDetalhes(projeto.id)">
                 <template #actions>
                   <template v-if="isAluno">
                     <v-btn v-if="projeto.alunoInscrito" color="red-darken-2" variant="text" size="small" @click.stop="sairDoProjeto(projeto)">Cancelar Inscrição</v-btn>

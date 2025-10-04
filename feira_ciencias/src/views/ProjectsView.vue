@@ -445,7 +445,10 @@ function handleApprovedCardClick() {
 
     <v-row v-else>
       <v-col v-for="projeto in projetosFiltrados" :key="projeto.id_projeto" cols="12" sm="6" lg="4">
-        <ProjectCard :projeto="projeto" @ver-detalhes="goToProjectDetails">
+        <ProjectCard 
+        :projeto="projeto"
+        contexto="gerenciamento"
+         @ver-detalhes="goToProjectDetails">
           <template #actions>
             <v-btn
               icon="mdi-pencil"

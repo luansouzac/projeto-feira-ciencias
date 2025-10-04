@@ -191,7 +191,11 @@ function goToProjectDetails(id) {
               sm="6"
               lg="4"
             >
-              <ProjectCard :projeto="projeto" @ver-detalhes="goToProjectDetails(projeto.id_projeto)" />
+              <ProjectCard 
+              :projeto="projeto"
+              @ver-detalhes="goToProjectDetails(projeto.id_projeto)"
+              contexto="inscricao"
+              />
             </v-col>
           </v-row>
 
