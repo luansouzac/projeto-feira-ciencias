@@ -245,10 +245,7 @@ const gerenciarProjeto = (id) => router.push(`/gerenciar-projeto/${id}`)
           <v-chip-group v-model="filtroStatus" mandatory color="green-darken-3">
             <v-chip v-for="status in statusOptions" :key="status" :value="status" filter size="small">{{ status }}</v-chip>
           </v-chip-group>
-          <v-btn-toggle v-model="viewMode" mandatory density="compact" variant="outlined" class="ml-4">
-            <v-btn value="grid" aria-label="Grade"><v-icon>mdi-view-grid-outline</v-icon></v-btn>
-            <v-btn value="list" aria-label="Lista"><v-icon>mdi-view-list-outline</v-icon></v-btn>
-          </v-btn-toggle>
+
         </v-col>
       </v-row>
     </v-card>
