@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class ProjetoController extends Controller
 {
@@ -96,53 +97,54 @@ class ProjetoController extends Controller
      * @param string $id O ID do projeto.
      * @return \Illuminate\Http\JsonResponse
      */
-    public function inscrever(Request $request, $id)
-    {
-        // Usamos findOrFail para garantir que o projeto exista, senão retorna 404.
-        // Carregamos o evento relacionado para verificar o número máximo de pessoas.
-        $projeto = Projeto::with('eventos')->findOrFail($id);
-        
-        $usuario = $request->user();
+    // Em app/Http/Controllers/ProjetoController.php
+public function inscrever(Request $request, $id)
+{
+    $projeto = Projeto::with('eventos')->findOrFail($id);
+    $usuarioIdParaAdicionar = $request->input('id_usuario', Auth::id());
+    $agora = Carbon::now();
 
-        // 1. Encontra a equipe do projeto ou cria uma nova se não existir.
-        $equipe = Equipe::firstOrCreate(['id_projeto' => $projeto->id_projeto]);
+    $inicioInscricao = Carbon::parse($projeto->eventos->nicio_inscricao)->startOfDay();
+    $fimInscricao = Carbon::parse($projeto->eventos->fim_inscricao)->endOfDay();
 
-        $usuarioIdParaAdicionar = $request->input('id_usuario', Auth::id());
-
-        // 2. Verifica se o usuário já é membro desta equipe.
-        $jaInscrito = MembroEquipe::where('id_equipe', $equipe->id_equipe)
-                                  ->where('id_usuario', $usuarioIdParaAdicionar)
-                                  ->exists();
-
-        if ($jaInscrito) {
-            return response()->json(['erro' => 'Você já está inscrito neste projeto.'], 409); // 409 Conflict
-        }
-
-        // 3. Verifica se o projeto atingiu o limite de membros definido no evento.
-        $limiteMembros = $projeto->evento->max_pessoas ?? 0;
-        $membrosAtuais = $equipe->membroEquipe()->count();
-
-        if ($limiteMembros > 0 && $membrosAtuais >= $limiteMembros) {
-            return response()->json(['erro' => 'Este projeto já atingiu o número máximo de participantes.'], 403); // 403 Forbidden
-        }
-
-        // 4. Cria o registro do novo membro na equipe.
-        // O modelo MembroEquipe espera 'id_funcao'. Assumimos um valor padrão para "Membro".
-        // Você pode precisar criar uma tabela 'funcoes' e definir um ID padrão.
-        $membro = MembroEquipe::create([
-            'id_equipe' => $equipe->id_equipe,
-            'id_usuario' => $usuarioIdParaAdicionar,
-            'id_funcao' => 2, // Assumindo que '2' é o ID para a função de 'Membro'
-        ]);
-
-        // Carregando os dados do usuário
-        $membro->load('usuario');
-
-        return response()->json([
-            'message' => 'Inscrição realizada com sucesso!',
-            'membro' => $membro
-        ], 201); // 201 Created
+    if (!$projeto->eventos || !$agora->between($inicioInscricao, $fimInscricao)) {
+        return response()->json(['message' => 'As inscrições para este projeto não estão abertas no momento.'], 403);
     }
+
+    
+    $equipe = Equipe::firstOrCreate(['id_projeto' => $projeto->id_projeto]);
+
+    $membroEmOutraEquipe = MembroEquipe::where('id_usuario', $usuarioIdParaAdicionar)
+                                       ->whereHas('equipe.projeto.eventos', function ($query) use ($projeto) {
+                                           $query->where('id_evento', $projeto->id_evento); 
+                                       })
+                                       ->where('id_equipe', '!=', $equipe->id_equipe)
+                                       ->exists();
+
+    if ($membroEmOutraEquipe) {
+        return response()->json(['message' => 'Este usuário já faz parte de outra equipe neste evento.'], 409);
+    }
+
+    $jaInscrito = $equipe->membroEquipe()->where('id_usuario', $usuarioIdParaAdicionar)->exists();
+    if ($jaInscrito) {
+        return response()->json(['message' => 'Este usuário já faz parte desta equipe.'], 409);
+    }
+
+    $limiteMembros = $projeto->eventos->max_pessoas ?? 0;
+    if ($limiteMembros > 0 && $equipe->membroEquipe()->count() >= $limiteMembros) {
+        return response()->json(['message' => 'Esta equipe já atingiu o número máximo de participantes.'], 403);
+    }
+
+    $novoMembro = MembroEquipe::create([
+        'id_equipe' => $equipe->id_equipe,
+        'id_usuario' => $usuarioIdParaAdicionar,
+        'id_funcao' => 2,
+    ]);
+
+    $novoMembro->load('usuario.tipoUsuario');
+
+    return response()->json($novoMembro, 201);
+}
 
     /**
      * Exibe os detalhes de um projeto específico.

@@ -200,18 +200,32 @@ onMounted(async () => {
 const openAddMemberModal = () => (isAddMemberModalOpen.value = true)
 
 const handleAddMember = async (user) => {
+  // --- VALIDAÇÃO DE DATA NO FRONTEND (Feedback Rápido) ---
+  const agora = new Date();
+  // Garanta que seu objeto 'project.evento' contenha essas datas
+  const inicioInscricao = new Date(project.value.evento?.data_inicio_inscricao);
+  const fimInscricao = new Date(project.value.evento?.data_fim_inscricao);
+
+  // if (!project.value.evento || agora < inicioInscricao || agora > fimInscricao) {
+  //   notificationStore.showError('As inscrições não estão abertas neste momento.');
+  //   return; // Interrompe a função
+  // }
+  // --- FIM DA VALIDAÇÃO DE DATA ---
+
   notificationStore.showInfo(`Adicionando ${user.nome}...`)
   try {
     const payload = { id_usuario: user.id_usuario }
     const response = await api.post(`/projetos/${project.value.id_projeto}/inscrever`, payload)
+
     membros.value.push(response.data.data || response.data)
     notificationStore.showSuccess(`${user.nome} foi adicionado à equipe!`)
     isAddMemberModalOpen.value = false
   } catch (err) {
     console.error('Erro ao adicionar membro:', err)
-    notificationStore.showError(
-      err.response?.data?.message || 'Não foi possível adicionar o membro.',
-    )
+    
+    // Lida com a resposta de erro específica do backend
+    const mensagemErro = err.response?.data?.message || 'Não foi possível adicionar o membro.';
+    notificationStore.showError(mensagemErro);
   }
 }
 
