@@ -227,7 +227,7 @@ const handleSave = async (formData) => {
     }
 
     if (!responseData.equipe) responseData.equipe = [];
-    if (!responseData.eventos) responseData.eventos = eventos.value.find(e => e.id_evento === responseData.id_evento);f
+    if (!responseData.eventos) responseData.eventos = eventos.value.find(e => e.id_evento === responseData.id_evento);
 
     const projetoProcessado = transformarProjeto(responseData);
 
