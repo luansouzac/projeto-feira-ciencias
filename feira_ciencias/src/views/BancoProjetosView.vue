@@ -152,10 +152,12 @@ const modalConfig = computed(() => ({
 // --- FUNÇÕES DE TRANSFORMAÇÃO E LÓGICA DE VISUALIZAÇÃO ---
 
 // NOVO: VERIFICA SE O ALUNO JÁ TEM INSCRIÇÃO EM ALGUM PROJETO
-const alunoJaInscrito = computed(() => {
-  if (userType.value !== 2) return false // Regra só se aplica a alunos
-  return projetos.value.some((p) => p.alunoInscrito)
-})
+const alunoJaInscritoNoEvento = (eventoId) => {
+  if (userType.value !== 2 || !eventoId) {
+    return false
+  }
+  return projetos.value.some(p => p.id_evento === eventoId && p.alunoInscrito);
+}
 
 const transformarProjeto = (apiProjeto) => {
   const inscritos = apiProjeto.equipe?.[0]?.membro_equipe?.length ?? 0
@@ -640,33 +642,39 @@ const confirmDialog = async () => {
                       Sair <v-icon size="small" end>mdi-logout</v-icon>
                     </v-btn>
 
-                    <v-tooltip
-                      v-else
-                      :text="
-                        alunoJaInscrito
-                          ? 'Você já está inscrito em outro projeto.'
-                          : projeto.mensagemInscricao
-                      "
-                      location="top"
-                    >
-                      <template v-slot:activator="{ props }">
-                        <div v-bind="props">
-                          <v-btn
-                            size="small"
-                            :disabled="
-                              projeto.status === 'Esgotado' ||
-                              alunoJaInscrito ||
-                              projeto.statusInscricao !== 'ABERTO'
-                            "
-                            color="green-darken-3"
-                            variant="tonal"
-                            @click="inscreverNoProjeto(projeto)"
-                          >
-                            Inscrever-se
-                          </v-btn>
-                        </div>
-                      </template>
-                    </v-tooltip>
+                   <v-tooltip
+  v-else
+  location="top"
+>
+  <template v-slot:activator="{ props }">
+    <div v-bind="props">
+      <v-btn
+        size="small"
+        :disabled="
+          projeto.status === 'Esgotado' ||
+          alunoJaInscritoNoEvento(projeto.id_evento) || // <-- MUDANÇA PRINCIPAL AQUI
+          projeto.statusInscricao !== 'ABERTO'
+        "
+        color="green-darken-3"
+        variant="flat"
+        @click="inscreverNoProjeto(projeto)"
+      >
+        Inscrever-se
+      </v-btn>
+    </div>
+  </template>
+
+  <span v-if="alunoJaInscritoNoEvento(projeto.id_evento)">
+    Você já está em um projeto deste evento.
+  </span>
+  <span v-else-if="projeto.status === 'Esgotado'">
+    Vagas esgotadas para este projeto.
+  </span>
+  <span v-else>
+    {{ projeto.mensagemInscricao }}
+  </span>
+
+</v-tooltip>
                   </div>
                 </td>
               </tr>
