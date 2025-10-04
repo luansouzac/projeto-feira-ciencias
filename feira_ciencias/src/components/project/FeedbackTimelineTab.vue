@@ -64,7 +64,6 @@ const getInitials = (name) => {
     </div>
 
     <v-expansion-panels v-else variant="inset">
-      <transition-group name="fade-list">
         <v-expansion-panel
           v-for="fb in filteredFeedbacks"
           :key="fb.id"
@@ -85,46 +84,53 @@ const getInitials = (name) => {
               <span class="text-caption text-grey ml-4">{{ formatDateTime(fb.date) }}</span>
             </div>
           </v-expansion-panel-title>
-          
+          <transition name="fade-slow">
           <v-expansion-panel-text class="bg-grey-lighten-5 pt-4">
             <blockquote v-if="fb.feedbackText" class="text-body-1 font-italic text-medium-emphasis">
               "{{ fb.feedbackText }}"
             </blockquote>
 
+
             <div v-if="fb.arquivo" class="mt-4">
-              <p class="text-caption font-weight-bold mb-2">ARQUIVO ANEXADO:</p>
-              <v-img
-                v-if="isImage(fb.arquivo)"
-                :src="getFullStorageUrl(fb.arquivo)"
-                max-height="200"
-                aspect-ratio="16/9"
-                cover
-                class="rounded border mb-2 cursor-pointer"
-                @click="() => window.open(getFullStorageUrl(fb.arquivo), '_blank')"
-              >
-                <v-tooltip activator="parent" location="center">Clique para ampliar</v-tooltip>
-              </v-img>
-              <v-btn
-                :href="getFullStorageUrl(fb.arquivo)"
-                target="_blank"
-                prepend-icon="mdi-download-circle-outline"
-                :color="fb.color"
-                variant="tonal"
-                size="small"
-              >
-                {{ isImage(fb.arquivo) ? 'Baixar Imagem' : 'Baixar Anexo' }}
-              </v-btn>
-            </div>
+  <p class="text-caption font-weight-bold mb-2 text-grey-darken-1">ARQUIVO ANEXADO:</p>
+      <v-img
+      v-if="isImage(fb.arquivo)"
+      :src="getFullStorageUrl(fb.arquivo)"
+      max-height="200"
+      aspect-ratio="16/9"
+      cover
+      class="rounded border mb-2 cursor-pointer"
+      @click="() => window.open(getFullStorageUrl(fb.arquivo), '_blank')"
+    >
+      <v-tooltip activator="parent" location="center">Clique para ampliar</v-tooltip>
+    </v-img>
+    
+    <v-btn
+      :href="getFullStorageUrl(fb.arquivo)"
+      target="_blank"
+      prepend-icon="mdi-download-circle-outline"
+      :color="fb.color"
+      variant="tonal"
+      size="small"
+    >
+      {{ isImage(fb.arquivo) ? 'Baixar Imagem' : 'Baixar Anexo' }}
+    </v-btn>
+</div>
           </v-expansion-panel-text>
+          </transition>
         </v-expansion-panel>
-      </transition-group>
+      
     </v-expansion-panels>
   </v-card-text>
 </template>
 
 <style scoped>
-.fade-list-item { transition: all 0.5s ease; }
-.fade-list-enter-from, .fade-list-leave-to { opacity: 0; transform: translateY(20px); }
-.fade-list-leave-active { position: absolute; width: calc(100% - 16px); }
-.cursor-pointer { cursor: pointer; }
+.fade-slow-enter-active,
+.fade-slow-leave-active {
+  transition: opacity 0.4s ease;
+}
+.fade-slow-enter-from,
+.fade-slow-leave-to {
+  opacity: 0;
+}
 </style>

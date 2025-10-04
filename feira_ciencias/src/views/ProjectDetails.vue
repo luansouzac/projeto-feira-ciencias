@@ -77,10 +77,14 @@ const isTeamFull = computed(() => {
 
 const isProfessor = computed(() => authStore.user?.id_tipo_usuario === 4)
 
+
 const combinedFeedbacks = computed(() => {
   const createAuthorObject = (userObject) => {
     if (!userObject) return { name: 'Usuário desconhecido', photo: null }
-    return { name: userObject.nome, photo: userObject.photo }
+    return {
+      name: userObject.nome,
+      photo: userObject.photo, 
+    }
   }
 
   const findAuthorObject = (userId) => {
@@ -88,24 +92,22 @@ const combinedFeedbacks = computed(() => {
       return { name: 'Não atribuído', photo: null }
     }
     const membro = membros.value.find((m) => m.id_usuario === userId)
-    return membro
-      ? createAuthorObject(membro.usuario)
-      : { name: 'Usuário desconhecido', photo: null }
+    return membro ? createAuthorObject(membro.usuario) : { name: 'Usuário desconhecido', photo: null }
   }
-
+  
   const avaliacaoStatusMap = {
-    1: { text: 'Análise', color: 'grey', icon: 'mdi-check-circle' },
     2: { text: 'Aprovado', color: 'green', icon: 'mdi-check-circle' },
     3: { text: 'Reprovado', color: 'red', icon: 'mdi-close-circle' },
     4: { text: 'Reprovado com Ressalvas', color: 'orange', icon: 'mdi-alert-circle' },
   }
+
   const evaluationFeedbacks = (avaliacoes.value || []).map((ava) => ({
     id: `ava-${ava.id_projeto_avaliacao}`,
     date: new Date(ava.created_at),
     type: 'Avaliação do Projeto',
     title: avaliacaoStatusMap[ava.id_situacao]?.text || 'Avaliação',
     feedbackText: ava.feedback || 'Nenhum comentário adicional.',
-    author: createAuthorObject(ava.avaliador),
+    author: createAuthorObject(ava.avaliador), // Usa a função padronizada
     color: avaliacaoStatusMap[ava.id_situacao]?.color || 'grey',
     icon: avaliacaoStatusMap[ava.id_situacao]?.icon || 'mdi-comment-question-outline',
   }))
@@ -117,7 +119,7 @@ const combinedFeedbacks = computed(() => {
       type: 'Feedback de Tarefa',
       title: `Na tarefa: "${task.descricao}"`,
       feedbackText: fb.feedback,
-      author: createAuthorObject(fb.usuario),
+      author: createAuthorObject(fb.usuario), // Usa a função padronizada
       color: 'blue-darken-1',
       icon: 'mdi-comment-processing-outline',
     })),
@@ -127,22 +129,21 @@ const combinedFeedbacks = computed(() => {
     (task.registros || [])
       .filter((reg) => reg.resultado || reg.arquivo)
       .map((reg) => ({
-        id: `sub-${reg.id_registro_tarefa}`,
+        id: `sub-${reg.id_registro}`, // CORREÇÃO: Usar id_registro que é único
         date: new Date(reg.data_execucao),
         type: 'Entrega de Tarefa',
         title: `Entrega da tarefa: "${task.descricao}"`,
         feedbackText: reg.resultado || 'Tarefa entregue sem comentários.',
-        author: findAuthorObject(reg.id_responsavel),
+        author: findAuthorObject(reg.id_responsavel), // Usa a função corrigida
         color: 'purple-darken-1',
         icon: 'mdi-upload',
         arquivo: reg.arquivo,
       })),
   )
-
-  return [...evaluationFeedbacks, ...taskFeedbacks, ...submissionFeedbacks].sort(
-    (a, b) => new Date(b.date) - new Date(a.date),
-  )
-})
+  console.log(submissionFeedbacks);
+  
+  return [...evaluationFeedbacks, ...taskFeedbacks, ...submissionFeedbacks];
+});
 
 // --- LÓGICA DE BUSCA DE DADOS ---
 onMounted(async () => {
