@@ -4,17 +4,24 @@ import { useFileUtils } from '@/composables/useFileUtils'
 
 const { getFullStorageUrl, isImage } = useFileUtils()
 
+const isImageModalOpen = ref(false)     
+const selectedImageUrl = ref('')
+
+const expandImage = (imageUrl) => {
+  selectedImageUrl.value = imageUrl
+  isImageModalOpen.value = true
+}
+
+
 const props = defineProps({
   feedbacks: { type: Array, required: true },
 })
 
-// --- NOVA LÓGICA DE FILTRO (APENAS POR NOME) ---
 const authorSearchQuery = ref('')
 
 const filteredFeedbacks = computed(() => {
   let items = [...props.feedbacks]
 
-  // 1. Filtra por nome do autor (se houver texto na busca)
   if (authorSearchQuery.value && authorSearchQuery.value.trim() !== '') {
     const searchTerm = authorSearchQuery.value.toLowerCase().trim()
     items = items.filter(fb => 
@@ -22,7 +29,6 @@ const filteredFeedbacks = computed(() => {
     )
   }
   
-  // 2. Ordena o resultado final por data
   return items.sort((a, b) => new Date(b.date) - new Date(a.date))
 })
 
@@ -100,7 +106,7 @@ const getInitials = (name) => {
       aspect-ratio="16/9"
       cover
       class="rounded border mb-2 cursor-pointer"
-      @click="() => window.open(getFullStorageUrl(fb.arquivo), '_blank')"
+      @click="expandImage(getFullStorageUrl(fb.arquivo))"
     >
       <v-tooltip activator="parent" location="center">Clique para ampliar</v-tooltip>
     </v-img>
@@ -122,6 +128,20 @@ const getInitials = (name) => {
       
     </v-expansion-panels>
   </v-card-text>
+
+  <v-dialog v-model="isImageModalOpen" max-width="900px">
+  <v-card>
+    <v-btn
+      icon="mdi-close"
+      variant="text"
+      class="close-button"
+      @click="isImageModalOpen = false"
+    ></v-btn>
+
+    <v-img :src="selectedImageUrl" max-height="80vh" contain></v-img>
+  </v-card>
+</v-dialog>
+
 </template>
 
 <style scoped>
@@ -132,5 +152,18 @@ const getInitials = (name) => {
 .fade-slow-enter-from,
 .fade-slow-leave-to {
   opacity: 0;
+}
+.v-card {
+  position: relative;
+}
+
+.close-button {
+  position: absolute;  
+  top: 8px;            
+  right: 8px;        
+  z-index: 10;        
+  
+  background-color: rgba(0, 0, 0, 0.3);
+  color: white;
 }
 </style>
