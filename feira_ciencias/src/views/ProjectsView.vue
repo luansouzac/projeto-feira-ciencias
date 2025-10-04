@@ -143,17 +143,17 @@ onMounted(async () => {
   const fetchProjetosPromise = api.get(`/projetos?id_responsavel=${userId}&situacao_not=2`)
   const fetchEventosPromise = eventoStore.fetchEventos()
   const fetchAvaliadoresPromise = api.get(`/usuarios?id_tipo_usuario=4`)
-  const fetchAprovadosCountPromise = api.get(`/projetos?id_responsavel=${userId}&id_situacao=2`)
+  const fetchProjetosInscritosPromise = api.get(`/usuarios/${userId}/projetos-inscritos`)
 
   try {
     const results = await Promise.allSettled([
       fetchProjetosPromise,
       fetchAvaliadoresPromise,
       fetchEventosPromise,
-      fetchAprovadosCountPromise,
+      fetchProjetosInscritosPromise,
     ])
 
-    const [projetosResult, avaliadoresResult, eventosResult, aprovadosCountResult] = results
+    const [projetosResult, avaliadoresResult, eventosResult, ProjetosInscritosResult] = results
 
     if (projetosResult.status === 'fulfilled') {
       todosProjetos.value = projetosResult.value.data
@@ -167,10 +167,10 @@ onMounted(async () => {
     } else {
       console.error('Erro ao buscar avaliadores:', avaliadoresResult.reason)
     }
-    if (aprovadosCountResult.status === 'fulfilled') {
-      totalProjetosAprovados.value = aprovadosCountResult.value.data.length
+    if (ProjetosInscritosResult.status === 'fulfilled') {
+      totalProjetosAprovados.value = ProjetosInscritosResult.value.data.length
     } else {
-      console.error('Erro ao buscar contagem de aprovados:', aprovadosCountResult.reason)
+      console.error('Erro ao buscar contagem de aprovados:', ProjetosInscritosResult.reason)
     }
 
     if (eventosResult.status === 'rejected') {
