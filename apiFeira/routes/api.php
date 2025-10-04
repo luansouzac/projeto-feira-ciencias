@@ -48,6 +48,7 @@ Route::middleware(['auth:sanctum', 'permission:exibir projeto'])->group(function
     Route::get('/projetos', [ProjetoController::class, 'index']);
     Route::get('/projetos/{id}', [ProjetoController::class, 'show']);
     Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
+    Route::get('/usuarios/{id}/projetos-inscritos', [UsuarioController::class, 'projetosInscritos']);
 });
 
 // Rotas de ESCRITA (acessíveis por quem pode 'crud projeto')

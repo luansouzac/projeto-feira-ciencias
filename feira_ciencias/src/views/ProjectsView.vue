@@ -389,7 +389,7 @@ function handleApprovedCardClick() {
                 <div class="text-h4 font-weight-bold text-green-darken-4">
                   {{ totalProjetosAprovados }}
                 </div>
-                <div class="text-subtitle-2 text-green-darken-3">Projetos Aprovados</div>
+                <div class="text-subtitle-2 text-green-darken-3">Projetos Inscritos</div>
               </div>
               <v-spacer></v-spacer>
               <v-icon v-if="totalProjetosAprovados > 0" size="36" class="icon-arrow"
