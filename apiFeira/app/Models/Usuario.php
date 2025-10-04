@@ -20,7 +20,7 @@ class Usuario extends Authenticatable
 
     protected $fillable = ['nome', 'email', 'senha_hash', 'data_cadastro','id_tipo_usuario', 'id_matricula', 'cpf', 'telefone', 'instituicao', 'ano', 'photo'];
 
-    public $timestamps = false;
+    
 
     protected $hidden = [
         'senha_hash',

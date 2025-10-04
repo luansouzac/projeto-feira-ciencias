@@ -13,7 +13,7 @@ class AvaliacaoAprendizagem extends Model
 
     protected $primaryKey = 'id_avaliacao';
 
-    public $timestamps = false;
+    
 
     protected $fillable = [
         'id_projeto',

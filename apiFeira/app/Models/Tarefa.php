@@ -13,7 +13,7 @@ class Tarefa extends Model
 
     protected $primaryKey = 'id_tarefa';
 
-    public $timestamps = false;
+    
 
     protected $fillable = [
         'id_projeto', 

@@ -13,7 +13,7 @@ class Projeto extends Model
 
     protected $primaryKey = 'id_projeto';
 
-    public $timestamps = false;
+    
 
     protected $fillable = [
         'id_responsavel',

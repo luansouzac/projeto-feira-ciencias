@@ -13,8 +13,6 @@ class AtribuicaoTarefa extends Model
 
     protected $primaryKey = 'id_atribuicao';
 
-    public $timestamps = false;
-
     protected $fillable = ['id_tarefa', 'id_membro', 'data_atribuicao'];
 
     public function tarefa()

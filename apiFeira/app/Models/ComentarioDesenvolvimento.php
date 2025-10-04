@@ -13,7 +13,7 @@ class ComentarioDesenvolvimento extends Model
 
     protected $primaryKey = 'id_comentario';
 
-    public $timestamps = false;
+    
 
     protected $fillable = [
         'id_registro',
