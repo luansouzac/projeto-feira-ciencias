@@ -12,7 +12,7 @@ class Equipe extends Model
     protected $table = 'equipes';
     protected $primaryKey = 'id_equipe';
 
-    
+    public $timestamps = false;
 
     protected $fillable = ['id_projeto'];
 

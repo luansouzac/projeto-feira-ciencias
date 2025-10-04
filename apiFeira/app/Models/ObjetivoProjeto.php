@@ -13,7 +13,7 @@ class ObjetivoProjeto extends Model
 
     protected $primaryKey = 'id_objetivo';
 
-    
+    public $timestamps = false;
 
     protected $fillable = ['id_projeto', 'descricao'];
 
