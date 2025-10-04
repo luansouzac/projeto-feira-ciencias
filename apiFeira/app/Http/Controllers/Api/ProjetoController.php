@@ -85,6 +85,7 @@ class ProjetoController extends Controller
 
         $data = $request->all();
         $item = Projeto::create($data);
+        $item->load(['eventos', 'orientador', 'responsavel', 'equipe.membroEquipe']);
 
         return response()->json($item, 201);
     }
@@ -228,6 +229,7 @@ public function inscrever(Request $request, $id)
 
         $data = $request->all();
         $item->update($data);
+        $item->load(['eventos', 'orientador', 'responsavel', 'equipe.membroEquipe']);
 
         return response()->json($item, 200);
     }

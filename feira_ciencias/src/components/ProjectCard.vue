@@ -1,102 +1,181 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, defineProps, defineEmits } from 'vue'
 
-// O componente ainda recebe o objeto 'projeto' como sua principal fonte de dados.
 const props = defineProps({
-  projeto: {
-    type: Object,
-    required: true,
-  }
+  projeto: { type: Object, required: true },
+  contexto: {
+    type: String,
+    default: 'inscricao',
+    validator: (value) => ['inscricao', 'gerenciamento'].includes(value),
+  },
+  inscrito: { type: Boolean, default: false },
 })
 
-// O único evento que o card emite por padrão é 'ver-detalhes'.
-// Outras ações (editar, excluir, avaliar) serão inseridas via slots.
 const emit = defineEmits(['ver-detalhes'])
 
-// O mapa de status continua aqui para o componente ser autossuficiente.
+// Mapa de status para o contexto de gerenciamento
 const statusMap = {
-  1: { text: 'Em Elaboração', color: 'orange-darken-2' },
-  2: { text: 'Inscrito', color: 'green-darken-2' },
-  3: { text: 'Reprovado', color: 'red-darken-2' },
-  4: { text: 'Reprovado com Ressalvas', color: 'orange-darken-2' },
+  1: { text: 'Em Análise', color: 'orange', icon: 'mdi-file-search-outline' },
+  2: { text: 'Aprovado', color: 'green', icon: 'mdi-check-decagram' },
+  3: { text: 'Reprovado', color: 'red', icon: 'mdi-close-octagon' },
+  4: { text: 'Com Ressalvas', color: 'orange', icon: 'mdi-alert-circle-outline' },
 }
 
 const statusInfo = computed(() => {
-  return statusMap[props.projeto.id_situacao] || { text: 'Pendente', color: 'grey' }
+  if (props.contexto === 'inscricao') {
+    const estaEsgotado = props.projeto.inscritos >= props.projeto.maxAlunos
+    return estaEsgotado
+      ? { text: 'Esgotado', color: 'red', icon: 'mdi-account-off' }
+      : { text: 'Vagas Abertas', color: 'green', icon: 'mdi-account-check-outline' }
+  }
+  // No gerenciamento, usa o status real do projeto
+  return (
+    statusMap[props.projeto.id_situacao] || {
+      text: 'Pendente',
+      color: 'grey',
+      icon: 'mdi-help-circle',
+    }
+  )
 })
 
-// Função para manter a emissão do evento de detalhes limpa.
+const memberCount = computed(() => props.projeto.equipe?.[0]?.membro_equipe?.length || 0)
+
+// Função de data ajustada para formatar datas de submissão/evento
+const formatDate = (dateString) => {
+  if (!dateString) return 'Não definida'
+  const date = new Date(dateString)
+  // Usa fuso horário UTC para evitar problemas de um dia a mais/a menos
+  return date.toLocaleDateString('pt-BR', {
+    timeZone: 'UTC',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
 function emitVerDetalhes() {
   emit('ver-detalhes', props.projeto.id_projeto)
 }
 </script>
 
 <template>
-  <v-card class="d-flex flex-column" height="100%" hover variant="outlined">
-    <v-img
-      height="180"
-      :src="projeto.imagem_url || 'https://smp.ifsp.edu.br/images/2022/extensao/PROJETOS-DE-EXTENSAO.png'"  
-      cover
-      class="text-white"
+  <v-card
+    class="d-flex flex-column"
+    height="100%"
+    hover
+    :variant="inscrito ? 'tonal' : 'outlined'"
+    :color="inscrito ? 'green-darken-3' : undefined"
+  >
+    <div
+      v-if="inscrito"
+      class="d-flex align-center pa-1 bg-green-darken-3 text-caption justify-center"
     >
-      <v-toolbar class="bg-green-darken-4" theme="dark">
-        <v-toolbar-title class="text-body-2 text-truncate">
-          {{ projeto.eventos?.nome || 'Evento não definido' }}
-        </v-toolbar-title>
-      </v-toolbar>
-    </v-img>
+      <v-icon start size="small">mdi-check-circle</v-icon>
+      INSCRITO
+    </div>
 
-    <v-card-item class="pt-4 pb-2">
-      <div class="d-flex justify-space-between align-start mb-2">
-        <v-card-title class="text-wrap me-2 pa-0">{{ projeto.titulo }}</v-card-title>
-        <v-chip :color="statusInfo.color" size="small" label>{{ statusInfo.text }}</v-chip>
+    <v-card-item class="pb-2">
+      <div class="d-flex align-start justify-space-between ga-2 mb-2">
+        <v-card-title class="text-wrap me-2 pa-0 text-body-1 font-weight-bold">{{
+          projeto.titulo
+        }}</v-card-title>
+        <v-chip
+          :color="statusInfo.color"
+          :prepend-icon="statusInfo.icon"
+          size="small"
+          label
+          variant="tonal"
+        >
+          {{ statusInfo.text }}
+        </v-chip>
       </div>
+      <v-chip
+        v-if="projeto.eventos?.nome"
+        color="grey"
+        prepend-icon="mdi-calendar-star"
+        size="x-small"
+        label
+      >
+        {{ projeto.eventos.nome }}
+      </v-chip>
     </v-card-item>
 
-    <v-card-text class="py-2">
-       <p class="text-body-2 text-grey-darken-2 mb-4 text-truncate-3-lines">
-        {{ projeto.problema || 'Descrição não fornecida.' }}
-      </p>
+    <v-card-text class="py-3">
+      <template v-if="contexto === 'inscricao'">
+        <p class="text-body-2 text-medium-emphasis mb-4 text-truncate-3-lines">
+          {{ projeto.problema || 'Descrição não fornecida.' }}
+        </p>
+        <v-divider></v-divider>
+        <div class="mt-3">
+          <div class="d-flex align-center text-caption mb-2">
+            <v-icon start color="grey-darken-2">mdi-account-tie-outline</v-icon>
+            Orientador:
+            <span class="font-weight-bold ml-1">{{
+              projeto.orientador?.nome || 'Não definido'
+            }}</span>
+          </div>
+          <div class="d-flex justify-space-between align-center text-caption font-weight-medium">
+            <span>INSCRIÇÕES</span>
+            <span>{{ memberCount }} de {{ projeto.max_pessoas }} vagas</span>
+          </div>
+          <v-progress-linear
+            :model-value="(memberCount / projeto.max_pessoas) * 100"
+            :color="memberCount >= projeto.max_pessoas ? 'red' : 'green-darken-1'"
+            height="6"
+            rounded
+            class="mt-1"
+          ></v-progress-linear>
+        </div>
+      </template>
 
-      <v-row dense>
-        <v-col cols="12" sm="6">
-          <div class="d-flex align-center">
-            <v-icon start color="grey-darken-1">mdi-account-school-outline</v-icon>
-            <div>
-              <div class="text-caption text-grey-darken-1">Responsável</div>
-              <div class="text-body-2 font-weight-medium text-truncate">
-                {{ projeto.responsavel?.nome || 'Não informado' }}
-              </div>
-            </div>
-          </div>
-        </v-col>
-        <v-col cols="12" sm="6">
-          <div class="d-flex align-center">
-            <v-icon start color="grey-darken-1">mdi-account-tie-outline</v-icon>
-            <div>
-              <div class="text-caption text-grey-darken-1">Orientador</div>
-              <div class="text-body-2 font-weight-medium text-truncate">
-                {{ projeto.orientador?.nome || 'Não informado' }}
-              </div>
-            </div>
-          </div>
-        </v-col>
-      </v-row>
+      <template v-if="contexto === 'gerenciamento'">
+        <v-list density="compact" bg-color="transparent" lines="two">
+          <v-list-item class="px-0" prepend-icon="mdi-account-school-outline">
+            <v-list-item-title class="font-weight-medium">{{
+              projeto.responsavel?.nome || 'Não definido'
+            }}</v-list-item-title>
+            <v-list-item-subtitle>Aluno Responsável</v-list-item-subtitle>
+          </v-list-item>
+
+          <v-list-item class="px-0" prepend-icon="mdi-account-tie-outline">
+            <v-list-item-title class="font-weight-medium">{{
+              projeto.orientador?.nome || 'Não definido'
+            }}</v-list-item-title>
+            <v-list-item-subtitle>Professor Orientador</v-list-item-subtitle>
+          </v-list-item>
+
+          <v-list-item
+            v-if="projeto.coorientador"
+            class="px-0"
+            prepend-icon="mdi-account-tie-outline"
+          >
+            <v-list-item-title class="font-weight-medium">{{
+              projeto.coorientador?.nome
+            }}</v-list-item-title>
+            <v-list-item-subtitle>Coorientador</v-list-item-subtitle>
+          </v-list-item>
+
+          <v-list-item class="px-0" prepend-icon="mdi-calendar-clock-outline">
+            <v-list-item-title class="font-weight-medium">
+              {{ formatDate(projeto.eventos?.inicio_submissao) }} -
+              {{ formatDate(projeto.eventos?.fim_submissao) }}
+            </v-list-item-title>
+            <v-list-item-subtitle>Período de Submissão</v-list-item-subtitle>
+          </v-list-item>
+        </v-list>
+      </template>
     </v-card-text>
 
     <v-spacer></v-spacer>
     <v-divider></v-divider>
 
-    <v-card-actions class="pa-3">
-      <v-btn
-        variant="text"
-        color="grey-darken-2"
-        @click="emitVerDetalhes"
-      >
-        Ver Detalhes
-      </v-btn>
+    <v-card-actions class="pa-2">
+      <slot name="actions-start">
+        <v-btn variant="text" color="grey-darken-2" @click="emitVerDetalhes" size="small">
+          Ver Detalhes
+        </v-btn>
+      </slot>
       <v-spacer></v-spacer>
-
       <slot name="actions"></slot>
     </v-card-actions>
   </v-card>
@@ -104,17 +183,13 @@ function emitVerDetalhes() {
 
 <style scoped>
 .v-card-title.text-wrap {
-  white-space: normal;
   line-height: 1.3em;
-  font-weight: 500;
 }
-
-/* Limita o texto da descrição a 3 linhas e adiciona "..." no final */
 .text-truncate-3-lines {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-height: 60px; /* 3 linhas * 20px de altura de linha aproximada */
+  min-height: 60px;
 }
 </style>

@@ -22,7 +22,7 @@ class TipoUsuario extends Model
         'updated_at'
     ];
 
-    
+    public $timestamps = false;
 
     protected $fillable = ['tipo'];
 
