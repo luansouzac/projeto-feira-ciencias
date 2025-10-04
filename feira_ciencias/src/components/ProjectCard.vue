@@ -188,7 +188,6 @@ function emitVerDetalhes() {
 .text-truncate-3-lines {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
   overflow: hidden;
   text-overflow: ellipsis;
   min-height: 60px;

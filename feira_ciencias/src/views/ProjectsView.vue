@@ -7,6 +7,8 @@ import CrudModal from '@/components/CrudModal.vue'
 import { useEventoStore } from '@/stores/eventoStore'
 import { storeToRefs } from 'pinia'
 import ProjectCard from '@/components/ProjectCard.vue'
+import { useAuthStore } from '@/stores/authStore'
+const authStore = useAuthStore()
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
@@ -19,7 +21,6 @@ const erro = ref(null)
 const todosProjetos = ref([])
 const filtroStatus = ref('Todos')
 const nomeUsuario = ref('')
-let userId = null
 const avaliadores = ref([])
 const totalProjetosAprovados = ref(0)
 
@@ -41,12 +42,8 @@ const currentItem = ref(getInitialFormData())
 const isDeleteModalOpen = ref(false)
 const projectToDelete = ref(null)
 
-const userDataString = sessionStorage.getItem('user_data')
-if (userDataString) {
-  const userData = JSON.parse(userDataString)
-  nomeUsuario.value = userData.user.nome
-  userId = userData.user.id_usuario
-}
+const userId = authStore.user?.id_usuario
+const userType = authStore.user?.id_tipo_usuario
 
 const modalConfig = computed(() => ({
   title: currentItem.value && currentItem.value.id_projeto ? 'Editar Projeto' : 'Novo Projeto',
@@ -132,8 +129,7 @@ const statusMap = {
   4: { text: 'Reprovado com Ressalvas', color: 'orange-darken-2' },
 }
 
-// --- MÉTODOS ---
-onMounted(async () => {
+async function fetchData(){
   if (!userId) {
     erro.value = 'Usuário não encontrado. Por favor, faça o login novamente.'
     carregando.value = false
@@ -182,7 +178,14 @@ onMounted(async () => {
   } finally {
     carregando.value = false
   }
+}
+
+
+// --- MÉTODOS ---
+onMounted(() => {
+  fetchData()
 })
+  
 
 // --- MÉTODOS PARA MODAIS ---
 
@@ -203,43 +206,51 @@ const openDeleteModal = (projeto) => {
 }
 
 const handleSave = async (formData) => {
-  isModalLoading.value = true
-  console.log(formData)
-  // A lógica para adicionar o id_responsavel e id_situacao foi movida para dentro da verificação de "criação"
-  const isCreating = !formData.id_projeto
+  isModalLoading.value = true;
+  const isCreating = !formData.id_projeto;
+  let responseData; 
 
   try {
     if (isCreating) {
-      // Cria um novo payload para não modificar o formData diretamente
-      const payload = {
-        ...formData,
-        id_responsavel: userId,
-        id_situacao: 1,
-      }
-      const { data } = await api.post('/projetos', payload)
-      todosProjetos.value.push(data)
-      //Adicionar a equipe assim que o projeto for armazenado
-      const { dataEquipe } = await api.post('/equipes', { id_projeto: data.id_projeto })
-      notificationStore.showSuccess('Projeto criado com sucesso!')
-    } else {
-      const payload = {
-        ...formData,
-        id_responsavel: userId,
-        id_situacao: 1,
-      }
-      const { data } = await api.put(`/projetos/${formData.id_projeto}`, payload)
-      const index = todosProjetos.value.findIndex((p) => p.id_projeto === data.id_projeto)
-      if (index !== -1) todosProjetos.value.splice(index, 1, data)
-      notificationStore.showSuccess('Projeto alterado com sucesso!')
+      const payload = { ...formData, id_responsavel: userId, id_situacao: 1 };
+      const { data } = await api.post('/projetos', payload);
+      responseData = data;
+      
+      await api.post('/equipes', { id_projeto: responseData.id_projeto });
+      notificationStore.showSuccess('Projeto criado com sucesso!');
+    } else { 
+      const payload = { ...formData, id_responsavel: userId, id_situacao: 1 };
+      const { data } = await api.put(`/projetos/${formData.id_projeto}`, payload);
+      responseData = data;
+      
+      notificationStore.showSuccess('Projeto alterado com sucesso!');
     }
-    isModalOpen.value = false
+
+    if (!responseData.equipe) responseData.equipe = [];
+    if (!responseData.eventos) responseData.eventos = eventos.value.find(e => e.id_evento === responseData.id_evento);f
+
+    const projetoProcessado = transformarProjeto(responseData);
+
+    if (isCreating) {
+      todosProjetos.value.unshift(projetoProcessado);
+    } else {
+      const index = todosProjetos.value.findIndex((p) => p.id === projetoProcessado.id);
+      if (index !== -1) {
+        todosProjetos.value[index] = projetoProcessado;
+      }
+    }
+    
+    isModalOpen.value = false;
+    await fetchData();
+
   } catch (error) {
-    console.error('Erro ao salvar o projeto:', error)
-    notificationStore.showError('Ocorreu um erro ao salvar o projeto.')
+    console.error('Erro ao salvar o projeto:', error);
+    notificationStore.showError('Ocorreu um erro ao salvar o projeto.');
   } finally {
-    isModalLoading.value = false
+    isModalLoading.value = false;
   }
-}
+};
+
 
 const handleDelete = async () => {
   if (!projectToDelete.value) return
@@ -315,6 +326,61 @@ function handleApprovedCardClick() {
       message: 'É necessário ter um projeto aprovado para acessar esta área.',
       type: 'info',
     })
+  }
+}
+
+const transformarProjeto = (apiProjeto) => {
+  const inscritos = apiProjeto.equipe?.[0]?.membro_equipe?.length ?? 0
+  const maxAlunos = apiProjeto.max_pessoas || apiProjeto.eventos?.max_pessoas || 5
+  
+  // O status que o card exibe depende de quem está vendo
+  let statusParaCard;
+  if (userType.value === 2) { // Se for aluno
+    statusParaCard = inscritos >= maxAlunos ? 'Esgotado' : 'Vagas Abertas';
+  } else { // Se for professor/admin
+    const statusMapProfessor = {
+      1: 'Em Análise',
+      2: 'Aprovado',
+      3: 'Reprovado',
+      4: 'Com Ressalvas'
+    };
+    statusParaCard = statusMapProfessor[apiProjeto.id_situacao] || 'Pendente';
+  }
+
+  const alunoInscrito =
+    apiProjeto.equipe?.[0]?.membro_equipe?.some((m) => m.id_usuario === userId) ?? false
+
+  const eventoDoProjeto = eventos.value.find((e) => e.id_evento === apiProjeto.id_evento)
+  let statusInscricao = 'INDISPONIVEL'
+  let mensagemInscricao = 'Período de inscrição não definido para este evento.'
+
+  if (eventoDoProjeto && eventoDoProjeto.inicio_inscricao && eventoDoProjeto.fim_inscricao) {
+    const agora = new Date()
+    const inicio = new Date(eventoDoProjeto.inicio_inscricao)
+    const fim = new Date(eventoDoProjeto.fim_inscricao)
+    fim.setHours(23, 59, 59, 999) // Inclui o dia final
+
+    if (agora < inicio) {
+      statusInscricao = 'NAO_INICIADO'
+      mensagemInscricao = `As inscrições abrem em: ${inicio.toLocaleDateString('pt-BR')}`
+    } else if (agora > fim) {
+      statusInscricao = 'ENCERRADO'
+      mensagemInscricao = 'O período de inscrições para este projeto está encerrado.'
+    } else {
+      statusInscricao = 'ABERTO'
+      mensagemInscricao = 'Inscrições abertas!'
+    }
+  }
+
+  return {
+    ...apiProjeto, // Mantém todos os dados originais da API
+    id: apiProjeto.id_projeto,
+    status: statusParaCard, // Status adaptado para a UI
+    inscritos,
+    maxAlunos,
+    alunoInscrito,
+    statusInscricao,
+    mensagemInscricao,
   }
 }
 </script>
