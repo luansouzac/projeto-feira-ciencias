@@ -34,22 +34,33 @@ class TarefaFeedbackController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request, Tarefa $tarefa)
-    {
-        $dadosValidados = $request->validate([
-            'feedback' => 'required|string|min:5',
-        ]);
+{
+    $dadosValidados = $request->validate([
+        'feedback' => 'required|string|min:5|max:2000',
+    ]);
 
-        // Cria o feedback associado à tarefa e ao usuário autenticado
-        $feedback = $tarefa->feedbacks()->create([
-            'feedback' => $dadosValidados['feedback'],
-            'id_usuario' => $request->user()->id_usuario, // Pega o ID do usuário logado
-        ]);
+    $tarefa->load('projeto.equipe.membroEquipe');
+    $usuario = Auth::user();
 
-        // Carrega os dados do usuário para retornar uma resposta completa
-        $feedback->load('usuario');
-
-        return response()->json($feedback, 201);
+    $eOrientador = $tarefa->projeto->id_orientador == $usuario->id_usuario;
+    $eMembroDaEquipe = false;
+    if ($tarefa->projeto->equipe->first()) {
+        $eMembroDaEquipe = $tarefa->projeto->equipe->first()->membroEquipe->contains('id_usuario', $usuario->id_usuario);
     }
+
+    if (!$eOrientador && !$eMembroDaEquipe) {
+        return response()->json(['message' => 'Você não tem permissão para interagir com esta tarefa.'], 403);
+    }
+
+    $feedback = $tarefa->feedbacks()->create([
+        'feedback' => $dadosValidados['feedback'],
+        'id_usuario' => $usuario->id_usuario,
+    ]);
+
+    $feedback->load('usuario.tipoUsuario');
+
+    return response()->json($feedback, 201);
+}
 
     /**
      * Exibe um feedback específico.

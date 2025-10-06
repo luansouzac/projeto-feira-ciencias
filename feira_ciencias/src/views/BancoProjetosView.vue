@@ -1,14 +1,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '../assets/plugins/axios.js'
-import CrudModal from '@/components/CrudModal.vue'
+import api from '@/assets/plugins/axios.js'
 import { useNotificationStore } from '@/stores/notification'
+import { useAuthStore } from '@/stores/authStore'
 import { useEventoStore } from '@/stores/eventoStore'
 import { storeToRefs } from 'pinia'
+import ProjectCard from '@/components/ProjectCard.vue'
+import CrudModal from '@/components/CrudModal.vue'
 
+// --- INSTÂNCIAS E STORES ---
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const authStore = useAuthStore()
 const eventoStore = useEventoStore()
 const { eventos } = storeToRefs(eventoStore)
 
@@ -18,175 +22,67 @@ const carregando = ref(true)
 const erro = ref(null)
 const filtroBusca = ref('')
 const filtroStatus = ref('Todos')
+const filtroEvento = ref(null)
 const viewMode = ref('grid')
 const avaliadores = ref([])
-let userId = null
-const userType = ref(null)
-const selectedProject = ref(null) // Corrigido para null
-const nenhumProjetoAprovado = ref(false)
 
-// --- ESTADOS DO MODAL ---
+// --- ESTADOS DE CONTROLE ---
+const userId = authStore.user?.id_usuario
+const userType = authStore.user?.id_tipo_usuario
 const isModalOpen = ref(false)
 const isModalLoading = ref(false)
 const showConfirmDialog = ref(false)
+const selectedProject = ref(null)
+const currentItem = ref({})
 
-const getInitialFormData = () => ({
-  id_evento: null,
-  titulo: '',
-  problema: '',
-  relevancia: '',
-  max_pessoas: 5,
-  id_orientador: null,
-  id_coorientador: null,
-})
-const currentItem = ref(getInitialFormData())
+// --- COMPUTEDS DE CONTROLE DE PAPEL ---
+const isAluno = computed(() => userType === 2)
+const isProfessor = computed(() => userType === 4)
 
-// --- OBTÉM DADOS DO USUÁRIO LOGADO ---
-const userDataString = sessionStorage.getItem('user_data')
-if (userDataString) {
-  const userData = JSON.parse(userDataString)
-  userId = userData.user.id_usuario
-  userType.value = userData.user.id_tipo_usuario
-}
-
-// --- LÓGICA DE BUSCA DE DADOS ---
+// --- LÓGICA DE BUSCA DE DADOS (CONDICIONAL) ---
 onMounted(async () => {
   carregando.value = true
   erro.value = null
-
-  const fetchProjetosPromise = api.get('/projetos')
-  const fetchAvaliadoresPromise = api.get('/usuarios?id_tipo_usuario=4')
-  const fetchEventosPromise = eventoStore.fetchEventos()
-
   try {
-    const results = await Promise.allSettled([
-      fetchProjetosPromise,
-      fetchAvaliadoresPromise,
-      fetchEventosPromise,
-    ])
-
-    const [projetosResult, avaliadoresResult, eventosResult] = results
-
-    if (projetosResult.status === 'fulfilled') {
-      let dadosProjetos = projetosResult.value.data
-
-      if (userType.value === 2) {
-        const projetosAprovados = dadosProjetos.filter((p) => p.id_situacao > 1)
-        if (projetosAprovados.length === 0) {
-          nenhumProjetoAprovado.value = true
-        }
-        dadosProjetos = projetosAprovados
-      }
-      projetos.value = dadosProjetos.map(transformarProjeto)
-    } else {
-      throw new Error('Não foi possível carregar os projetos.')
-    }
-
-    if (avaliadoresResult.status === 'fulfilled') {
-      avaliadores.value = avaliadoresResult.value.data
-    } else {
-      console.error('Erro ao buscar avaliadores:', avaliadoresResult.reason)
-    }
-
-    if (eventosResult.status === 'rejected') {
-      console.error('Erro ao buscar eventos:', eventosResult.reason)
-    }
+    const { data: apiProjetos } = await api.get('/projetos')
+    await eventoStore.fetchEventos() 
+    projetos.value = apiProjetos.map(transformarProjeto)
   } catch (err) {
-    erro.value = err.message || 'Ocorreu um erro inesperado.'
+    console.error("Erro ao buscar dados:", err)
+    erro.value = "Não foi possível carregar os dados."
   } finally {
     carregando.value = false
   }
 })
 
-// --- CONFIGURAÇÃO DO MODAL ---
-const modalConfig = computed(() => ({
-  title: 'Cadastrar Novo Projeto',
-  fields: [
-    {
-      key: 'id_evento',
-      label: 'Evento Associado',
-      type: 'select',
-      items: eventos.value.map((e) => ({ title: e.nome, value: e.id_evento })),
-      rules: [(v) => !!v || 'É necessário selecionar um evento'],
-    },
-    {
-      key: 'titulo',
-      label: 'Título do Projeto',
-      type: 'text',
-      rules: [(v) => !!v || 'O título é obrigatório'],
-    },
-    {
-      key: 'problema',
-      label: 'Problema a ser Resolvido',
-      type: 'textarea',
-      rules: [(v) => !!v || 'A descrição do problema é obrigatória'],
-    },
-    {
-      key: 'relevancia',
-      label: 'Relevância do Projeto',
-      type: 'textarea',
-      rules: [(v) => !!v || 'A relevância é obrigatória'],
-    },
-    {
-      key: 'max_pessoas',
-      label: 'Nº Máximo de Participantes',
-      type: 'number',
-      rules: [(v) => !!v || 'O nº máximo é obrigatório', (v) => v > 0 || 'Deve ser maior que zero'],
-    },
-    {
-      key: 'id_orientador',
-      label: 'Professor Orientador',
-      type: 'select',
-      items: avaliadores.value.map((a) => ({ title: a.nome, value: a.id_usuario })),
-      rules: [(v) => !!v || 'O orientador é obrigatório'],
-    },
-    {
-      key: 'id_coorientador',
-      label: 'Professor Coorientador (Opcional)',
-      type: 'select',
-      items: avaliadores.value.map((a) => ({ title: a.nome, value: a.id_usuario })),
-    },
-  ],
-}))
-
-// --- FUNÇÕES DE TRANSFORMAÇÃO E LÓGICA DE VISUALIZAÇÃO ---
-
-// NOVO: VERIFICA SE O ALUNO JÁ TEM INSCRIÇÃO EM ALGUM PROJETO
-const alunoJaInscrito = computed(() => {
-  if (userType.value !== 2) return false // Regra só se aplica a alunos
-  return projetos.value.some((p) => p.alunoInscrito)
-})
-
-const transformarProjeto = (apiProjeto) => {
+// --- FUNÇÕES DE TRANSFORMAÇÃO DE DADOS ---
+function transformarProjeto(apiProjeto) {
   const inscritos = apiProjeto.equipe?.[0]?.membro_equipe?.length ?? 0
-  const maxAlunos = apiProjeto.max_pessoas || apiProjeto.eventos?.max_pessoas || 5
-  let status = 'Em Análise'
-  let validado = false
+  const maxAlunos = apiProjeto.max_pessoas ?? 5
+  const alunoInscrito = apiProjeto.equipe?.[0]?.membro_equipe?.some(m => m.id_usuario === userId) ?? false
 
-  if (apiProjeto.id_situacao > 1) {
-    validado = true
-    status = inscritos >= maxAlunos ? 'Esgotado' : 'Vagas Abertas'
+  let statusParaCard
+  if (isAluno.value) {
+    statusParaCard = inscritos >= maxAlunos ? 'Esgotado' : 'Vagas Abertas'
+  } else {
+    const statusMapProfessor = { 1: 'Em Análise', 2: 'Aprovado', 3: 'Reprovado', 4: 'Com Ressalvas' }
+    statusParaCard = statusMapProfessor[apiProjeto.id_situacao] || 'Pendente'
   }
-  const alunoInscrito =
-    apiProjeto.equipe?.[0]?.membro_equipe?.some((m) => m.id_usuario === userId) ?? false
 
-  const eventoDoProjeto = eventos.value.find((e) => e.id_evento === apiProjeto.id_evento)
   let statusInscricao = 'INDISPONIVEL'
-  let mensagemInscricao = 'Período de inscrição não definido para este evento.'
-
-  const nomeEvento = eventoDoProjeto ? eventoDoProjeto.nome : 'Evento não associado';
-
-  if (eventoDoProjeto && eventoDoProjeto.inicio_inscricao && eventoDoProjeto.fim_inscricao) {
+  let mensagemInscricao = 'Período de inscrição não definido.'
+  if (apiProjeto.eventos?.inicio_inscricao && apiProjeto.eventos?.fim_inscricao) {
     const agora = new Date()
-    const inicio = new Date(eventoDoProjeto.inicio_inscricao)
-    const fim = new Date(eventoDoProjeto.fim_inscricao)
+    const inicio = new Date(apiProjeto.eventos.inicio_inscricao)
+    const fim = new Date(apiProjeto.eventos.fim_inscricao)
+    fim.setHours(23, 59, 59, 999)
 
     if (agora < inicio) {
       statusInscricao = 'NAO_INICIADO'
-      mensagemInscricao = `As inscrições abrem em: ${inicio.toLocaleDateString('pt-BR')}`
+      mensagemInscricao = `Inscrições abrem em ${inicio.toLocaleDateString('pt-BR')}`
     } else if (agora > fim) {
       statusInscricao = 'ENCERRADO'
-      mensagemInscricao = 'O período de inscrições para este projeto está encerrado.'
+      mensagemInscricao = 'Período de inscrições encerrado.'
     } else {
       statusInscricao = 'ABERTO'
       mensagemInscricao = 'Inscrições abertas!'
@@ -194,109 +90,89 @@ const transformarProjeto = (apiProjeto) => {
   }
 
   return {
+    ...apiProjeto,
     id: apiProjeto.id_projeto,
-    titulo: apiProjeto.titulo,
-    orientador: apiProjeto.orientador?.nome || 'Não definido',
-    area: apiProjeto.area_conhecimento || 'Não definida',
-    status,
-    validado,
+    status: statusParaCard,
     inscritos,
     maxAlunos,
     alunoInscrito,
     statusInscricao,
     mensagemInscricao,
-    nomeEvento
   }
 }
 
-const statusMap = {
-  'Vagas Abertas': { color: 'green-darken-2' },
-  Esgotado: { color: 'red-darken-2' },
-  'Em Análise': { color: 'orange-darken-2' },
+// --- COMPUTEDS PARA FILTRAGEM E VISUALIZAÇÃO ---
+const alunoJaInscritoNoEvento = (eventoId) => {
+  if (!eventoId || !isAluno.value) return false
+  return projetos.value.some(p => p.id_evento === eventoId && p.alunoInscrito)
 }
 
 const statusOptions = computed(() => {
-  if (userType.value === 2) return ['Todos', 'Vagas Abertas', 'Esgotado']
-  return ['Todos', 'Vagas Abertas', 'Esgotado', 'Em Análise']
+  if (isAluno.value) return ['Todos', 'Vagas Abertas', 'Esgotado']
+  if (isProfessor.value) return ['Todos', 'Em Análise', 'Aprovado', 'Reprovado', 'Com Ressalvas']
+  return ['Todos']
 })
 
+const eventosParaFiltro = computed(() => {
+  const listaEventos = eventos.value.map(e => ({ title: e.nome, value: e.id_evento }));
+  return [{ title: 'Todos os Eventos', value: null }, ...listaEventos];
+});
+
+const projetosPorEvento = computed(() => {
+  let projetosVisiveis = projetos.value;
+
+  if (isAluno.value) {
+    projetosVisiveis = projetos.value.filter(p => p.id_situacao === 2 || p.id_situacao === 4);
+  }
+
+  const projetosFiltrados = projetosVisiveis.filter(p => {
+    const correspondeBusca = p.titulo.toLowerCase().includes(filtroBusca.value.toLowerCase());
+    const correspondeStatus = filtroStatus.value === 'Todos' || p.status === filtroStatus.value;
+    const correspondeEvento = !filtroEvento.value || p.id_evento === filtroEvento.value;
+    return correspondeBusca && correspondeStatus && correspondeEvento;
+  });
+
+  const grupos = projetosFiltrados.reduce((acc, projeto) => {
+    const eventoId = projeto.id_evento || 'sem-evento';
+    if (!acc[eventoId]) {
+      acc[eventoId] = {
+        evento: eventos.value.find(e => e.id_evento === eventoId) || { id_evento: 'sem-evento', nome: 'Projetos sem Evento Associado' },
+        projetos: [],
+      };
+    }
+    acc[eventoId].projetos.push(projeto);
+    return acc;
+  }, {});
+
+  return Object.values(grupos);
+});
+
 const projetosFiltrados = computed(() => {
-  return projetos.value.filter((p) => {
+  return projetos.value.filter(p => {
     const correspondeBusca = p.titulo.toLowerCase().includes(filtroBusca.value.toLowerCase())
     const correspondeStatus = filtroStatus.value === 'Todos' || p.status === filtroStatus.value
     return correspondeBusca && correspondeStatus
   })
 })
 
-const getProgressoInscricao = (inscritos, max) => (max > 0 ? (inscritos / max) * 100 : 0)
-
-const getCorProgresso = (inscritos, max) => {
-  const percentual = getProgressoInscricao(inscritos, max)
-  if (percentual >= 100) return 'red-darken-1'
-  if (percentual > 70) return 'orange-darken-1'
-  return 'green-darken-1'
-}
-
 // --- FUNÇÕES DE AÇÃO ---
-const openCreateModal = () => {
-  currentItem.value = getInitialFormData()
-  isModalOpen.value = true
-}
-
-const handleSave = async (formData) => {
-  isModalLoading.value = true
-  try {
-    const situacaoProjeto = userType.value === 4 ? 2 : 1
-    const payloadProjeto = { ...formData, id_responsavel: userId, id_situacao: situacaoProjeto }
-    const { data: responseData } = await api.post('/projetos', payloadProjeto)
-    const novoProjeto = responseData.data || responseData
-
-    if (!novoProjeto || !novoProjeto.id_projeto) {
-      throw new Error('A API não retornou um projeto válido.')
-    }
-
-    const payloadEquipe = {
-      id_projeto: novoProjeto.id_projeto,
-      nome_equipe: `Equipe - ${novoProjeto.titulo}`,
-    }
-    await api.post('/equipes', payloadEquipe)
-
-    novoProjeto.equipe = [{ membro_equipe: [] }]
-    projetos.value.unshift(transformarProjeto(novoProjeto))
-
-    notificationStore.showSuccess('Projeto cadastrado com sucesso!')
-    isModalOpen.value = false
-  } catch (error) {
-    console.error('Erro ao cadastrar o projeto:', error)
-    const errorMessage = error.response?.data?.message || 'Ocorreu um erro.'
-    notificationStore.showError(errorMessage)
-  } finally {
-    isModalLoading.value = false
-  }
-}
-
-const gerenciarProjeto = (id) => {
-  router.push(`/gerenciar-projeto/${id}`)
-}
-
-const verDetalhes = (id) => {
-  router.push(`/projetos/${id}`)
-}
-
 const inscreverNoProjeto = async (projeto) => {
   notificationStore.showInfo(`Enviando inscrição para "${projeto.titulo}"...`)
   try {
     await api.post(`/projetos/${projeto.id}/inscrever`)
     notificationStore.showSuccess('Inscrição realizada com sucesso!')
-    projeto.alunoInscrito = true
-    projeto.inscritos++
-    if (projeto.inscritos >= projeto.maxAlunos) {
-      projeto.status = 'Esgotado'
+    
+    const projetoOriginal = projetos.value.find(p => p.id === projeto.id)
+    if (projetoOriginal) {
+      projetoOriginal.alunoInscrito = true
+      projetoOriginal.inscritos++
+      if (projetoOriginal.inscritos >= projetoOriginal.maxAlunos) {
+        projetoOriginal.status = 'Esgotado'
+      }
     }
   } catch (err) {
     console.error('Erro ao inscrever no projeto:', err)
-    const mensagemErro = err.response?.data?.erro || 'Não foi possível se inscrever.'
-    notificationStore.showError(mensagemErro)
+    notificationStore.showError(err.response?.data?.message || 'Não foi possível se inscrever.')
   }
 }
 
@@ -305,54 +181,51 @@ const sairDoProjeto = (projeto) => {
   showConfirmDialog.value = true
 }
 
-const cancelDialog = () => {
-  showConfirmDialog.value = false
-}
-
-const confirmDialog = async () => {
+const confirmSairDoProjeto = async () => {
   if (!selectedProject.value) return
-  notificationStore.showInfo(`Cancelando inscrição em "${selectedProject.value.titulo}"...`)
+  notificationStore.showInfo(`Cancelando inscrição...`)
   try {
-    await api.post(`/projetos/desinscrever/${selectedProject.value.id}/${userId}`)
+    const projeto = selectedProject.value
+    await api.post(`/projetos/desinscrever/${projeto.equipe[0].id_equipe}/${userId}`)
     notificationStore.showSuccess('Inscrição cancelada com sucesso!')
-
-    selectedProject.value.alunoInscrito = false
-    selectedProject.value.inscritos--
-    if (selectedProject.value.inscritos < selectedProject.value.maxAlunos) {
-      selectedProject.value.status = 'Vagas Abertas'
+    
+    const projetoOriginal = projetos.value.find(p => p.id === projeto.id)
+    if (projetoOriginal) {
+      projetoOriginal.alunoInscrito = false
+      projetoOriginal.inscritos--
+      if (projetoOriginal.inscritos < projetoOriginal.maxAlunos) {
+        projetoOriginal.status = 'Vagas Abertas'
+      }
     }
   } catch (err) {
     console.error('Erro ao sair do projeto:', err)
-    const mensagemErro = err.response?.data?.erro || 'Não foi possível sair do projeto.'
-    notificationStore.showError(mensagemErro)
+    notificationStore.showError(err.response?.data?.message || 'Não foi possível sair do projeto.')
   } finally {
     showConfirmDialog.value = false
     selectedProject.value = null
   }
 }
+
+const verDetalhes = (id) => router.push(`/projetos/${id}`)
+const gerenciarProjeto = (id) => router.push(`/gerenciar-projeto/${id}`)
 </script>
 
 <template>
   <v-container fluid>
     <v-row class="mb-6" align="center">
       <v-col cols="12" md="8">
-        <h1 class="text-h4 font-weight-bold text-green-darken-4">
-          {{ userType === 2 ? 'Projetos para inscrição' : 'Projetos aprovados' }}
-        </h1>
+        <h1 v-if="isAluno" class="text-h4 font-weight-bold text-green-darken-4">Projetos para Inscrição</h1>
+        <h1 v-if="isProfessor" class="text-h4 font-weight-bold text-green-darken-4">Galeria de Projetos</h1>
         <p class="text-subtitle-1 text-grey-darken-2">
-          {{
-            userType === 2
-              ? 'Explore os temas e inscreva-se em um projeto.'
-              : 'Visualize todos os projetos disponíveis para inscrição.'
-          }}
+          {{ isAluno ? 'Explore os temas e inscreva-se em um projeto por evento.' : 'Visualize e gerencie todos os projetos submetidos.' }}
         </p>
       </v-col>
-      <v-col v-if="userType === 4" cols="12" md="4" class="text-md-right">
+      <v-col v-if="isProfessor" cols="12" md="4" class="text-md-right">
         <v-btn
           color="green-darken-3"
           size="large"
           prepend-icon="mdi-plus-box-outline"
-          @click="openCreateModal"
+          @click="openCreateModal" 
           block
         >
           Cadastrar Novo Projeto
@@ -360,52 +233,19 @@ const confirmDialog = async () => {
       </v-col>
     </v-row>
 
-    <v-dialog v-model="showConfirmDialog" max-width="500px">
-      <v-card>
-        <v-card-title class="headline"> Cancelar Inscrição </v-card-title>
-        <v-card-text> Tem certeza que deseja sair da equipe deste projeto? </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="grey-darken-1" text @click="cancelDialog">Voltar</v-btn>
-          <v-btn color="red-darken-1" variant="flat" @click="confirmDialog">Confirmar Saída</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
     <v-card class="mb-8 pa-4" variant="outlined">
-      <v-row align="center">
-        <v-col cols="12" md="6">
-          <v-text-field
-            v-model="filtroBusca"
-            label="Buscar por título do projeto..."
-            prepend-inner-icon="mdi-magnify"
-            variant="outlined"
-            density="compact"
-            hide-details
-          ></v-text-field>
+      <v-row align="center" no-gutters>
+        <v-col cols="12" md="4" class="pa-1">
+          <v-text-field v-model="filtroBusca" label="Buscar por título..." prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details clearable></v-text-field>
         </v-col>
-        <v-col cols="12" md="6" class="d-flex align-center justify-start justify-md-end">
+        <v-col cols="12" md="4" class="pa-1">
+          <v-select v-model="filtroEvento" :items="eventosParaFiltro" label="Filtrar por evento" variant="outlined" density="compact" hide-details clearable></v-select>
+        </v-col>
+        <v-col cols="12" md="4" class="d-flex align-center justify-start justify-md-end mt-4 mt-md-0 pa-1">
           <v-chip-group v-model="filtroStatus" mandatory color="green-darken-3">
-            <v-chip v-for="status in statusOptions" :key="status" :value="status" filter>
-              {{ status }}
-            </v-chip>
+            <v-chip v-for="status in statusOptions" :key="status" :value="status" filter size="small">{{ status }}</v-chip>
           </v-chip-group>
-          <v-btn-toggle
-            v-model="viewMode"
-            mandatory
-            density="compact"
-            variant="outlined"
-            class="ml-4"
-          >
-            <v-btn value="grid" aria-label="Visualização em Grade">
-              <v-icon>mdi-view-grid-outline</v-icon>
-              <v-tooltip activator="parent" location="bottom">Grade</v-tooltip>
-            </v-btn>
-            <v-btn value="list" aria-label="Visualização em Lista">
-              <v-icon>mdi-view-list-outline</v-icon>
-              <v-tooltip activator="parent" location="bottom">Lista</v-tooltip>
-            </v-btn>
-          </v-btn-toggle>
+
         </v-col>
       </v-row>
     </v-card>
@@ -413,287 +253,129 @@ const confirmDialog = async () => {
     <div v-if="carregando">
       <v-row>
         <v-col v-for="n in 6" :key="n" cols="12" sm="6" lg="4">
-          <v-skeleton-loader type="card"></v-skeleton-loader>
+          <v-skeleton-loader type="image, article, actions"></v-skeleton-loader>
         </v-col>
       </v-row>
     </div>
 
-    <v-alert v-else-if="erro" type="error" variant="tonal" border="start" prominent>{{
-      erro
-    }}</v-alert>
+    <v-alert v-else-if="erro" type="error" variant="tonal">{{ erro }}</v-alert>
 
-    <div v-else>
-      <v-alert
-        v-if="userType === 2 && nenhumProjetoAprovado"
-        type="info"
-        variant="tonal"
-        border="start"
-        prominent
-        icon="mdi-clock-time-three-outline"
+    <div v-else-if="projetosPorEvento.length === 0" class="text-center pa-16">
+        <v-icon size="60" class="mb-4 text-grey-lighten-1">mdi-folder-search-outline</v-icon>
+        <p class="text-h6 text-grey-darken-1">
+          {{ filtroBusca || filtroStatus !== 'Todos' || filtroEvento ? 'Nenhum projeto encontrado para os filtros aplicados.' : 'Nenhum projeto disponível no momento.' }}
+        </p>
+    </div>
+    
+    <div v-else class="d-flex flex-column ga-8">
+      <v-card 
+        v-for="grupo in projetosPorEvento" 
+        :key="grupo.evento.id_evento" 
+        variant="outlined"
       >
-        <v-alert-title class="font-weight-bold">Inscrições em Breve!</v-alert-title>
-        As inscrições para os projetos aprovados ainda não abriram!
-      </v-alert>
+        <v-card-title class="bg-grey-lighten-5">
+          <span class="text-h6 font-weight-medium text-grey-darken-3">{{ grupo.evento.nome }}</span>
+        </v-card-title>
+        <v-divider></v-divider>
 
-      <v-alert
-        v-else-if="projetosFiltrados.length === 0"
-        type="info"
-        variant="tonal"
-        border="start"
-        prominent
-      >
-        Nenhum projeto encontrado com os filtros selecionados.
-      </v-alert>
-
-      <div v-else>
-        <v-row v-if="viewMode === 'grid'">
-          <v-col v-for="projeto in projetosFiltrados" :key="projeto.id" cols="12" sm="6" lg="4">
-            <v-card class="d-flex flex-column" height="100%" hover variant="outlined">
-              <v-card-item class="pb-2">
-                <div class="d-flex justify-space-between align-start">
-                  <v-card-title class="text-wrap me-2">{{ projeto.titulo }}</v-card-title>
-                  <v-chip
-                    :color="statusMap[projeto.status].color"
-                    size="small"
-                    label
-                    variant="tonal"
-                    >{{ projeto.status }}</v-chip
-                  >
-                </div>
-                <v-card-subtitle
-                  v-if="userType !== 2 && !projeto.validado"
-                  class="d-flex align-center text-orange-darken-3 mt-1"
-                >
-                  <v-icon size="xs" start>mdi-eye-off-outline</v-icon>
-                  Visível apenas para professores
-                </v-card-subtitle>
-                <v-card-subtitle v-else class="d-flex align-center text-green-darken-3 mt-1">
-                  <v-icon size="xs" start>mdi-eye-outline</v-icon>
-                  Público para inscrições
-                </v-card-subtitle>
-              </v-card-item>
-              <v-card-text class="py-3">
-                <div>
-                  <div class="info-item">
-                    <v-icon start color="grey-darken-1" size="small">mdi-account-tie</v-icon
-                    ><span class="font-weight-medium text-body-2">{{ projeto.orientador }}</span>
-                  </div>
-                  <div class="info-item mt-1">
-                    <v-icon start color="grey-darken-1" size="small"
-                      >mdi-lightbulb-on-outline</v-icon
-                    ><span class="text-body-2">{{ projeto.nomeEvento }}</span>
-                  </div>
-                </div>
-                <div class="mt-4">
-                  <div class="d-flex justify-space-between align-center mb-1">
-                    <span class="text-body-2 font-weight-medium text-grey-darken-3"
-                      >Inscrições</span
-                    >
-                    <span
-                      class="font-weight-bold"
-                      :class="`text-${getCorProgresso(projeto.inscritos, projeto.maxAlunos)}`"
-                      >{{ projeto.inscritos }} / {{ projeto.maxAlunos }}</span
-                    >
-                  </div>
-                  <v-progress-linear
-                    :model-value="getProgressoInscricao(projeto.inscritos, projeto.maxAlunos)"
-                    :color="getCorProgresso(projeto.inscritos, projeto.maxAlunos)"
-                    height="7"
-                    rounded
-                  ></v-progress-linear>
-                </div>
-              </v-card-text>
-              <v-spacer></v-spacer>
-              <v-divider></v-divider>
-              <v-card-actions class="pa-2">
-                <template v-if="userType !== 2">
-                  <v-spacer></v-spacer>
-                  <v-btn color="grey-darken-3" variant="text" @click="verDetalhes(projeto.id)"
-                    >Detalhes</v-btn
-                  >
-                  <v-btn color="green-darken-3" variant="text" @click="gerenciarProjeto(projeto.id)"
-                    >Gerenciar<v-icon end>mdi-arrow-right</v-icon></v-btn
-                  >
+        <v-card-text>
+          <v-row v-if="viewMode === 'grid'">
+            <v-col v-for="projeto in grupo.projetos" :key="projeto.id" cols="12" md="6" lg="4">
+              <ProjectCard
+               :projeto="projeto"
+                contexto= "inscricao"
+                :inscrito="projeto.alunoInscrito"
+                @ver-detalhes="verDetalhes(projeto.id)">
+                <template #actions>
+                  <template v-if="isAluno">
+                    <v-btn v-if="projeto.alunoInscrito" color="red-darken-2" variant="text" size="small" @click.stop="sairDoProjeto(projeto)">Cancelar Inscrição</v-btn>
+                    <v-tooltip v-else location="top">
+                      <template v-slot:activator="{ props }">
+                        <div v-bind="props">
+                          <v-btn
+                            :disabled="projeto.status === 'Esgotado' || alunoJaInscritoNoEvento(projeto.id_evento) || projeto.statusInscricao !== 'ABERTO'"
+                            color="green-darken-3" variant="flat" size="small" @click.stop="inscreverNoProjeto(projeto)"
+                          >Inscrever-se</v-btn>
+                        </div>
+                      </template>
+                      <span v-if="projeto.status === 'Esgotado'">Vagas esgotadas</span>
+                      <span v-else-if="alunoJaInscritoNoEvento(projeto.id_evento)">Você já está em um projeto deste evento</span>
+                      <span v-else>{{ projeto.mensagemInscricao }}</span>
+                    </v-tooltip>
+                  </template>
+                  <template v-if="isProfessor">
+                    <v-btn variant="text" color="green-darken-2" size="small" @click.stop="gerenciarProjeto(projeto.id)">
+                      Gerenciar<v-icon end>mdi-arrow-right</v-icon>
+                    </v-btn>
+                  </template>
                 </template>
-                <template v-else>
-                  <v-btn variant="text" @click="verDetalhes(projeto.id)">Ver Detalhes</v-btn>
-                  <v-spacer></v-spacer>
+              </ProjectCard>
+            </v-col>
+          </v-row>
 
-                  <v-btn
-                    v-if="projeto.alunoInscrito"
-                    color="red-darken-2"
-                    variant="text"
-                    @click="sairDoProjeto(projeto)"
-                  >
-                    Sair
-                    <v-icon end>mdi-logout</v-icon>
-                  </v-btn>
-                  <v-tooltip
-                    v-else
-                    :text="
-                      alunoJaInscrito
-                        ? 'Você já está inscrito em outro projeto.'
-                        : projeto.mensagemInscricao
-                    "
-                    location="top"
-                  >
-                    <template v-slot:activator="{ props }">
-                      <div v-bind="props">
-                        <v-btn
-                          :disabled="
-                            projeto.status === 'Esgotado' ||
-                            alunoJaInscrito ||
-                            projeto.statusInscricao !== 'ABERTO'
-                          "
-                          color="green-darken-3"
-                          variant="flat"
-                          @click="inscreverNoProjeto(projeto)"
-                        >
-                          {{ alunoJaInscrito ? 'Inscrição única' : 'Inscrever-se' }}
-                        </v-btn>
-                      </div>
-                    </template>
-                  </v-tooltip>
-                </template>
-              </v-card-actions>
-            </v-card>
-          </v-col>
-        </v-row>
-
-        <v-card v-if="viewMode === 'list'" variant="outlined">
-          <v-table hover>
+          <v-table v-else-if="viewMode === 'list'" hover>
             <thead>
               <tr>
                 <th class="text-left">Projeto</th>
+                <th class="text-left d-none d-sm-table-cell">Orientador</th>
                 <th class="text-left d-none d-md-table-cell">Inscrições</th>
-                <th class="text-left d-none d-sm-table-cell">Status</th>
+                <th class="text-left">Status</th>
                 <th class="text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="projeto in projetosFiltrados" :key="`list-${projeto.id}`">
+              <tr v-for="projeto in grupo.projetos" :key="`list-${projeto.id}`" @click="verDetalhes(projeto.id)" style="cursor: pointer;">
                 <td>
                   <div class="font-weight-bold">{{ projeto.titulo }}</div>
-                  <div class="text-caption text-grey-darken-1">{{ projeto.orientador }}</div>
-                  <v-card-subtitle
-                    v-if="userType !== 2 && !projeto.validado"
-                    class="d-flex align-center text-orange-darken-3 pa-0 mt-1"
-                    style="font-size: 0.7rem"
-                    ><v-icon size="xs" start>mdi-eye-off-outline</v-icon>Apenas
-                    professores</v-card-subtitle
-                  >
-                  <v-card-subtitle
-                    v-else
-                    class="d-flex align-center text-green-darken-3 pa-0 mt-1"
-                    style="font-size: 0.7rem"
-                    ><v-icon size="xs" start>mdi-eye-outline</v-icon>Público</v-card-subtitle
-                  >
                 </td>
+                <td class="d-none d-sm-table-cell">{{ projeto.orientador?.nome || 'Não definido' }}</td>
                 <td class="d-none d-md-table-cell">
-                  <div class="d-flex align-center" style="min-width: 150px">
-                    <v-progress-linear
-                      :model-value="getProgressoInscricao(projeto.inscritos, projeto.maxAlunos)"
-                      :color="getCorProgresso(projeto.inscritos, projeto.maxAlunos)"
-                      height="6"
-                      rounded
-                      class="mr-3"
-                    ></v-progress-linear>
-                    <span class="font-weight-medium text-body-2"
-                      >{{ projeto.inscritos }}/{{ projeto.maxAlunos }}</span
-                    >
-                  </div>
+                  <v-icon size="small" class="mr-1">mdi-account-group-outline</v-icon>
+                  {{ projeto.inscritos }} / {{ projeto.maxAlunos }}
                 </td>
-                <td class="d-none d-sm-table-cell">
-                  <v-chip
-                    :color="statusMap[projeto.status].color"
-                    size="small"
-                    label
-                    variant="tonal"
-                    >{{ projeto.status }}</v-chip
-                  >
+                <td>
+                    <v-chip :color="statusMap[projeto.status]?.color || 'grey'" size="small" label variant="tonal">
+                        {{ projeto.status }}
+                    </v-chip>
                 </td>
                 <td class="text-right">
-                  <div v-if="userType !== 2">
-                    <v-btn size="small" variant="text" @click="verDetalhes(projeto.id)" class="mr-1"
-                      >Detalhes</v-btn
-                    >
-                    <v-btn
-                      size="small"
-                      color="green-darken-3"
-                      variant="text"
-                      @click="gerenciarProjeto(projeto.id)"
-                      >Gerenciar</v-btn
-                    >
-                  </div>
-                  <div v-else class="d-flex justify-end align-center">
-                    <v-btn size="small" variant="text" @click="verDetalhes(projeto.id)" class="mr-1"
-                      >Detalhes</v-btn
-                    >
-
-                    <v-btn
-                      v-if="projeto.alunoInscrito"
-                      size="small"
-                      color="red-darken-2"
-                      variant="text"
-                      @click="sairDoProjeto(projeto)"
-                    >
-                      Sair <v-icon size="small" end>mdi-logout</v-icon>
-                    </v-btn>
-
-                    <v-tooltip
-                      v-else
-                      :text="
-                        alunoJaInscrito
-                          ? 'Você já está inscrito em outro projeto.'
-                          : projeto.mensagemInscricao
-                      "
-                      location="top"
-                    >
-                      <template v-slot:activator="{ props }">
-                        <div v-bind="props">
-                          <v-btn
-                            size="small"
-                            :disabled="
-                              projeto.status === 'Esgotado' ||
-                              alunoJaInscrito ||
-                              projeto.statusInscricao !== 'ABERTO'
-                            "
-                            color="green-darken-3"
-                            variant="tonal"
-                            @click="inscreverNoProjeto(projeto)"
-                          >
-                            Inscrever-se
-                          </v-btn>
-                        </div>
-                      </template>
-                    </v-tooltip>
+                  <div class="d-flex justify-end">
+                    <template v-if="isAluno">
+                      <v-btn v-if="projeto.alunoInscrito" color="red-darken-2" variant="text" size="small" @click.stop="sairDoProjeto(projeto)">Cancelar</v-btn>
+                      <v-tooltip v-else location="top" :text="alunoJaInscritoNoEvento(projeto.id_evento) ? 'Já inscrito neste evento' : (projeto.status === 'Esgotado' ? 'Vagas esgotadas' : projeto.mensagemInscricao)">
+                        <template v-slot:activator="{ props }">
+                          <div v-bind="props">
+                            <v-btn :disabled="projeto.status === 'Esgotado' || alunoJaInscritoNoEvento(projeto.id_evento) || projeto.statusInscricao !== 'ABERTO'" color="green-darken-3" variant="tonal" size="small" @click.stop="inscreverNoProjeto(projeto)">Inscrever-se</v-btn>
+                          </div>
+                        </template>
+                      </v-tooltip>
+                    </template>
+                    <template v-if="isProfessor">
+                      <v-btn variant="text" color="green-darken-2" size="small" @click.stop="gerenciarProjeto(projeto.id)">Gerenciar</v-btn>
+                    </template>
                   </div>
                 </td>
               </tr>
             </tbody>
           </v-table>
-        </v-card>
-      </div>
+        </v-card-text>
+      </v-card>
     </div>
 
-    <CrudModal
-      v-model="isModalOpen"
-      :title="modalConfig.title"
-      :fields="modalConfig.fields"
-      :item="currentItem"
-      :loading="isModalLoading"
-      @save="handleSave"
-    />
-  </v-container>
+    <v-dialog v-model="showConfirmDialog" max-width="500px">
+      <v-card title="Cancelar Inscrição">
+        <v-card-text>Tem certeza que deseja sair da equipe do projeto "{{ selectedProject?.titulo }}"?</v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text @click="showConfirmDialog = false">Voltar</v-btn>
+          <v-btn color="red-darken-1" variant="flat" @click="confirmSairDoProjeto">Confirmar Saída</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    </v-container>
 </template>
+
 <style scoped>
-.text-wrap {
-  white-space: normal !important;
-  word-break: break-word;
-}
-.info-item {
-  display: flex;
-  align-items: center;
-  color: #424242;
-}
+/* Adicione estilos se necessário */
 </style>

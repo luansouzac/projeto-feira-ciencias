@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Projeto; 
 
 class UsuarioController extends Controller
 {
@@ -183,4 +184,25 @@ class UsuarioController extends Controller
             return response()->json(['erro' => 'Não foi possível inserir os dados.', 'detalhes' => $e->getMessage()], 500);
         }
     }
+    public function projetosInscritos($id)
+    {
+        $usuario = Usuario::findOrFail($id);
+
+        $equipeIds = $usuario->membroEquipe()->pluck('id_equipe');
+
+        $projetos = Projeto::whereIn('id_projeto', function ($query) use ($equipeIds) {
+            $query->select('id_projeto')
+                  ->from('equipes')
+                  ->whereIn('id_equipe', $equipeIds);
+        })
+        ->with([
+            'eventos', // O evento do projeto
+            'orientador', // O orientador
+            'equipe.membroEquipe' // A contagem de membros
+        ])
+        ->get();
+
+        return response()->json($projetos, 200);
+    }
 }
+
