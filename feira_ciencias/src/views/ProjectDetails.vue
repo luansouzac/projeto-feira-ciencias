@@ -230,14 +230,14 @@ const handleAddMember = async (user) => {
 }
 
 const handleRemoveMember = async (memberToRemove) => {
-  if (!confirm(`Tem certeza que deseja remover ${memberToRemove.usuario.nome} da equipe?`)) return
+  if (!confirm(`Tem certeza que deseja remover ${memberToRemove.usuario.snome} da equipe?`)) return
   notificationStore.showInfo(`Removendo ${memberToRemove.usuario.nome}...`)
   try {
-    const equipeId = project.value.equipe[0]?.id_equipe
-    if (!equipeId) throw new Error('ID da equipe não encontrado no projeto.')
+    const projetoId = project.value.id_projeto
+    if (!projetoId) throw new Error('ID da equipe não encontrado no projeto.')
 
     const usuarioId = memberToRemove.id_usuario
-    await api.post(`/projetos/desinscrever/${equipeId}/${usuarioId}`)
+    await api.post(`/projetos/desinscrever/${projetoId}/${usuarioId}`)
     membros.value = membros.value.filter((m) => m.id_membro !== memberToRemove.id_membro)
     notificationStore.showSuccess(`${memberToRemove.usuario.nome} foi removido da equipe.`)
   } catch (err) {
