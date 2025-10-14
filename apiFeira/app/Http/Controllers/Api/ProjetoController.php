@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Projeto;
 use App\Models\Equipe;
 use App\Models\MembroEquipe;
+use App\Models\Evento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -262,6 +263,22 @@ public function inscrever(Request $request, $id)
         }
         
         return response()->json(['erro' => 'Projeto não encontrado'], 404);
+    }
+
+     public function publicShow(Projeto $projeto)
+    {
+        if ($projeto->id_situacao != 2) {
+            return response()->json(['erro' => 'Este projeto não está disponível para visualização pública.'], 403);
+        }
+
+        $projeto->load([
+            'orientador:id_usuario,nome',
+            'coorientador:id_usuario,nome',
+            'eventos:id_evento,nome', 
+            'equipe.membroEquipe.usuario:id_usuario,nome' 
+        ]);
+
+        return response()->json($projeto, 200);
     }
 }
 

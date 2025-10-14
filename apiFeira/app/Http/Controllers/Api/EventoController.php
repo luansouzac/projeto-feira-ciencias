@@ -124,4 +124,22 @@ class EventoController extends Controller
         // Se o evento não for encontrado, retorna um erro 404 Not Found.
         return response()->json(['erro' => 'Evento não encontrado'], 404);
     }
+    public function publicProjects(Evento $evento)
+        {
+            $projetos = $evento->projetos()
+                ->where('id_situacao' , '=', 2) 
+                ->with(['orientador' => function ($query) {
+                    $query->select('id_usuario', 'nome'); 
+                }])
+                ->get();
+
+            return response()->json([
+                'evento' => [
+                    'id_evento' => $evento->id_evento,
+                    'nome' => $evento->nome,
+                    'data_evento' => $evento->data_evento,
+                ],
+                'projetos' => $projetos
+            ], 200);
+        }
 }

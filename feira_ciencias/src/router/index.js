@@ -96,7 +96,18 @@ const router = createRouter({
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
       meta: { requiresAuth: true },
-    }
+    },
+    {
+    path: '/public/projeto/:id',
+    name: 'PublicProject',
+    component: () => import('../views/PublicProjectView.vue'),
+  },
+  {
+    // ✅ ROTA ADICIONADA PARA A PÁGINA DE LISTAGEM
+    path: '/public/evento/:id/projetos',
+    name: 'PublicEventProjects',
+    component: () => import('../views/PublicEventView.vue'),
+  },
   ],
 })
 

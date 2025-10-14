@@ -206,3 +206,9 @@ Route::post('register', [UserAuthController::class, 'register']);
 Route::post('login', [UserAuthController::class, 'login']);
 
 Route::post('/recuperar_senha', [PasswordResetController::class, 'generateAndSend']);
+
+Route::prefix('public')->group(function () {
+        Route::get('/eventos/{evento}/projetos', [\App\Http\Controllers\Api\EventoController::class, 'publicProjects']);
+
+        Route::get('/projetos/{projeto}', [\App\Http\Controllers\Api\ProjetoController::class, 'publicShow']);
+    });
