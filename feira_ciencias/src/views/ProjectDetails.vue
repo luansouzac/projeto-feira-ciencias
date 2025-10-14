@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue' // ✅ CORREÇÃO: nextTick foi importado
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/assets/plugins/axios.js'
 import { useNotificationStore } from '@/stores/notification'
@@ -35,6 +35,8 @@ const activeTab = ref('detalhes')
 const isTaskModalOpen = ref(false)
 const isTaskModalLoading = ref(false)
 const currentTask = ref(null) // Usado para saber qual tarefa editar
+
+const isQrModalOpen = ref(false);
 
 const isAddMemberModalOpen = ref(false)
 
@@ -389,6 +391,45 @@ const handleSubmitTask = async (submissionDataFromModal) => {
     isSubmitTaskLoading.value = false
   }
 }
+const publicUrl = computed(() => {
+    if (!project.value) return '';
+    return `${window.location.origin}/public/projeto/${project.value.id_projeto}`;
+});
+
+const generateQRCode = () => {
+    nextTick(() => {
+        const canvas = document.getElementById('qrcode-canvas-details');
+        if (canvas && publicUrl.value) {
+            QRCode.toCanvas(canvas, publicUrl.value, { width: 220, margin: 2 }, (error) => {
+                if (error) console.error('Erro ao gerar QR code:', error);
+            });
+        }
+    });
+};
+
+const openQrModal = () => {
+  isQrModalOpen.value = true;
+  generateQRCode();
+};
+
+const copyPublicUrl = () => {
+    navigator.clipboard.writeText(publicUrl.value).then(() => {
+        notificationStore.showSuccess('Link copiado para a área de transferência!');
+    }).catch(err => {
+        notificationStore.showError('Não foi possível copiar o link.');
+    });
+};
+
+const downloadQRCode = () => {
+    const canvas = document.getElementById('qrcode-canvas-details');
+    if (canvas) {
+        const link = document.createElement('a');
+        link.download = `qrcode-projeto-${project.value.titulo.replace(/\s+/g, '_')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+};
+
 </script>
 
 <template>
@@ -404,23 +445,28 @@ const handleSubmitTask = async (submissionDataFromModal) => {
     <v-alert v-else-if="error" type="error" variant="tonal">{{ error }}</v-alert>
 
     <div v-else-if="project">
-      <v-card theme="dark" class="mb-8 bg-green-darken-4">
-        <v-card-item class="pa-4 pa-sm-6">
+      <v-card class="mb-8">
+        <v-card-item class="pa-4 pa-sm-6 bg-green-darken-4" style="color: white;">
           <div class="d-flex flex-wrap justify-space-between align-center">
             <div>
               <p class="text-overline">Projeto</p>
               <h1 class="text-h4 font-weight-bold">{{ project.titulo }}</h1>
+              <div v-if="project.eventos" class="d-flex align-center mt-2 opacity-75">
+                <v-icon size="small" start icon="mdi-calendar-star"></v-icon>
+                <span class="text-subtitle-1">{{ project.eventos.nome }}</span>
+              </div>
             </div>
-            <v-chip
-              :color="projectStatus.color"
-              :prepend-icon="projectStatus.icon"
-              variant="tonal"
-              label
-            >
+            <v-chip :color="projectStatus.color" :prepend-icon="projectStatus.icon" variant="tonal" label>
               {{ projectStatus.text }}
             </v-chip>
           </div>
         </v-card-item>
+        <v-card-actions class="pa-3">
+            <v-spacer></v-spacer>
+            <v-btn color="green-darken-2" variant="flat" prepend-icon="mdi-qrcode" @click="openQrModal">
+                QR Code
+            </v-btn>
+        </v-card-actions>
       </v-card>
 
       <v-card>
@@ -506,6 +552,36 @@ const handleSubmitTask = async (submissionDataFromModal) => {
       :is-loading="isSubmitTaskLoading"
       @submit="handleSubmitTask"
     />
+
+    <v-dialog v-model="isQrModalOpen" max-width="500px">
+        <v-card>
+            <v-card-title class="d-flex align-center">
+                <v-icon start color="green-darken-2">mdi-qrcode</v-icon>
+                <span class="text-h5">Compartilhar o Projeto</span>
+                <v-spacer></v-spacer>
+                <v-btn icon="mdi-close" variant="text" @click="isQrModalOpen = false"></v-btn>
+            </v-card-title>
+            <v-card-text class="text-center">
+                <p class="mb-6">Aponte a câmara para o código ou utilize o link para compartilhar à página pública do projeto.</p>
+                <canvas id="qrcode-canvas-details"></canvas>
+                <v-text-field
+                  :model-value="publicUrl"
+                  label="Link Público"
+                  variant="outlined"
+                  readonly
+                  append-inner-icon="mdi-content-copy"
+                  @click:append-inner="copyPublicUrl"
+                  class="mt-6"
+                ></v-text-field>
+            </v-card-text>
+            <v-card-actions class="pa-4">
+                <v-spacer></v-spacer>
+                <v-btn color="green-darken-3" variant="flat" @click="downloadQRCode" prepend-icon="mdi-download">
+                  Baixar QR Code
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -528,3 +604,4 @@ const handleSubmitTask = async (submissionDataFromModal) => {
   cursor: not-allowed;
 }
 </style>
+

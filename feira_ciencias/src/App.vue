@@ -2,13 +2,22 @@
 import { computed } from 'vue';
 import { RouterView, useRoute } from 'vue-router'
 import GlobalAlert from '@/components/GlobalAlert.vue';
-import NavBar from '@/components/NavBar.vue';
+import NavBar from '@/components/NavBar.vue'; 
 
 const route = useRoute();
 
 const showNavbar = computed(() => {
-  const rotasSemNavbar = ['login', 'registrar', 'recuperar']; 
-  return !rotasSemNavbar.includes(route.name);
+
+  const rotasSemNavbarPorNome = ['login', 'registrar', 'recuperar']; 
+  if (rotasSemNavbarPorNome.includes(route.name)) {
+    return false;
+  }
+
+  if (route.meta.layout === 'public') {
+    return false;
+  }
+
+  return true;
 });
 </script>
 
@@ -24,7 +33,6 @@ const showNavbar = computed(() => {
 </template>
 
 <style scoped>
-/* PASSO 2: Limpar o CSS antigo que não é mais necessário. 
-   O Vuetify já cuida disso.
-   Você pode adicionar seus próprios estilos aqui depois, se precisar. */
+/* Pode adicionar estilos globais para a v-main aqui se necessário, 
+   por exemplo, uma cor de fundo. */
 </style>

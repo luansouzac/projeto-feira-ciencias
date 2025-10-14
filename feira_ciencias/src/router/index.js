@@ -101,12 +101,13 @@ const router = createRouter({
     path: '/public/projeto/:id',
     name: 'PublicProject',
     component: () => import('../views/PublicProjectView.vue'),
+    meta: { layout: 'public' }
   },
   {
-    // ✅ ROTA ADICIONADA PARA A PÁGINA DE LISTAGEM
     path: '/public/evento/:id/projetos',
     name: 'PublicEventProjects',
     component: () => import('../views/PublicEventView.vue'),
+    meta: { layout: 'public' }
   },
   ],
 })

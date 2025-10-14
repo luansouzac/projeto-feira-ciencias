@@ -92,7 +92,7 @@ const formatDate = (dateString) => {
                   <v-card-item>
                     <v-card-title>
                       <v-icon start>mdi-account-group-outline</v-icon>
-                      Equipa do Projeto
+                      Equipe do Projeto
                     </v-card-title>
                   </v-card-item>
                   <v-list class="bg-transparent">
