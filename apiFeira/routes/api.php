@@ -202,6 +202,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [UserAuthController::class, 'logout']);        // Logout
 });
 
+Route::middleware(['auth:sanctum', 'permission:crud avaliacao'])->group(function () {
+    Route::apiResource('questionarios', \App\Http\Controllers\Api\QuestionarioController::class);
+    Route::apiResource('perguntas_questionario', \App\Http\Controllers\Api\PerguntaQuestionarioController::class);
+});
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/avaliacoes/submeter', [\App\Http\Controllers\Api\AvaliacaoAprendizagemController::class, 'submeterAvaliacao']);
+    Route::apiResource('avaliacoes', \App\Http\Controllers\Api\AvaliacaoAprendizagemController::class)
+         ->middleware('permission:crud avaliacao projeto');
+    Route::apiResource('votos_populares', \App\Http\Controllers\Api\VotoPopularController::class);
+});
+
 Route::post('register', [UserAuthController::class, 'register']);
 Route::post('login', [UserAuthController::class, 'login']);
 
@@ -212,3 +224,6 @@ Route::prefix('public')->group(function () {
 
         Route::get('/projetos/{projeto}', [\App\Http\Controllers\Api\ProjetoController::class, 'publicShow']);
     });
+
+
+
