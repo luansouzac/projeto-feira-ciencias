@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Projeto; 
+use App\Models\AvaliadorProjeto;
 
 class UsuarioController extends Controller
 {
@@ -203,6 +204,21 @@ class UsuarioController extends Controller
         ->get();
 
         return response()->json($projetos, 200);
+    }
+     public function minhaAtribuicaoParaProjeto(Request $request, Projeto $projeto)
+    {
+        $usuario = $request->user();
+
+        $atribuicao = AvaliadorProjeto::where('id_projeto', $projeto->id_projeto)
+                                      ->where('id_avaliador', $usuario->id_usuario)
+                                      ->first();
+
+        // Se não encontrar uma atribuição, significa que este utilizador não foi designado para avaliar este projeto.
+        if (!$atribuicao) {
+            return response()->json(['erro' => 'Você não está atribuído para avaliar este projeto.'], 403); // 403 Forbidden
+        }
+
+        return response()->json($atribuicao, 200);
     }
 }
 

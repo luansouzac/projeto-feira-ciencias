@@ -219,6 +219,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/usuarios/{id}', [UserAuthController::class, 'show']);  // Pega dados do usuário
     Route::put('/usuarios/{id}', [UserAuthController::class, 'update']); // Atualiza perfil
     Route::post('/logout', [UserAuthController::class, 'logout']);        // Logout
+    Route::get('/projetos/{projeto}/minha-atribuicao', [\App\Http\Controllers\Api\UsuarioController::class, 'minhaAtribuicaoParaProjeto']);
 });
 
 Route::middleware(['auth:sanctum', 'permission:crud avaliacao'])->group(function () {
@@ -227,7 +228,7 @@ Route::middleware(['auth:sanctum', 'permission:crud avaliacao'])->group(function
 });
 
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('/avaliacoes/submeter', [\App\Http\Controllers\Api\AvaliacaoAprendizagemController::class, 'submeterAvaliacao']);
+    Route::post('/avaliacoes/submeter', [\App\Http\Controllers\Api\AvaliacaoAprendizagemController::class, 'store']);
     Route::apiResource('avaliacoes', \App\Http\Controllers\Api\AvaliacaoAprendizagemController::class)
          ->middleware('permission:crud avaliacao projeto');
     Route::apiResource('votos_populares', \App\Http\Controllers\Api\VotoPopularController::class);
