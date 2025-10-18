@@ -112,5 +112,10 @@ class Projeto extends Model
     {
         return $this->hasMany(ProjetoAvaliacao::class, 'id_projeto', 'id_projeto');
     }
+
+    public function atribuicoesAvaliadores()
+    {
+        return $this->hasMany(AvaliadorProjeto::class, 'id_projeto', 'id_projeto');
+    }
 }
 

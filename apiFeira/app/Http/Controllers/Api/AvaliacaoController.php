@@ -7,6 +7,7 @@ use App\Models\Projeto;
 use App\Models\ProjetoAvaliacao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB; 
+use App\Models\AvaliacaoAprendizagem;
 
 class AvaliacaoController extends Controller
 {
@@ -19,9 +20,21 @@ class AvaliacaoController extends Controller
     }
     public function getByProject(Projeto $projeto)
     {
-        $avaliacoes = ProjetoAvaliacao::where('id_projeto', $projeto->id_projeto)
-                                            ->with('avaliador', 'situacao')
-                                            ->get();
+        // 1. Encontra os IDs de todas as "tarefas de avaliação" (atribuições) deste projeto.
+        $atribuicaoIds = $projeto->atribuicoesAvaliadores()->pluck('id');
+
+        // 2. Busca todas as avaliações que pertencem a essas atribuições.
+        $avaliacoes = AvaliacaoAprendizagem::whereIn('id_avaliador_projeto', $atribuicaoIds)
+            ->with([
+                // 3. Para cada avaliação, carrega os dados do avaliador (nome e id).
+                'atribuicao.avaliador:id_usuario,nome',
+                // 4. Carrega todas as respostas.
+                'respostas',
+                // 5. Para cada resposta, carrega o texto e o critério da pergunta original.
+                'respostas.pergunta:id_pergunta,texto_pergunta,criterio'
+            ])
+            ->get();
+
         return response()->json($avaliacoes, 200);
     }
 

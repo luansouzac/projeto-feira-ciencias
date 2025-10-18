@@ -118,6 +118,15 @@ const router = createRouter({
         requiredTypeId: [1, 3] // Apenas Admin e Orientador podem aceder
     },
     },
+    {
+      path: '/projetos/:id/resultados',
+      name: 'Resultados', // Pode manter o nome ou alterar para 'ProjectResults'
+      component: () => import('../views/ProjectResultsView.vue'),
+      meta: {
+        requiresAuth: true,
+        requiredTypeId: [1, 3] 
+      },
+    },
   {
     path: '/public/projeto/:id',
     name: 'PublicProject',
