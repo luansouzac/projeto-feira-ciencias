@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\AvaliacaoController;
 use App\Http\Controllers\Api\EquipeController;
 use App\Http\Controllers\Api\TarefaFeedbackController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\AvaliadorProjetoController;
 
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
@@ -157,6 +158,7 @@ Route::middleware(['auth:sanctum', 'permission:crud comentario desenvolvimento']
 });
 
 
+
 Route::middleware(['auth:sanctum', 'permission:exibir feedback tarefas'])->group(function () {
 
 });
@@ -172,6 +174,23 @@ Route::middleware(['auth:sanctum', 'permission:exibir avaliacao projeto'])->grou
     Route::get('/projeto_avaliacoes', [AvaliacaoController::class, 'index']);
     Route::get('/projeto_avaliacoes/{id}', [AvaliacaoController::class, 'show']);
     Route::get('/projetos/{projeto}/avaliacoes', [AvaliacaoController::class, 'getByProject']);
+});
+
+Route::middleware(['auth:sanctum', 'permission:crud avaliacao projeto'])->group(function () {
+    
+    Route::post('/avaliador_projeto', [AvaliadorProjetoController::class, 'store']);
+    Route::delete('/avaliador_projeto/{id}', [AvaliadorProjetoController::class, 'destroy']);
+    Route::apiResource('questionarios', \App\Http\Controllers\Api\QuestionarioController::class);
+    Route::apiResource('perguntas_questionario', \App\Http\Controllers\Api\PerguntaQuestionarioController::class);
+});
+
+
+// Ações do Avaliador e Aluno (Submeter avaliações e votos)
+Route::middleware('auth:sanctum')->group(function () {
+    
+    Route::post('/avaliacoes', [\App\Http\Controllers\Api\AvaliacaoAprendizagemController::class, 'store'])
+         ->middleware('permission:crud avaliacao projeto'); // Permissão necessária para esta ação
+    Route::post('/votos_populares', [\App\Http\Controllers\Api\VotoPopularController::class, 'store']);
 });
 
 

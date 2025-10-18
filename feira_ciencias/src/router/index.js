@@ -98,6 +98,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+    path: '/projeto/:id/avaliar',
+    name: 'AvaliarProjeto',
+    component: () => import('../views/AvaliacaoProjetoView.vue'),
+    meta: { requiresAuth: true } 
+},
+    {
     path: '/public/projeto/:id',
     name: 'PublicProject',
     component: () => import('../views/PublicProjectView.vue'),
