@@ -51,6 +51,11 @@ const allNavLinks = [
     meta: { requiredTypeId: [1, 3, 4] } // Visível para Aluno, Orientador e Avaliador
   },
   {
+    title: 'Resultados de Avaliações',
+    to: '/ranking-projetos',
+    icon: 'mdi-clipboard-check-outline',
+  },
+  {
     title: 'Gerenciar Avaliacoes',
     to: '/admin/avaliacoes',
     icon: 'mdi-clipboard-edit-outline',
@@ -60,7 +65,7 @@ const allNavLinks = [
     title: 'Eventos',
     to: '/eventos',
     icon: 'mdi-calendar-star-outline',
-    meta: { requiredTypeId: [1, 4] } // Visível para Admin, Orientador e Avaliador
+    meta: { requiredTypeId: [1, 4] } 
   },
 ];
 

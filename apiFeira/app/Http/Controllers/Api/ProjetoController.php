@@ -280,5 +280,22 @@ public function inscrever(Request $request, $id)
 
         return response()->json($projeto, 200);
     }
+
+     public function resultadosGerais()
+    {
+        $projetosComResultados = Projeto::query()
+            
+            ->whereHas('avaliacoes')
+            
+            ->with('eventos:id_evento,nome')
+            
+            ->withAvg('avaliacoes', 'nota_geral')
+            
+            ->orderByDesc('avaliacoes_avg_nota_geral')
+            
+            ->get();
+
+        return response()->json($projetosComResultados, 200);
+    }
 }
 

@@ -110,6 +110,12 @@ const router = createRouter({
       requiredTypeId: [1, 3, 4],
     },
     {
+      path: '/ranking-projetos',
+      name: 'Ranking',
+      component: () => import('../views/RankingView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/admin/avaliacoes',
     name: 'AdminAvaliacoes',
     component: () => import('../views/AvaliacaoAdminView.vue'),

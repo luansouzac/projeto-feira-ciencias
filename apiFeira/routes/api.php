@@ -22,229 +22,118 @@ use App\Http\Controllers\Api\EquipeController;
 use App\Http\Controllers\Api\TarefaFeedbackController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\AvaliadorProjetoController;
+use App\Http\Controllers\Api\QuestionarioController;
+use App\Http\Controllers\Api\PerguntaQuestionarioController;
+use App\Http\Controllers\Api\VotoPopularController;
 
+/*
+|--------------------------------------------------------------------------
+| Rotas da API
+|--------------------------------------------------------------------------
+| Organizadas por Acesso: Públicas e Autenticadas (com subgrupos de permissões)
+*/
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
-//Exibir Usuário e Crud Usuário
-Route::middleware(['auth:sanctum', 'permission:crud usuario'])->group(function () {
-    Route::apiResource('usuarios', UsuarioController::class);
-    Route::get('/usuarios/{id}', [UsuarioController::class, 'show']);
-    Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
-    Route::get('/usuarios/{id}/projetos/avaliacao', [ProjetoController::class, 'projetosAvaliacao']);
-    Route::post('/usuarioslista', [UsuarioController::class, 'inserirLista']);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir usuario'])->group(function () {
-    Route::get('/usuarios', [UsuarioController::class, 'index']);
-    Route::get('/usuarios/{id}', [UsuarioController::class, 'show']);
-    Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
-    Route::get('/usuarios/{id}/projetos/avaliacao', [ProjetoController::class, 'projetosAvaliacao']);
-});
-
-// Rotas de LEITURA (acessíveis por quem pode 'exibir projeto')
-Route::middleware(['auth:sanctum', 'permission:exibir projeto'])->group(function () {
-    Route::get('/projetos', [ProjetoController::class, 'index']);
-    Route::get('/projetos/{id}', [ProjetoController::class, 'show']);
-    Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
-    Route::get('/usuarios/{id}/projetos-inscritos', [UsuarioController::class, 'projetosInscritos']);
-});
-
-// Rotas de ESCRITA (acessíveis por quem pode 'crud projeto')
-Route::middleware(['auth:sanctum', 'permission:crud projeto'])->group(function () {
-    Route::post('/projetos', [ProjetoController::class, 'store']);
-    Route::put('/projetos/{projeto}', [ProjetoController::class, 'update']);
-    Route::patch('/projetos/{projeto}', [ProjetoController::class, 'update']);
-    Route::delete('/projetos/{projeto}', [ProjetoController::class, 'destroy']);
-    Route::patch('/projetos/{id_projeto}/situacao', [ProjetoController::class, 'updateSituacao']);
-});
-
-//Exibir Equipe e Crud Equipe
-Route::middleware(['auth:sanctum', 'permission:crud equipe'])->group(function () {
-    Route::get('/membros_projeto/{id}', [MembroEquipeController::class, 'membrosProjeto']);
-    Route::apiResource('membro_equipes', MembroEquipeController::class);
-    Route::apiResource('equipes', EquipeController::class);
-    Route::delete('/equipesProjeto/{id}', [EquipeController::class, 'destroyProjeto']);
-    Route::post('/projetos/{id}/inscrever', [ProjetoController::class, 'inscrever']);
-    Route::post('/projetos/desinscrever/{equipe}/{usuario}', [MembroEquipeController::class, 'retiraMembroProjeto']);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir equipe'])->group(function () {
-    Route::get('/membro_equipes', [MembroEquipeController::class, 'index']);
-    Route::get('/membro_equipes/{id}', [MembroEquipeController::class, 'show']);
-    Route::get('/membros_projeto/{id}', [MembroEquipeController::class, 'membrosProjeto']);
-});
-
-//Exibir Objetivo e Crud Objetivo
-Route::middleware(['auth:sanctum', 'permission:crud objetivo'])->group(function () {
-    Route::apiResource('questao_pesquisas', QuestaoPesquisaController::class);
-    Route::apiResource('objetivo_projetos', ObjetivoProjetoController::class);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir objetivo'])->group(function () {
-    Route::get('/questao_pesquisas', [QuestaoPesquisaController::class, 'index']);
-    Route::get('/questao_pesquisas/{id}', [QuestaoPesquisaController::class, 'show']);
-    Route::get('/objetivo_projetos', [ObjetivoProjetoController::class, 'index']);
-    Route::get('/objetivo_projetos/{id}', [ObjetivoProjetoController::class, 'show']);
-});
-
-//Exibir Tarefas e Crud Tarefas
-Route::middleware(['auth:sanctum', 'permission:crud tarefa'])->group(function () {
-    Route::apiResource('tarefas', TarefaController::class);
-    Route::apiResource('atribuicao_tarefas', AtribuicaoTarefaController::class);
-    Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
-    Route::apiResource('registros_tarefas', RegistroTarefaController::class);
-    Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir tarefa'])->group(function () {
-    Route::get('/tarefas', [TarefaController::class, 'index']);
-    Route::get('/tarefas/{id}', [TarefaController::class, 'show']);
-    Route::get('/atribuicao_tarefas', [AtribuicaoTarefaController::class, 'index']);
-    Route::get('/atribuicao_tarefas/{id}', [AtribuicaoTarefaController::class, 'show']);
-    Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
-    Route::get('/registros_tarefas', [RegistroTarefaController::class, 'index']);
-    Route::get('/registros_tarefas/{id}', [RegistroTarefaController::class, 'show']);
-});
-
-//Exibir Apresentação e Crud Apresentação
-Route::middleware(['auth:sanctum', 'permission:crud apresentacao'])->group(function () {
-    Route::apiResource('apresentacao_projetos', ApresentacaoProjetoController::class);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir apresentacao'])->group(function () {
-    Route::get('/apresentacao_projetos', [ApresentacaoProjetoController::class, 'index']);
-    Route::get('/apresentacao_projetos/{id}', [ApresentacaoProjetoController::class, 'show']);
-});
-
-//Exibir Evento e Crud Evento
-Route::middleware(['auth:sanctum', 'permission:crud evento'])->group(function () {
-    Route::apiResource('eventos', EventoController::class);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir evento'])->group(function () {
-    Route::get('/eventos', [EventoController::class, 'index']);
-    Route::get('/eventos/{id}', [EventoController::class, 'show']);
-});
-
-//Exibir Avaliação e Crud Avaliação
-Route::middleware(['auth:sanctum', 'permission:crud avaliacao'])->group(function () {
-    Route::apiResource('avaliacao_aprendizagem', AvaliacaoAprendizagemController::class);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir avaliacao'])->group(function () {
-    Route::get('/avaliacao_aprendizagem', [AvaliacaoAprendizagemController::class, 'index']);
-    Route::get('/avaliacao_aprendizagem/{id}', [AvaliacaoAprendizagemController::class, 'show']);
-});
-
-//Exibir Comentários Planejamento e Crud Comentários Planejamento
-Route::middleware(['auth:sanctum', 'permission:crud comentario planejamento'])->group(function () {
-    Route::apiResource('comentarios_planejamentos', ComentarioPlanejamentoController::class);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir comentario planejamento'])->group(function () {
-    Route::get('/comentarios_planejamentos', [ComentarioPlanejamentoController::class, 'index']);
-    Route::get('/comentarios_planejamentos/{id}', [ComentarioPlanejamentoController::class, 'show']);
-});
-
-Route::middleware(['auth:sanctum', 'permission:crud comentario desenvolvimento'])->group(function () {
-    Route::get('/tarefas/{tarefa}/feedbacks', [TarefaFeedbackController::class, 'index']);
-    Route::post('/tarefas/{tarefa}/feedbacks', [TarefaFeedbackController::class, 'store']);
-    Route::get('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'show']);
-    Route::put('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'update']);
-    Route::delete('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'destroy']);
-});
-
-
-
-Route::middleware(['auth:sanctum', 'permission:exibir feedback tarefas'])->group(function () {
-
-});
-    Route::get('/tarefas/{tarefa}/feedbacks', [TarefaFeedbackController::class, 'index']);
-    Route::get('/tarefa_feedbacks/{feedback}', [TarefaFeedbackController::class, 'show']);
-//Exibir Comentários avaliacao projeto e Crud avaliacao projeto
-Route::middleware(['auth:sanctum', 'permission:crud avaliacao projeto'])->group(function () {
-    Route::apiResource('projeto_avaliacoes', AvaliacaoController::class);
-    Route::get('/projetos/{projeto}/avaliacoes', [AvaliacaoController::class, 'getByProject']);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir avaliacao projeto'])->group(function () {
-    Route::get('/projeto_avaliacoes', [AvaliacaoController::class, 'index']);
-    Route::get('/projeto_avaliacoes/{id}', [AvaliacaoController::class, 'show']);
-    Route::get('/projetos/{projeto}/avaliacoes', [AvaliacaoController::class, 'getByProject']);
-});
-
-Route::middleware(['auth:sanctum', 'permission:crud avaliacao projeto'])->group(function () {
-    Route::get('/projetos/{projeto}/avaliadores', [AvaliadorProjetoController::class, 'index']);
-    Route::post('/avaliador_projeto', [AvaliadorProjetoController::class, 'store']);
-    Route::delete('/avaliador_projeto/{id}', [AvaliadorProjetoController::class, 'destroy']);
-    Route::apiResource('questionarios', \App\Http\Controllers\Api\QuestionarioController::class);
-    Route::apiResource('perguntas_questionario', \App\Http\Controllers\Api\PerguntaQuestionarioController::class);
-    Route::get('/minhas-avaliacoes', [\App\Http\Controllers\Api\UsuarioController::class, 'minhasAtribuicoes']);
-});
-
-
-// Ações do Avaliador e Aluno (Submeter avaliações e votos)
-Route::middleware('auth:sanctum')->group(function () {
-    
-    Route::post('/avaliacoes', [\App\Http\Controllers\Api\AvaliacaoAprendizagemController::class, 'store'])
-         ->middleware('permission:crud avaliacao projeto'); // Permissão necessária para esta ação
-    Route::post('/votos_populares', [\App\Http\Controllers\Api\VotoPopularController::class, 'store']);
-});
-
-
-//Exibir Comentários Desenvolvimento e Crud Comentários Desenvolvimento
-Route::middleware(['auth:sanctum', 'permission:crud comentario desenvolvimento'])->group(function () {
-    Route::apiResource('comentarios_desenvolvimentos', ComentarioDesenvolvimentoController::class);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir comentario desenvolvimento'])->group(function () {
-    Route::get('/comentarios_desenvolvimentos', [ComentarioDesenvolvimentoController::class, 'index']);
-    Route::get('/comentarios_desenvolvimentos/{id}', [ComentarioDesenvolvimentoController::class, 'show']);
-});
-
-//Exibir Discussão Equipe e Crud Discussão Equipe
-Route::middleware(['auth:sanctum', 'permission:crud discussao equipe'])->group(function () {
-    Route::apiResource('discussao_equipes', DiscussaoEquipeController::class);
-});
-
-Route::middleware(['auth:sanctum', 'permission:exibir discussao equipe'])->group(function () {
-    Route::get('/discussao_equipes', [DiscussaoEquipeController::class, 'index']);
-    Route::get('/discussao_equipes/{id}', [DiscussaoEquipeController::class, 'show']);
-});
-
-
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/usuarios/{id}', [UserAuthController::class, 'show']);  // Pega dados do usuário
-    Route::put('/usuarios/{id}', [UserAuthController::class, 'update']); // Atualiza perfil
-    Route::post('/logout', [UserAuthController::class, 'logout']);        // Logout
-    Route::get('/projetos/{projeto}/minha-atribuicao', [\App\Http\Controllers\Api\UsuarioController::class, 'minhaAtribuicaoParaProjeto']);
-});
-
-Route::middleware(['auth:sanctum', 'permission:crud avaliacao'])->group(function () {
-    Route::apiResource('questionarios', \App\Http\Controllers\Api\QuestionarioController::class);
-    Route::apiResource('perguntas_questionario', \App\Http\Controllers\Api\PerguntaQuestionarioController::class);
-});
-
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('/avaliacoes/submeter', [\App\Http\Controllers\Api\AvaliacaoAprendizagemController::class, 'store']);
-    Route::apiResource('avaliacoes', \App\Http\Controllers\Api\AvaliacaoAprendizagemController::class)
-         ->middleware('permission:crud avaliacao projeto');
-    Route::apiResource('votos_populares', \App\Http\Controllers\Api\VotoPopularController::class);
-});
-
+// --- 1. ROTAS PÚBLICAS (NÃO EXIGEM AUTENTICAÇÃO) ---
 Route::post('register', [UserAuthController::class, 'register']);
 Route::post('login', [UserAuthController::class, 'login']);
-
 Route::post('/recuperar_senha', [PasswordResetController::class, 'generateAndSend']);
 
 Route::prefix('public')->group(function () {
-        Route::get('/eventos/{evento}/projetos', [\App\Http\Controllers\Api\EventoController::class, 'publicProjects']);
+    Route::get('/eventos/{evento}/projetos', [EventoController::class, 'publicProjects']);
+    Route::get('/projetos/{projeto}', [ProjetoController::class, 'publicShow']);
+});
 
-        Route::get('/projetos/{projeto}', [\App\Http\Controllers\Api\ProjetoController::class, 'publicShow']);
+
+// --- 2. ROTAS AUTENTICADAS (EXIGEM LOGIN) ---
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/user', fn(Request $request) => $request->user());
+    Route::post('/logout', [UserAuthController::class, 'logout']);
+
+    // --- ROTAS GERAIS AUTENTICADAS ---
+    Route::get('/projetos/resultados-gerais', [ProjetoController::class, 'resultadosGerais']);
+    Route::get('/minhas-avaliacoes', [UsuarioController::class, 'minhasAtribuicoes']);
+    Route::get('/projetos/{projeto}/minha-atribuicao', [UsuarioController::class, 'minhaAtribuicaoParaProjeto']);
+    Route::post('/votos_populares', [VotoPopularController::class, 'store']);
+
+    // --- GRUPOS ESPECÍFICOS DE PERMISSÕES ---
+
+    // -- PERMISSÕES DE USUÁRIO --
+    Route::middleware('permission:crud usuario')->group(function () {
+        Route::apiResource('usuarios', UsuarioController::class)->except(['index', 'show']);
+        Route::post('/usuarioslista', [UsuarioController::class, 'inserirLista']);
+    });
+    Route::middleware('permission:exibir usuario')->group(function () {
+        Route::get('/usuarios', [UsuarioController::class, 'index']);
+        Route::get('/usuarios/{id}', [UsuarioController::class, 'show']);
+        Route::get('/usuarios/{id}/projetos/avaliacao', [ProjetoController::class, 'projetosAvaliacao']);
     });
 
+    // -- PERMISSÕES DE PROJETO --
+    Route::middleware('permission:crud projeto')->group(function () {
+        Route::post('/projetos', [ProjetoController::class, 'store']);
+        Route::put('/projetos/{projeto}', [ProjetoController::class, 'update']);
+        Route::delete('/projetos/{projeto}', [ProjetoController::class, 'destroy']);
+        Route::patch('/projetos/{id_projeto}/situacao', [ProjetoController::class, 'updateSituacao']);
+    });
+    Route::middleware('permission:exibir projeto')->group(function () {
+        Route::get('/projetos', [ProjetoController::class, 'index']);
+        Route::get('/projetos/{id}', [ProjetoController::class, 'show']);
+        Route::get('/usuarios/{id}/projetos', [ProjetoController::class, 'meusProjetos']);
+        Route::get('/usuarios/{id}/projetos-inscritos', [UsuarioController::class, 'projetosInscritos']);
+    });
 
+    // -- PERMISSÕES DE EQUIPE --
+    Route::middleware('permission:crud equipe')->group(function () {
+        Route::apiResource('equipes', EquipeController::class);
+        Route::apiResource('membro_equipes', MembroEquipeController::class);
+        Route::post('/projetos/{id}/inscrever', [ProjetoController::class, 'inscrever']);
+        Route::post('/projetos/desinscrever/{equipe}/{usuario}', [MembroEquipeController::class, 'retiraMembroProjeto']);
+    });
+    Route::middleware('permission:exibir equipe')->group(function () {
+        Route::get('/membros_projeto/{id}', [MembroEquipeController::class, 'membrosProjeto']);
+    });
 
+    // -- PERMISSÕES DE TAREFAS E FEEDBACKS --
+    Route::middleware('permission:crud tarefa')->group(function () {
+        Route::apiResource('tarefas', TarefaController::class);
+        Route::apiResource('registros_tarefas', RegistroTarefaController::class);
+    });
+    Route::middleware('permission:exibir tarefa')->group(function () {
+        Route::get('/projetos/{id_projeto}/tarefas', [TarefaController::class, 'tarefasProjeto']);
+    });
+    Route::middleware('permission:crud comentario desenvolvimento')->group(function () {
+        Route::get('/tarefas/{tarefa}/feedbacks', [TarefaFeedbackController::class, 'index']);
+        Route::post('/tarefas/{tarefa}/feedbacks', [TarefaFeedbackController::class, 'store']);
+        Route::apiResource('tarefa_feedbacks', TarefaFeedbackController::class)->except(['index', 'store']);
+    });
+    
+    // -- PERMISSÕES DE EVENTO --
+    Route::middleware('permission:crud evento')->group(function () {
+        Route::apiResource('eventos', EventoController::class)->except(['index', 'show']);
+    });
+    Route::middleware('permission:exibir evento')->group(function () {
+        Route::get('/eventos', [EventoController::class, 'index']);
+        Route::get('/eventos/{id}', [EventoController::class, 'show']);
+    });
+
+    // -- PERMISSÕES DE AVALIAÇÃO --
+    Route::middleware('permission:crud avaliacao projeto')->group(function () {
+        // Atribuição de avaliadores
+        Route::get('/projetos/{projeto}/avaliadores', [AvaliadorProjetoController::class, 'index']);
+        Route::post('/avaliador_projeto', [AvaliadorProjetoController::class, 'store']);
+        Route::delete('/avaliador_projeto/{id}', [AvaliadorProjetoController::class, 'destroy']);
+        // Gestão de Questionários
+        Route::apiResource('questionarios', QuestionarioController::class);
+        Route::apiResource('perguntas_questionario', PerguntaQuestionarioController::class);
+        // Submissão de Avaliação Oficial
+        Route::post('/avaliacoes', [AvaliacaoAprendizagemController::class, 'store']);
+    });
+    Route::middleware('permission:exibir avaliacao projeto')->group(function () {
+        Route::get('/projetos/{projeto}/avaliacoes', [AvaliacaoController::class, 'getByProject']);
+    });
+
+    // Outros resources (podem ser movidos para os seus próprios grupos de permissão se necessário)
+    Route::apiResource('objetivo_projetos', ObjetivoProjetoController::class);
+    Route::apiResource('questao_pesquisas', QuestaoPesquisaController::class);
+});

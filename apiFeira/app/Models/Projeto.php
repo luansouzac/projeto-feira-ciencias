@@ -117,5 +117,17 @@ class Projeto extends Model
     {
         return $this->hasMany(AvaliadorProjeto::class, 'id_projeto', 'id_projeto');
     }
+
+     public function avaliacoes()
+    {
+        return $this->hasManyThrough(
+            AvaliacaoAprendizagem::class, // O modelo final que queremos alcançar
+            AvaliadorProjeto::class,     // O modelo intermediário pelo qual passamos
+            'id_projeto',              // Chave estrangeira na tabela intermediária (avaliador_projeto)
+            'id_avaliador_projeto',    // Chave estrangeira na tabela final (avaliacoes)
+            'id_projeto',              // Chave local neste modelo (projetos)
+            'id'                       // Chave local na tabela intermediária (avaliador_projeto)
+        );
+    }
 }
 

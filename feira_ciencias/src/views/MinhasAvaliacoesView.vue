@@ -45,6 +45,9 @@ const totalConcluidas = computed(() => atribuicoes.value.filter(a => a.status ==
 const goToAvaliacao = (projetoId) => {
   router.push(`/projeto/${projetoId}/avaliar`);
 };
+const goToResults = (projetoId) => {
+  router.push(`/projetos/${projetoId}/resultados`);
+};
 </script>
 
 <template>
@@ -114,51 +117,56 @@ const goToAvaliacao = (projetoId) => {
 
       <!-- Lista de Projetos para Avaliar -->
       <div v-if="filteredAtribuicoes.length > 0">
-        <v-card 
-          v-for="atribuicao in filteredAtribuicoes" 
-          :key="atribuicao.id" 
-          class="mb-4"
-          variant="outlined"
-          :disabled="atribuicao.status === 'concluida'"
-        >
-          <v-card-item>
-            <div>
-              <div class="text-overline mb-1 text-medium-emphasis">
-                {{ atribuicao.projeto.eventos?.nome || 'Evento não especificado' }}
-              </div>
-              <div class="text-h6 mb-1">{{ atribuicao.projeto.titulo }}</div>
+      <v-card 
+        v-for="atribuicao in filteredAtribuicoes" 
+        :key="atribuicao.id" 
+        class="mb-4"
+        variant="outlined"
+      >
+        <v-card-item>
+          <div>
+            <div class="text-overline mb-1 text-medium-emphasis">
+              {{ atribuicao.projeto.eventos?.nome || 'Evento não especificado' }}
             </div>
-          </v-card-item>
-          <v-card-actions class="pa-4">
-             <v-chip
-                :color="atribuicao.status === 'pendente' ? 'orange' : 'green'"
-                :prepend-icon="atribuicao.status === 'pendente' ? 'mdi-clock-outline' : 'mdi-check-circle-outline'"
-                label
-                variant="tonal"
-              >
-                {{ atribuicao.status === 'pendente' ? 'Pendente' : 'Concluída' }}
-              </v-chip>
-            <v-spacer></v-spacer>
-            <v-btn
-              v-if="atribuicao.status === 'pendente'"
-              color="green-darken-3"
-              variant="flat"
-              @click="goToAvaliacao(atribuicao.projeto.id_projeto)"
+            <div class="text-h6 mb-1">{{ atribuicao.projeto.titulo }}</div>
+          </div>
+        </v-card-item>
+        
+        <!-- ✅ SECÇÃO DE AÇÕES ATUALIZADA -->
+        <v-card-actions class="pa-4">
+           <v-chip
+              :color="atribuicao.status === 'pendente' ? 'orange' : 'green'"
+              :prepend-icon="atribuicao.status === 'pendente' ? 'mdi-clock-outline' : 'mdi-check-circle-outline'"
+              label
+              variant="tonal"
             >
-              Avaliar Agora
-              <v-icon end>mdi-arrow-right</v-icon>
-            </v-btn>
-             <v-btn
-              v-else
-              color="grey"
-              variant="text"
-              disabled
-            >
-              Avaliação Submetida
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </div>
+              {{ atribuicao.status === 'pendente' ? 'Pendente' : 'Concluída' }}
+            </v-chip>
+          <v-spacer></v-spacer>
+          
+          <!-- Botão para avaliar se estiver pendente -->
+          <v-btn
+            v-if="atribuicao.status === 'pendente'"
+            color="green-darken-3"
+            variant="flat"
+            @click="goToAvaliacao(atribuicao.projeto.id_projeto)"
+          >
+            Avaliar Agora
+            <v-icon end>mdi-arrow-right</v-icon>
+          </v-btn>
+           
+           <!-- Botão para ver resultados se estiver concluída -->
+           <v-btn
+            v-else
+            color="blue-darken-2"
+            variant="text"
+            @click="goToResults(atribuicao.projeto.id_projeto)"
+          >
+            Ver Resultados
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </div>
       <v-alert v-else type="info" variant="tonal">
         Nenhuma avaliação encontrada com os filtros atuais.
       </v-alert>
