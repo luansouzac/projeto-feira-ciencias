@@ -19,10 +19,20 @@ class UsuarioController extends Controller
     {
         $query = Usuario::with('tipoUsuario');
 
+        // Lógica existente para filtrar por um único tipo de utilizador
         if ($request->has('id_tipo_usuario')) {
             $query->where('id_tipo_usuario', $request->input('id_tipo_usuario'));
         }
 
+        // ✅ NOVO BLOCO: Adicionado para lidar com o filtro 'id_tipo_usuario_in'
+        // Verifica se o parâmetro 'id_tipo_usuario_in' foi enviado na requisição
+        if ($request->filled('id_tipo_usuario_in')) {
+            // Converte a string "3,4" num array [3, 4]
+            $listaDeTipos = explode(',', $request->input('id_tipo_usuario_in'));
+            // Usa o método whereIn() para filtrar por múltiplos valores
+            $query->whereIn('id_tipo_usuario', $listaDeTipos);
+        }
+        
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
 

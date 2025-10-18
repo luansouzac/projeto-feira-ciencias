@@ -36,7 +36,7 @@ const allNavLinks = [
     title: 'Meus Projetos Orientados',
     to: '/projetos/orientados',
     icon: 'mdi-human-male-board-outline',
-    meta: { requiredTypeId: [1, 3] } // Visível para Admin e Orientador
+    meta: { requiredTypeId: [1] } // Visível para Admin e Orientador
   },
   {
     title: 'Aprovações de projetos',
@@ -51,10 +51,16 @@ const allNavLinks = [
     meta: { requiredTypeId: [1, 3, 4] } // Visível para Aluno, Orientador e Avaliador
   },
   {
+    title: 'Gerenciar Avaliacoes',
+    to: '/admin/avaliacoes',
+    icon: 'mdi-clipboard-edit-outline',
+    meta: { requiredTypeId: [1] } // Visível para Admin
+  },
+  {
     title: 'Eventos',
     to: '/eventos',
     icon: 'mdi-calendar-star-outline',
-    meta: { requiredTypeId: [1, 3, 4] } // Visível para Admin, Orientador e Avaliador
+    meta: { requiredTypeId: [1, 4] } // Visível para Admin, Orientador e Avaliador
   },
 ];
 

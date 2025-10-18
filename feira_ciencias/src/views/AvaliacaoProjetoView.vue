@@ -124,7 +124,7 @@ const confirmarSubmissao = async () => {
         const response = await api.post(endpoint, payload);
         
         notificationStore.showSuccess(response.data.message || 'Operação realizada com sucesso!');
-        router.push('/home'); // Volta para a página inicial após avaliar
+        router.push('/minhas-avaliacoes'); // Volta para a página inicial após avaliar
 
     } catch (error) {
         console.error("Erro ao submeter avaliação:", error);
