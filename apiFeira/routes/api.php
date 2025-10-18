@@ -177,7 +177,7 @@ Route::middleware(['auth:sanctum', 'permission:exibir avaliacao projeto'])->grou
 });
 
 Route::middleware(['auth:sanctum', 'permission:crud avaliacao projeto'])->group(function () {
-    
+    Route::get('/projetos/{projeto}/avaliadores', [AvaliadorProjetoController::class, 'index']);
     Route::post('/avaliador_projeto', [AvaliadorProjetoController::class, 'store']);
     Route::delete('/avaliador_projeto/{id}', [AvaliadorProjetoController::class, 'destroy']);
     Route::apiResource('questionarios', \App\Http\Controllers\Api\QuestionarioController::class);

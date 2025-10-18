@@ -102,8 +102,17 @@ const router = createRouter({
     name: 'AvaliarProjeto',
     component: () => import('../views/AvaliacaoProjetoView.vue'),
     meta: { requiresAuth: true } 
-},
+    },
     {
+      path: '/admin/avaliacoes',
+    name: 'AdminAvaliacoes',
+    component: () => import('../views/AvaliacaoAdminView.vue'),
+    meta: {
+        requiresAuth: true,
+        requiredTypeId: [1, 3] // Apenas Admin e Orientador podem aceder
+    },
+    },
+  {
     path: '/public/projeto/:id',
     name: 'PublicProject',
     component: () => import('../views/PublicProjectView.vue'),
