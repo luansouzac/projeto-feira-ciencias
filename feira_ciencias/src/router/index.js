@@ -104,6 +104,12 @@ const router = createRouter({
     meta: { requiresAuth: true } 
     },
     {
+      path: '/minhas-avaliacoes',
+      name: 'MinhasAvaliacoes',
+      component: () => import('../views/MinhasAvaliacoesView.vue'),
+      requiredTypeId: [1, 3, 4],
+    },
+    {
       path: '/admin/avaliacoes',
     name: 'AdminAvaliacoes',
     component: () => import('../views/AvaliacaoAdminView.vue'),

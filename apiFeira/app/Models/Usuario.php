@@ -81,6 +81,11 @@ class Usuario extends Authenticatable
         return $this->hasMany(ProjetoAvaliacao::class, 'id_avaliador', 'id_usuario');
     }
 
+    public function atribuicoesComoAvaliador()
+    {
+        return $this->hasMany(AvaliadorProjeto::class, 'id_avaliador', 'id_usuario');
+    }
+
     public function can($ability, $arguments = []): bool
     {
         if (parent::can($ability, $arguments)) {

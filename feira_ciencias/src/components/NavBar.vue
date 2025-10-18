@@ -45,6 +45,12 @@ const allNavLinks = [
     meta: { requiredTypeId: [1, 4] } // Visível para Admin e Avaliador
   },
   {
+    title: 'Minhas Avaliações',
+    to: '/minhas-avaliacoes',
+    icon: 'mdi-clipboard-clock-outline',
+    meta: { requiredTypeId: [1, 3, 4] } // Visível para Aluno, Orientador e Avaliador
+  },
+  {
     title: 'Eventos',
     to: '/eventos',
     icon: 'mdi-calendar-star-outline',

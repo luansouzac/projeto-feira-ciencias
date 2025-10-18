@@ -220,5 +220,26 @@ class UsuarioController extends Controller
 
         return response()->json($atribuicao, 200);
     }
+     public function minhasAtribuicoes(Request $request)
+    {
+        $usuario = $request->user();
+
+        // Usa o relacionamento 'atribuicoesComoAvaliador' que definimos no Model Usuario
+        $atribuicoes = $usuario->atribuicoesComoAvaliador()
+                               ->with([
+                                   // Carrega os detalhes do projeto associado a cada atribuição
+                                   'projeto' => function ($query) {
+                                       $query->select('id_projeto', 'titulo', 'id_evento');
+                                   },
+                                   // Carrega o nome do evento associado ao projeto
+                                   'projeto.eventos' => function ($query) {
+                                       $query->select('id_evento', 'nome');
+                                   }
+                               ])
+                               ->orderBy('status', 'asc') // Mostra os pendentes primeiro
+                               ->get();
+
+        return response()->json($atribuicoes, 200);
+    }
 }
 

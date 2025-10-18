@@ -182,6 +182,7 @@ Route::middleware(['auth:sanctum', 'permission:crud avaliacao projeto'])->group(
     Route::delete('/avaliador_projeto/{id}', [AvaliadorProjetoController::class, 'destroy']);
     Route::apiResource('questionarios', \App\Http\Controllers\Api\QuestionarioController::class);
     Route::apiResource('perguntas_questionario', \App\Http\Controllers\Api\PerguntaQuestionarioController::class);
+    Route::get('/minhas-avaliacoes', [\App\Http\Controllers\Api\UsuarioController::class, 'minhasAtribuicoes']);
 });
 
 
