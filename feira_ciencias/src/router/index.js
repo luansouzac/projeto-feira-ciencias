@@ -130,7 +130,7 @@ const router = createRouter({
       component: () => import('../views/ProjectResultsView.vue'),
       meta: {
         requiresAuth: true,
-        requiredTypeId: [1, 3] 
+        requiredTypeId: [1, 2, 3, 4] 
       },
     },
   {

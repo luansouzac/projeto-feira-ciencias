@@ -22,7 +22,6 @@ const isSubmitting = ref(false)
 // --- Estado do Formulário ---
 const respostas = ref({}) // Ex: { 1: 50, 2: 100, ... }
 const observacoes = ref('')
-const notaGeral = ref(75)
 const isConfirmDialogOpen = ref(false)
 
 // --- Busca de Dados ---
@@ -81,6 +80,16 @@ const isFormValid = computed(() => {
   return totalPerguntas > 0 && totalRespostas === totalPerguntas
 })
 
+const notaGeralCalculada = computed(() => {
+    const valoresDasRespostas = Object.values(respostas.value);
+    if (valoresDasRespostas.length === 0) {
+        return 0; // Evita divisão por zero
+    }
+    const soma = valoresDasRespostas.reduce((total, valor) => total + valor, 0);
+    const media = soma / valoresDasRespostas.length;
+    return parseFloat(media.toFixed(2)); // Arredonda para 2 casas decimais
+});
+
 // --- Lógica de Submissão ---
 const abrirDialogoConfirmacao = () => {
   if (!isFormValid.value) {
@@ -107,7 +116,7 @@ const confirmarSubmissao = async () => {
       // ✅ CORREÇÃO CRUCIAL: O payload agora envia o ID da atribuição
       payload = {
         id_avaliador_projeto: atribuicao.value.id, // O ID da "tarefa de avaliação"
-        nota_geral: notaGeral.value,
+        nota_geral: notaGeralCalculada.value,
         observacoes: observacoes.value || 'Nenhuma observação.',
         respostas: respostasArray,
       }

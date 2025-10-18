@@ -17,7 +17,6 @@ const searchQuery = ref('');
 // --- Busca de Dados ---
 onMounted(async () => {
   try {
-    // Chama o novo endpoint que criámos para buscar os resultados gerais
     const response = await api.get('/projetos/resultados-gerais');
     projetosRanqueados.value = response.data;
   } catch (err) {
@@ -41,13 +40,19 @@ const filteredRanking = computed(() => {
 
 // --- Métodos ---
 const goToResults = (projetoId) => {
-  // Navega para a página de detalhes da avaliação, que já criámos
   router.push(`/projetos/${projetoId}/resultados`);
 };
 
-// Formata a nota para ter sempre duas casas decimais
 const formatNota = (nota) => {
-    return parseFloat(nota).toFixed(2);
+    console.log('Valor recebido por formatNota:', nota);
+
+    const num = parseFloat(nota);
+
+    if (isNaN(num)) {
+        return '0.00';
+    }
+
+    return num.toFixed(2);
 }
 </script>
 
@@ -109,7 +114,7 @@ const formatNota = (nota) => {
               <td class="d-none d-sm-table-cell">{{ projeto.eventos?.nome || 'N/A' }}</td>
               <td class="text-center">
                 <span class="font-weight-bold text-h6 text-green-darken-2">
-                  {{ formatNota(projeto.atribuicoes_avaliadores_avaliacao_avg_nota_geral) }}
+                  {{ formatNota(projeto.avaliacoes_avg_nota_geral) }}
                 </span>
               </td>
               <td class="text-right">
@@ -131,3 +136,4 @@ const formatNota = (nota) => {
     </div>
   </v-container>
 </template>
+
