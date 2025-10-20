@@ -30,6 +30,7 @@ const isQuestionarioModalOpen = ref(false);
 const isPerguntaModalOpen = ref(false);
 const questionarioParaEditar = ref(null);
 const questionarioParaAdicionarPergunta = ref(null);
+const perguntaParaEditar = ref(null);
 
 // --- Busca de Dados Iniciais ---
 onMounted(async () => {
@@ -115,6 +116,20 @@ const avaliadoresParaAtribuir = computed(() => {
   return avaliadoresDisponiveis.value.filter(a => !idsAtribuidos.includes(a.id_usuario));
 });
 
+const eventosDisponiveisParaQuestionario = computed(() => {
+  const idsEventosUsados = new Set(questionarios.value.map(q => q.id_evento));
+  
+  return eventos.value.filter(evento => {
+    if (!idsEventosUsados.has(evento.id_evento)) {
+      return true;
+    }
+    if (questionarioParaEditar.value && questionarioParaEditar.value.id_evento === evento.id_evento) {
+      return true;
+    }
+    return false;
+  });
+});
+
 
 // --- Lógica da Aba "Gestão de Questionários" ---
 
@@ -129,12 +144,12 @@ const openEditQuestionarioModal = (questionario) => {
 const handleSaveQuestionario = async (formData) => {
   isSubmitting.value = true;
   try {
-    if (formData.id_questionario) { // Modo Edição
+    if (formData.id_questionario) { 
       const response = await api.put(`/questionarios/${formData.id_questionario}`, formData);
       const index = questionarios.value.findIndex(q => q.id_questionario === formData.id_questionario);
       if (index !== -1) questionarios.value[index] = response.data;
       notificationStore.showSuccess("Questionário atualizado com sucesso!");
-    } else { // Modo Criação
+    } else { 
       const response = await api.post('/questionarios', formData);
       questionarios.value.unshift(response.data);
       notificationStore.showSuccess("Questionário criado com sucesso!");
@@ -160,19 +175,54 @@ const openAddPerguntaModal = (questionario) => {
   questionarioParaAdicionarPergunta.value = questionario;
   isPerguntaModalOpen.value = true;
 };
+
+const handleDeletePergunta = async (pergunta, questionario) => {
+    if (!confirm(`Tem a certeza de que deseja apagar a pergunta: "${pergunta.texto_pergunta}"?`)) return;
+    try {
+        await api.delete(`/perguntas_questionario/${pergunta.id_pergunta}`);
+        const qIndex = questionarios.value.findIndex(q => q.id_questionario === questionario.id_questionario);
+        if (qIndex !== -1) {
+            const pIndex = questionarios.value[qIndex].perguntas.findIndex(p => p.id_pergunta === pergunta.id_pergunta);
+            if (pIndex !== -1) {
+                questionarios.value[qIndex].perguntas.splice(pIndex, 1);
+            }
+        }
+        notificationStore.showSuccess("Pergunta apagada com sucesso.");
+    } catch(err) {
+        notificationStore.showError("Não foi possível apagar a pergunta.");
+    }
+};
+
+
+const openEditPerguntaModal = (pergunta, questionario) => {
+  questionarioParaAdicionarPergunta.value = questionario;
+  perguntaParaEditar.value = { ...pergunta };
+  isPerguntaModalOpen.value = true;
+};
+
 const handleSavePergunta = async (formData) => {
   isSubmitting.value = true;
   try {
-    const response = await api.post('/perguntas_questionario', formData);
     const questionario = questionarios.value.find(q => q.id_questionario === formData.id_questionario);
-    if (questionario) {
+    if (!questionario) throw new Error("Questionário não encontrado");
+
+    if (formData.id_pergunta) { // A CONDIÇÃO QUE ESTÁ A FALHAR
+      const response = await api.put(`/perguntas_questionario/${formData.id_pergunta}`, formData);
+      const pIndex = questionario.perguntas.findIndex(p => p.id_pergunta === formData.id_pergunta);
+      if (pIndex !== -1) {
+        questionario.perguntas[pIndex] = response.data;
+      }
+      notificationStore.showSuccess("Pergunta atualizada com sucesso!");
+    } else {
+      const response = await api.post('/perguntas_questionario', formData);
       if (!questionario.perguntas) questionario.perguntas = [];
       questionario.perguntas.push(response.data);
+      notificationStore.showSuccess("Pergunta adicionada com sucesso!");
     }
-    notificationStore.showSuccess("Pergunta adicionada com sucesso!");
+    
     isPerguntaModalOpen.value = false;
   } catch(err) {
-    notificationStore.showError("Falha ao adicionar a pergunta.");
+    notificationStore.showError(err.response?.data?.erro || "Falha ao salvar a pergunta.");
   } finally {
     isSubmitting.value = false;
   }
@@ -292,7 +342,12 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
                     <v-list-subheader>Perguntas do Questionário</v-list-subheader>
                      <v-list v-if="q.perguntas && q.perguntas.length > 0" lines="two" class="bg-transparent">
                         <div v-for="(pergunta, index) in q.perguntas" :key="pergunta.id_pergunta">
-                            <v-list-item :title="pergunta.texto_pergunta" :subtitle="`Critério: ${pergunta.criterio}`"></v-list-item>
+                            <v-list-item :title="pergunta.texto_pergunta" :subtitle="`Critério: ${pergunta.criterio}`">
+                              <template v-slot:append>
+                                <v-btn icon="mdi-pencil" variant="text" size="small" @click.stop="openEditPerguntaModal(pergunta, q)"></v-btn>
+                                <v-btn icon="mdi-delete" variant="text" size="small" color="red-lighten-1" @click.stop="handleDeletePergunta(pergunta, q)"></v-btn>
+                              </template>
+                            </v-list-item>
                             <v-divider v-if="index < q.perguntas.length - 1"></v-divider>
                         </div>
                      </v-list>
@@ -325,6 +380,7 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
       v-model="isPerguntaModalOpen"
       :questionario-id="questionarioParaAdicionarPergunta?.id_questionario"
       :is-loading="isSubmitting"
+      :pergunta-to-edit="perguntaParaEditar"
       @save="handleSavePergunta"
     />
   </v-container>

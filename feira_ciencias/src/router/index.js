@@ -98,10 +98,10 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-    path: '/projeto/:id/avaliar',
-    name: 'AvaliarProjeto',
-    component: () => import('../views/AvaliacaoProjetoView.vue'),
-    meta: { requiresAuth: true } 
+      path: '/projeto/:id/avaliar',
+      name: 'AvaliarProjeto',
+      component: () => import('../views/AvaliacaoProjetoView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/minhas-avaliacoes',
@@ -117,12 +117,12 @@ const router = createRouter({
     },
     {
       path: '/admin/avaliacoes',
-    name: 'AdminAvaliacoes',
-    component: () => import('../views/AvaliacaoAdminView.vue'),
-    meta: {
+      name: 'AdminAvaliacoes',
+      component: () => import('../views/AvaliacaoAdminView.vue'),
+      meta: {
         requiresAuth: true,
-        requiredTypeId: [1, 3] // Apenas Admin e Orientador podem aceder
-    },
+        requiredTypeId: [1, 3], // Apenas Admin e Orientador podem aceder
+      },
     },
     {
       path: '/projetos/:id/resultados',
@@ -130,21 +130,21 @@ const router = createRouter({
       component: () => import('../views/ProjectResultsView.vue'),
       meta: {
         requiresAuth: true,
-        requiredTypeId: [1, 2, 3, 4] 
+        requiredTypeId: [1, 2, 3, 4],
       },
     },
-  {
-    path: '/public/projeto/:id',
-    name: 'PublicProject',
-    component: () => import('../views/PublicProjectView.vue'),
-    meta: { layout: 'public' }
-  },
-  {
-    path: '/public/evento/:id/projetos',
-    name: 'PublicEventProjects',
-    component: () => import('../views/PublicEventView.vue'),
-    meta: { layout: 'public' }
-  },
+    {
+      path: '/public/projeto/:id',
+      name: 'PublicProject',
+      component: () => import('../views/PublicProjectView.vue'),
+      meta: { layout: 'public' },
+    },
+    {
+      path: '/public/evento/:id/projetos',
+      name: 'PublicEventProjects',
+      component: () => import('../views/PublicEventView.vue'),
+      meta: { layout: 'public' },
+    },
   ],
 })
 
@@ -156,7 +156,7 @@ router.beforeEach((to, from, next) => {
   if (isAuthenticated) {
     const userData = JSON.parse(userDataString)
 
-    if (userData.user && userData.user.id_tipo_usuario) { 
+    if (userData.user && userData.user.id_tipo_usuario) {
       userTypeId = userData.user.id_tipo_usuario
     }
   }

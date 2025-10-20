@@ -131,6 +131,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::middleware('permission:exibir avaliacao projeto')->group(function () {
         Route::get('/projetos/{projeto}/avaliacoes', [AvaliacaoController::class, 'getByProject']);
+        Route::apiResource('projeto_avaliacoes', AvaliacaoController::class);
     });
 
     // Outros resources (podem ser movidos para os seus próprios grupos de permissão se necessário)
