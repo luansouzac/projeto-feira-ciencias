@@ -57,9 +57,9 @@ onMounted(async () => {
 
 // --- FUNÇÕES DE TRANSFORMAÇÃO DE DADOS ---
 function transformarProjeto(apiProjeto) {
-  const inscritos = apiProjeto.equipe?.[0]?.membro_equipe?.length ?? 0
+  const inscritos = apiProjeto.equipe?.membro_equipe?.length ?? 0
   const maxAlunos = apiProjeto.max_pessoas ?? 5
-  const alunoInscrito = apiProjeto.equipe?.[0]?.membro_equipe?.some(m => m.id_usuario === userId) ?? false
+  const alunoInscrito = apiProjeto.equipe?.membro_equipe?.some(m => m.id_usuario === userId) ?? false
 
   let statusParaCard
   if (isAluno.value) {
@@ -147,13 +147,6 @@ const projetosPorEvento = computed(() => {
   return Object.values(grupos);
 });
 
-const projetosFiltrados = computed(() => {
-  return projetos.value.filter(p => {
-    const correspondeBusca = p.titulo.toLowerCase().includes(filtroBusca.value.toLowerCase())
-    const correspondeStatus = filtroStatus.value === 'Todos' || p.status === filtroStatus.value
-    return correspondeBusca && correspondeStatus
-  })
-})
 
 // --- FUNÇÕES DE AÇÃO ---
 const inscreverNoProjeto = async (projeto) => {
@@ -186,7 +179,7 @@ const confirmSairDoProjeto = async () => {
   notificationStore.showInfo(`Cancelando inscrição...`)
   try {
     const projeto = selectedProject.value
-    await api.post(`/projetos/desinscrever/${projeto.equipe[0].id_equipe}/${userId}`)
+    await api.post(`/projetos/desinscrever/${projeto.equipe.id_equipe}/${userId}`)
     notificationStore.showSuccess('Inscrição cancelada com sucesso!')
     
     const projetoOriginal = projetos.value.find(p => p.id === projeto.id)
@@ -283,9 +276,11 @@ const gerenciarProjeto = (id) => router.push(`/gerenciar-projeto/${id}`)
             <v-col v-for="projeto in grupo.projetos" :key="projeto.id" cols="12" md="6" lg="4">
               <ProjectCard
                :projeto="projeto"
-                contexto= "inscricao"
-                :inscrito="projeto.alunoInscrito"
-                @ver-detalhes="verDetalhes(projeto.id)">
+               contexto= "inscricao"
+               :inscrito="projeto.alunoInscrito"
+               @ver-detalhes="verDetalhes(projeto.id)"
+               @ver-resultados="goToResults(projeto.id)"
+              >
                 <template #actions>
                   <template v-if="isAluno">
                     <v-btn v-if="projeto.alunoInscrito" color="red-darken-2" variant="text" size="small" @click.stop="sairDoProjeto(projeto)">Cancelar Inscrição</v-btn>
@@ -373,9 +368,19 @@ const gerenciarProjeto = (id) => router.push(`/gerenciar-projeto/${id}`)
       </v-card>
     </v-dialog>
 
-    </v-container>
+    <CrudModal 
+        v-if="isProfessor"
+        v-model="isModalOpen"
+        :title="modalConfig.title"
+        :fields="modalConfig.fields"
+        :item="currentItem"
+        :loading="isModalLoading"
+        @save="handleSave"
+    />
+  </v-container>
 </template>
 
 <style scoped>
 /* Adicione estilos se necessário */
 </style>
+

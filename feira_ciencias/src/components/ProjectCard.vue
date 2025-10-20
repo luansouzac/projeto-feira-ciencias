@@ -11,40 +11,34 @@ const props = defineProps({
   inscrito: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['ver-detalhes'])
+// ✅ Evento 'ver-resultados' adicionado para funcionalidade completa
+const emit = defineEmits(['ver-detalhes', 'ver-resultados'])
 
-// Mapa de status para o contexto de gerenciamento
+// ✅ LÓGICA SIMPLIFICADA: O statusInfo agora apenas mapeia o status
+// que já foi calculado pelo componente pai.
 const statusMap = {
-  1: { text: 'Em Análise', color: 'orange', icon: 'mdi-file-search-outline' },
-  2: { text: 'Aprovado', color: 'green', icon: 'mdi-check-decagram' },
-  3: { text: 'Reprovado', color: 'red', icon: 'mdi-close-octagon' },
-  4: { text: 'Com Ressalvas', color: 'orange', icon: 'mdi-alert-circle-outline' },
+  // Status de Inscrição (para alunos)
+  'Vagas Abertas': { color: 'green', icon: 'mdi-account-check-outline' },
+  'Esgotado': { color: 'red', icon: 'mdi-account-off-outline' },
+  // Status de Gerenciamento (para professores/admins)
+  'Em Análise': { color: 'orange', icon: 'mdi-file-search-outline' },
+  'Aprovado': { color: 'green', icon: 'mdi-check-decagram' },
+  'Reprovado': { color: 'red', icon: 'mdi-close-octagon' },
+  'Com Ressalvas': { color: 'orange', icon: 'mdi-alert-circle-outline' },
+  'Em Desenvolvimento': { color: 'blue', icon: 'mdi-progress-wrench' },
+  'Concluído': { color: 'purple', icon: 'mdi-trophy-check' },
 }
 
 const statusInfo = computed(() => {
-  if (props.contexto === 'inscricao') {
-    const estaEsgotado = props.projeto.inscritos >= props.projeto.maxAlunos
-    return estaEsgotado
-      ? { text: 'Esgotado', color: 'red', icon: 'mdi-account-off' }
-      : { text: 'Vagas Abertas', color: 'green', icon: 'mdi-account-check-outline' }
-  }
-  // No gerenciamento, usa o status real do projeto
-  return (
-    statusMap[props.projeto.id_situacao] || {
-      text: 'Pendente',
-      color: 'grey',
-      icon: 'mdi-help-circle',
-    }
-  )
+  // Retorna o objeto de cor/ícone com base no status que o projeto já tem
+  return statusMap[props.projeto.status] || { text: 'Pendente', color: 'grey', icon: 'mdi-help-circle' }
 })
 
-const memberCount = computed(() => props.projeto.equipe?.[0]?.membro_equipe?.length || 0)
 
 // Função de data ajustada para formatar datas de submissão/evento
 const formatDate = (dateString) => {
   if (!dateString) return 'Não definida'
   const date = new Date(dateString)
-  // Usa fuso horário UTC para evitar problemas de um dia a mais/a menos
   return date.toLocaleDateString('pt-BR', {
     timeZone: 'UTC',
     day: '2-digit',
@@ -54,7 +48,10 @@ const formatDate = (dateString) => {
 }
 
 function emitVerDetalhes() {
-  emit('ver-detalhes', props.projeto.id_projeto)
+  emit('ver-detalhes', props.projeto.id)
+}
+function emitVerResultados() {
+  emit('ver-resultados', props.projeto.id)
 }
 </script>
 
@@ -86,7 +83,7 @@ function emitVerDetalhes() {
           label
           variant="tonal"
         >
-          {{ statusInfo.text }}
+          {{ projeto.status }}
         </v-chip>
       </div>
       <v-chip
@@ -116,11 +113,12 @@ function emitVerDetalhes() {
           </div>
           <div class="d-flex justify-space-between align-center text-caption font-weight-medium">
             <span>INSCRIÇÕES</span>
-            <span>{{ memberCount }} de {{ projeto.max_pessoas }} vagas</span>
+            <!-- ✅ CORREÇÃO: Usando as propriedades 'inscritos' e 'maxAlunos' do projeto -->
+            <span>{{ projeto.inscritos }} de {{ projeto.maxAlunos }} vagas</span>
           </div>
           <v-progress-linear
-            :model-value="(memberCount / projeto.max_pessoas) * 100"
-            :color="memberCount >= projeto.max_pessoas ? 'red' : 'green-darken-1'"
+            :model-value="(projeto.inscritos / projeto.maxAlunos) * 100"
+            :color="projeto.inscritos >= projeto.maxAlunos ? 'red' : 'green-darken-1'"
             height="6"
             rounded
             class="mt-1"
@@ -176,6 +174,18 @@ function emitVerDetalhes() {
         </v-btn>
       </slot>
       <v-spacer></v-spacer>
+
+      <!-- ✅ Botão de "Resultados" adicionado -->
+      <v-btn
+        v-if="contexto === 'gerenciamento' && projeto.id_situacao > 2"
+        color="green-darken-3"
+        variant="flat"
+        size="small"
+        @click="emitVerResultados"
+      >
+        Resultados
+      </v-btn>
+
       <slot name="actions"></slot>
     </v-card-actions>
   </v-card>
@@ -190,6 +200,9 @@ function emitVerDetalhes() {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   min-height: 60px;
 }
 </style>
+
