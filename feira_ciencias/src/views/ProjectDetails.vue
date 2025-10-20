@@ -391,6 +391,11 @@ const handleSubmitTask = async (submissionDataFromModal) => {
     isSubmitTaskLoading.value = false
   }
 }
+
+const goToResults = (projectId) => {
+    router.push(`/projetos/${projectId}/resultados`);
+};
+
 const publicUrl = computed(() => {
     if (!project.value) return '';
     return `${window.location.origin}/public/projeto/${project.value.id_projeto}`;
@@ -461,8 +466,17 @@ const downloadQRCode = () => {
             </v-chip>
           </div>
         </v-card-item>
-        <v-card-actions class="pa-3">
+         <v-card-actions class="pa-3">
             <v-spacer></v-spacer>
+            <v-btn
+                v-if="project.id_situacao = 2"
+                color="blue-darken-2"
+                variant="text"
+                prepend-icon="mdi-chart-bar"
+                @click="goToResults(project.id_projeto)"
+            >
+                Ver Avaliações
+            </v-btn>
             <v-btn color="green-darken-2" variant="flat" prepend-icon="mdi-qrcode" @click="openQrModal">
                 QR Code
             </v-btn>
