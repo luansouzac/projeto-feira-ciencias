@@ -30,6 +30,7 @@ class EquipeSeeder extends Seeder
                 'problema' => 'Problema dummy',
                 'relevancia' => 'Relevancia dummy',
                 'id_situacao' => 1, // Certifique-se que a situação com ID 1 exista
+                'max_pessoas' => 8,
                 'data_criacao' => now(),
             ]);
             $projetoId = $projeto->id_projeto;
