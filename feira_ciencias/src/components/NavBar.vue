@@ -54,12 +54,13 @@ const allNavLinks = [
     title: 'Resultados de Avaliações',
     to: '/ranking-projetos',
     icon: 'mdi-clipboard-check-outline',
+    meta: { requiredTypeId: [1] } // Visível para Aluno, Orientador e Avaliador
   },
   {
     title: 'Gerenciar Avaliacoes',
     to: '/admin/avaliacoes',
     icon: 'mdi-clipboard-edit-outline',
-    meta: { requiredTypeId: [1, 3] } // Visível para Admin
+    meta: { requiredTypeId: [1] } // Visível para Admin
   },
   {
     title: 'Eventos',
