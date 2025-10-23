@@ -122,7 +122,7 @@ const notasPorCriterio = computed(() => {
 
           <h2 class="text-h5 font-weight-medium mb-4">Avaliações Individuais ({{ avaliacoes.length }}/3)</h2>
           <v-expansion-panels variant="accordion">
-            <v-expansion-panel v-for="avaliacao in avaliacoes" :key="avaliacao.id_avaliacao">
+            <v-expansion-panel v-for="(avaliacao, index) in avaliacoes" :key="avaliacao.id_avaliacao">
               <v-expansion-panel-title class="py-3">
                 <v-row align="center">
                   <v-col cols="6" sm="4" class="d-flex align-center">
@@ -130,8 +130,8 @@ const notasPorCriterio = computed(() => {
                       <v-icon>mdi-account-tie-outline</v-icon>
                     </v-avatar>
                     <div>
-                      <div class="font-weight-bold">{{ avaliacao.atribuicao.avaliador.nome }}</div>
-                      <div class="text-caption text-medium-emphasis">Avaliador</div>
+                      <div class="font-weight-bold">Avaliador {{ index + 1 }}</div>
+                      <div class="text-caption text-medium-emphasis">Avaliação Oficial</div>
                     </div>
                   </v-col>
                   <v-col cols="6" sm="4" class="text-center">
