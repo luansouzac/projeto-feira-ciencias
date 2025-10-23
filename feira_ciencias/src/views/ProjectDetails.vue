@@ -63,6 +63,53 @@ const projectStatus = computed(() => {
   return statusMap[project.value?.id_situacao] || {}
 })
 
+// ✅ LOG DE DEPURAÇÃO ADICIONADO
+const isAluno = computed(() => {
+  console.log(`[Debug] authStore.userTypeId é: ${authStore.userTypeId}`);
+  return authStore.userTypeId === 2;
+});
+
+// ✅ LOG DE DEPURAÇÃO ADICIONADO
+const isProfessorOuAdmin = computed(() => {
+  console.log(`[Debug] authStore.userTypeId é: ${authStore.userTypeId}`);
+  return [1, 3, 4].includes(authStore.userTypeId);
+});
+
+// ✅ LOG DE DEPURAÇÃO ADICIONADO
+const isAlunoInscrito = computed(() => {
+  console.log('[Debug] Verificando se é Aluno Inscrito...');
+  console.log(`  > é Aluno? ${isAluno.value}`);
+  console.log(`  > ID do utilizador logado: ${authStore.user?.id_usuario}`);
+  console.log(`  > Membros do projeto:`, JSON.stringify(membros.value));
+
+  if (!isAluno.value || !membros.value || membros.value.length === 0) {
+    console.log('  > Resultado: NÃO (Não é aluno ou não há membros)');
+    return false;
+  }
+  
+  const estaInscrito = membros.value.some(membro => membro.id_usuario === authStore.user.id_usuario);
+  console.log(`  > Resultado: ${estaInscrito}`);
+  return estaInscrito;
+});
+
+const canViewResults = computed(() => {
+    
+    const statusCheck = project.value?.id_situacao === 2;
+    if (!project.value || !statusCheck) {
+        return false;
+    }
+    
+    if (isProfessorOuAdmin.value) {
+        return true;
+    }
+    
+    if (isAlunoInscrito.value) {
+        return true;
+    }
+    
+    return false;
+});
+
 const canCreateTasks = computed(() => {
   if (!authStore.user || !project.value) return false
   const isResponsavel = authStore.user.id_usuario === project.value.id_responsavel
@@ -165,7 +212,7 @@ onMounted(async () => {
     project.value = projectResponse.data.data || projectResponse.data
     const initialTasks = tasksResponse.data.data || tasksResponse.data || []
     avaliacoes.value = avaliacoesResponse.data.data || avaliacoesResponse.data || []
-    membros.value = membrosResponse.data.data || membrosResponse.data || []
+    membros.value = membrosResponse.data.data || membrosResponse.data || [];
 
     if (Array.isArray(initialTasks) && initialTasks.length > 0) {
       const taskDetailPromises = initialTasks.map((task) => {
@@ -468,8 +515,9 @@ const downloadQRCode = () => {
         </v-card-item>
          <v-card-actions class="pa-3">
             <v-spacer></v-spacer>
+
             <v-btn
-                v-if="project.id_situacao = 2"
+                v-if="canViewResults"
                 color="blue-darken-2"
                 variant="text"
                 prepend-icon="mdi-chart-bar"
@@ -477,6 +525,7 @@ const downloadQRCode = () => {
             >
                 Ver Avaliações
             </v-btn>
+
             <v-btn color="green-darken-2" variant="flat" prepend-icon="mdi-qrcode" @click="openQrModal">
                 QR Code
             </v-btn>

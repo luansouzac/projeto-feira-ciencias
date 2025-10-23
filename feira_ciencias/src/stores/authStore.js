@@ -1,5 +1,3 @@
-// src/stores/authStore.js
-
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -7,12 +5,10 @@ import { useRouter } from 'vue-router';
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter();
   
-  // 1. STATE: Os dados do usuário e o token, lidos do sessionStorage como valor inicial.
   const userDataString = sessionStorage.getItem('user_data');
   const user = ref(userDataString ? JSON.parse(userDataString).user : null);
   const token = ref(userDataString ? JSON.parse(userDataString).token : null);
 
-  // 2. GETTERS: Informações computadas a partir do estado.
   const isAuthenticated = computed(() => !!token.value);
   const userName = computed(() => user.value?.nome || '');
   
@@ -21,12 +17,30 @@ export const useAuthStore = defineStore('auth', () => {
     if (user.value && user.value.photo) {
       return `${backendUrl}/storage/${user.value.photo}`;
     }
-    return null; // Retorna null se não houver foto
+    return null;
   });
 
-  // 3. ACTIONS: Funções para modificar o estado.
+  /**
+   * ✅ A LÓGICA CRUCIAL QUE ESTÁ EM FALTA
+   * Esta computed property encontra o ID do tipo de utilizador,
+   * quer ele venha na raiz do objeto ou aninhado.
+   */
+  const userTypeId = computed(() => {
+    if (!user.value) {
+      return null;
+    }
+    // 1. Tenta encontrar na raiz (ex: { "id_tipo_usuario": 2 })
+    if (user.value.id_tipo_usuario) {
+      return user.value.id_tipo_usuario;
+    }
+    // 2. Tenta encontrar aninhado (ex: { "tipo_usuario": { "id_tipo_usuario": 2 } })
+    if (user.value.tipo_usuario && user.value.tipo_usuario.id_tipo_usuario) {
+      return user.value.tipo_usuario.id_tipo_usuario;
+    }
+    return null;
+  });
+  
   function setUserData(authData) {
-    // authData deve ter o formato { user: {...}, token: '...' }
     user.value = authData.user;
     token.value = authData.token;
     sessionStorage.setItem('user_data', JSON.stringify(authData));
@@ -39,13 +53,16 @@ export const useAuthStore = defineStore('auth', () => {
     router.push('/login');
   }
 
+  // Certifique-se de que 'userTypeId' está a ser exportado no return
   return { 
     user, 
     token, 
     isAuthenticated, 
     userName, 
     userPhotoUrl,
+    userTypeId, // ✅ EXPORTAR A NOVA PROPRIEDADE
     setUserData, 
     logout 
   };
 });
+
