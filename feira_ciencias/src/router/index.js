@@ -134,6 +134,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/admin/usuarios',
+      name: 'AdminUsuarios',
+      component: () => import('../views/GerenciadorUsuarios.vue'),
+      meta: {
+        requiresAuth: true,
+        requiredTypeId: [1]
+      }
+    },
+    {
       path: '/public/projeto/:id',
       name: 'PublicProject',
       component: () => import('../views/PublicProjectView.vue'),

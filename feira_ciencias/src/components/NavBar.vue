@@ -68,6 +68,12 @@ const allNavLinks = [
     icon: 'mdi-calendar-star-outline',
     meta: { requiredTypeId: [1, 4] } 
   },
+  {
+    title: 'Gerenciar Usuarios',
+    to: '/admin/usuarios',
+    icon: 'mdi-account-group-outline',
+    meta: { requiredTypeId: [1] }
+  }
 ];
 
 const permanentDrawer = computed(() => {
