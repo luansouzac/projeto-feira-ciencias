@@ -1,12 +1,18 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useAuthStore } from '@/stores/authStore';
+import { useDisplay } from 'vuetify';
 
 const authStore = useAuthStore();
+const { mobile } = useDisplay();
 
-// Controle da gaveta de navegação. 
-// Definida como 'true' por padrão para que a barra lateral apareça ao carregar em telas desktop.
-const drawer = ref(true); 
+// Controle da gaveta de navegação.
+// Abre por padrão apenas em telas desktop para evitar deslocamento no mobile.
+const drawer = ref(!mobile.value);
+
+watch(mobile, (isMobile) => {
+  drawer.value = !isMobile;
+});
 
 // MAPEAMENTO DE PERFIS (Mantido, pois é usado para filtrar os links)
 // 1: Administrador
@@ -161,7 +167,8 @@ function logout() {
     <v-navigation-drawer 
       v-model="drawer" 
       app
-      permanent
+      :temporary="mobile"
+      :permanent="!mobile"
     >
       <v-list nav>
         <v-list-item
