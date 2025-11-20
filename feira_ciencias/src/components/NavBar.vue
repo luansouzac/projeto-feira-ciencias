@@ -35,7 +35,7 @@ const allNavLinks = [
   {
     title: 'Meus Projetos Orientados',
     to: '/projetos/orientados',
-    icon: 'mdi-human-male-board-outline',
+    icon: 'mdi-clipboard-clock-outline',
     meta: { requiredTypeId: [1] } // Visível para Admin e Orientador
   },
   {
@@ -70,6 +70,10 @@ const allNavLinks = [
   },
 ];
 
+const permanentDrawer = computed(() => {
+  return authStore.user?.id_tipo_usuario === 1;
+});
+
 // Filtra os links de navegação baseado no tipo de usuário logado
 const visibleNavLinks = computed(() => {
   return allNavLinks.filter(link => {
@@ -101,17 +105,32 @@ function logout() {
 
 <template>
   <div>
-    <v-app-bar app color="green-darken-4" flat border>
+    <v-app-bar
+      app
+      color="green-darken-4"
+      flat
+      border
+      :class="{ 'pl-0': permanentDrawer }"
+    >
       <v-app-bar-nav-icon
         class="d-md-none"
         @click="drawer = !drawer"
+      ></v-app-bar-nav-icon>
+
+      <v-app-bar-nav-icon
+        v-if="permanentDrawer"
+        @click="drawer = !drawer"
+        class="d-none d-md-flex"
       ></v-app-bar-nav-icon>
 
       <v-toolbar-title class="font-weight-bold text-white">
         Projetaí
       </v-toolbar-title>
 
-      <div class="centralizar-menu d-none d-md-flex">
+      <div 
+        class="centralizar-menu" 
+        :class="{ 'd-none d-md-flex': !permanentDrawer, 'd-none': permanentDrawer }"
+      >
         <v-btn
           v-for="link in visibleNavLinks"
           :key="link.title"
@@ -124,7 +143,7 @@ function logout() {
       </div>
 
       <v-spacer></v-spacer>
-
+      
       <v-menu offset-y>
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" text class="pa-20 text-none">
@@ -161,7 +180,12 @@ function logout() {
       </v-menu>
     </v-app-bar>
 
-    <v-navigation-drawer v-model="drawer" temporary app>
+    <v-navigation-drawer 
+      v-model="drawer" 
+      app
+      :permanent="permanentDrawer"
+      :temporary="!permanentDrawer"
+    >
       <v-list nav>
         <v-list-item
           v-for="link in visibleNavLinks"
@@ -175,6 +199,14 @@ function logout() {
     </v-navigation-drawer>
   </div>
 </template>
+
+<style scoped>
+.centralizar-menu {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+</style>
 
 <style scoped>
 .centralizar-menu {
