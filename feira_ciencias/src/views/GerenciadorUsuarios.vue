@@ -8,48 +8,45 @@ const notificationStore = useNotificationStore();
 
 // --- Estado da Página ---
 const isModalOpen = ref(false);
-const isLoading = ref(true);
+const isLoading = ref(true)
 const isSubmitting = ref(false);
 const erro = ref(null);
 
-// Dados da aplicação
-const userTypes = ref([]); // Lista de tipos de usuário (Admin, Aluno, Orientador...)
-const usuarios = ref([]); // Lista de usuários existentes (simulação)
+const userTypes = ref([
+    { id_tipo_usuario: 1, tipo: 'Administrador' },
+    { id_tipo_usuario: 2, tipo: 'Aluno' },
+    { id_tipo_usuario: 3, tipo: 'Orientador' },
+    { id_tipo_usuario: 4, tipo: 'Avaliador' },
+]); 
+const usuarios = ref([]);
 
 // Estado do Formulário
 const form = ref(null);
 const formData = ref({
     nome: '',
     email: '',
+    id_matricula: '',
     senha_hash: '',
     id_tipo_usuario: null,
 });
-const passwordConfirm = ref(''); // Para confirmação de senha
+const passwordConfirm = ref('');
 
-// --- Busca de Dados Iniciais (Tipos de Usuário) ---
+// --- Busca de Dados Iniciais (Apenas Usuários) ---
 onMounted(async () => {
     try {
-        const typesUser = [
-            { id_tipo_usuario: 1, tipo: 'Administrador' },
-            { id_tipo_usuario: 2, tipo: 'Aluno' },
-            { id_tipo_usuario: 3, tipo: 'Orientador' },
-            { id_tipo_usuario: 4, tipo: 'Avaliador' },
-        ]
-        userTypes.value = typesUser;
-        // Simulação da busca de usuários (ajuste o endpoint se necessário)
         const usersResponse = await api.get('/usuarios?limit=10'); 
         usuarios.value = usersResponse.data;
     } catch (err) {
-        erro.value = "Falha ao carregar tipos de usuário ou a lista inicial.";
+        erro.value = "Falha ao carregar a lista inicial de usuários.";
         console.error(err);
     } finally {
         isLoading.value = false;
     }
 });
 
-// --- Funções do Formulário ---
+// --- Funções do Formulário (restante do código...) ---
 const resetForm = () => {
-    formData.value = { nome: '', email: '', senha_hash: '', id_tipo_usuario: null };
+    formData.value = { nome: '', email: '', id_matricula: '', senha_hash: '', id_tipo_usuario: null };
     passwordConfirm.value = '';
     form.value?.resetValidation();
 };
@@ -70,10 +67,8 @@ const handleCreateUser = async () => {
     try {
         const payload = { ...formData.value };
         
-        // POST para o endpoint de criação de usuários
         const response = await api.post('/usuarios', payload);
         
-        // Adiciona o novo usuário à lista local para atualização da UI
         usuarios.value.unshift(response.data);
         
         notificationStore.showSuccess(`Usuário ${response.data.nome} criado com sucesso!`);
@@ -84,6 +79,8 @@ const handleCreateUser = async () => {
         let message = "Falha ao criar usuário.";
         if (err.response?.data?.errors?.email) {
             message = "E-mail já cadastrado.";
+        } else if (err.response?.data?.errors?.id_matricula) {
+            message = "Matrícula inválida ou já cadastrada.";
         }
         notificationStore.showError(message);
         console.error(err);
@@ -108,7 +105,7 @@ const handleCreateUser = async () => {
             </v-card-title>
             <v-divider class="my-4"></v-divider>
             
-            <!-- Tabela de Usuários Existentes (Simulação) -->
+            <!-- Tabela de Usuários Existentes -->
             <div v-if="isLoading" class="text-center py-8">
                 <v-progress-circular indeterminate color="grey-darken-1" size="32" />
             </div>
@@ -125,9 +122,8 @@ const handleCreateUser = async () => {
                     <tr v-for="user in usuarios" :key="user.id_usuario">
                         <td>{{ user.nome }}</td>
                         <td class="d-none d-sm-table-cell">{{ user.email }}</td>
-                        <td>{{ user.tipo_usuario?.tipo || 'N/A' }}</td>
+                        <td>{{ user.tipo_usuario?.tipo || 'N/A' }}</td> 
                         <td class="text-right">
-                           <!-- Aqui entraria a lógica de editar/deletar -->
                            <v-btn icon="mdi-pencil" variant="text" size="small"></v-btn>
                            <v-btn icon="mdi-delete" color="red" variant="text" size="small"></v-btn>
                         </td>
@@ -147,6 +143,9 @@ const handleCreateUser = async () => {
                         <v-text-field v-model="formData.nome" label="Nome Completo" :rules="[rules.required]" variant="outlined" class="mb-4"></v-text-field>
                         
                         <v-text-field v-model="formData.email" label="E-mail" :rules="[rules.required, rules.email]" variant="outlined" class="mb-4"></v-text-field>
+                        
+                        <!-- ✅ ADICIONADO: Campo 'Matrícula' -->
+                        <v-text-field v-model="formData.id_matricula" label="Matrícula" :rules="[rules.required]" variant="outlined" class="mb-4"></v-text-field>
 
                         <v-select
                             v-model="formData.id_tipo_usuario"
@@ -173,7 +172,3 @@ const handleCreateUser = async () => {
         </v-dialog>
     </v-container>
 </template>
-
-<style scoped>
-/* Adicione estilos específicos aqui */
-</style>
