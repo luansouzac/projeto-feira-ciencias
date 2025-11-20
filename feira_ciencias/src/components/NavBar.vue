@@ -35,7 +35,7 @@ const allNavLinks = [
   {
     title: 'Meus Projetos Orientados',
     to: '/projetos/orientados',
-    icon: 'mdi-human-male-board-outline', // Ícone alterado para ser mais específico
+    icon: 'mdi-human-male-board', // Ícone alterado para ser mais específico
     meta: { requiredTypeId: [1, 3] } // Corrigido para incluir Orientador (ID 3)
   },
   {
