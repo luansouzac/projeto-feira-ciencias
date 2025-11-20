@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\AvaliadorProjetoController;
 use App\Http\Controllers\Api\QuestionarioController;
 use App\Http\Controllers\Api\PerguntaQuestionarioController;
 use App\Http\Controllers\Api\VotoPopularController;
+use App\Http\Controllers\Api\EventoVinculoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -111,6 +112,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // -- PERMISSÕES DE EVENTO --
     Route::middleware('permission:crud evento')->group(function () {
         Route::apiResource('eventos', EventoController::class)->except(['index', 'show']);
+        Route::get('/eventos/{evento}/{tipo}', [EventoVinculoController::class, 'index']);
+        Route::post('/eventos/{evento}/{tipo}', [EventoVinculoController::class, 'store']);
+        Route::delete('/eventos/{evento}/{tipo}/{id_usuario}', [EventoVinculoController::class, 'destroy']);
     });
     Route::middleware('permission:exibir evento')->group(function () {
         Route::get('/eventos', [EventoController::class, 'index']);
