@@ -214,7 +214,7 @@ const gerenciarProjeto = (id) => router.push(`/gerenciar-projeto/${id}`)
         </p>
       </v-col>
       <v-col v-if="isProfessor" cols="12" md="4" class="text-md-right">
-        <v-btn
+        <!-- <v-btn
           color="green-darken-3"
           size="large"
           prepend-icon="mdi-plus-box-outline"
@@ -222,7 +222,7 @@ const gerenciarProjeto = (id) => router.push(`/gerenciar-projeto/${id}`)
           block
         >
           Cadastrar Novo Projeto
-        </v-btn>
+        </v-btn> -->
       </v-col>
     </v-row>
 
@@ -368,7 +368,7 @@ const gerenciarProjeto = (id) => router.push(`/gerenciar-projeto/${id}`)
       </v-card>
     </v-dialog>
 
-    <CrudModal 
+    <!-- <CrudModal 
         v-if="isProfessor"
         v-model="isModalOpen"
         :title="modalConfig.title"
@@ -376,7 +376,7 @@ const gerenciarProjeto = (id) => router.push(`/gerenciar-projeto/${id}`)
         :item="currentItem"
         :loading="isModalLoading"
         @save="handleSave"
-    />
+    /> -->
   </v-container>
 </template>
 

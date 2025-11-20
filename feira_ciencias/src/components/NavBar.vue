@@ -1,19 +1,20 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { useAuthStore } from '@/stores/authStore'; // Importa a store de autenticação
+import { useAuthStore } from '@/stores/authStore';
 
-const authStore = useAuthStore(); // Inicia a store
+const authStore = useAuthStore();
 
-// Controle da gaveta de navegação para telas mobile
-const drawer = ref(false);
+// Controle da gaveta de navegação. 
+// Definida como 'true' por padrão para que a barra lateral apareça ao carregar em telas desktop.
+const drawer = ref(true); 
 
-// MAPEAMENTO DE PERFIS (Exemplo baseado nas suas rotas)
+// MAPEAMENTO DE PERFIS (Mantido, pois é usado para filtrar os links)
 // 1: Administrador
 // 2: Aluno
 // 3: Orientador
 // 4: Avaliador
 
-// Lista completa de todos os links de navegação possíveis
+// Lista completa de todos os links de navegação possíveis (Seu código existente)
 const allNavLinks = [
   { 
     title: 'Home', 
@@ -24,43 +25,42 @@ const allNavLinks = [
     title: 'Submeter Projetos',
     to: '/projetos',
     icon: 'mdi-folder-plus-outline',
-    meta: { requiredTypeId: [1, 2] } // Visível para Admin e Aluno
+    meta: { requiredTypeId: [1, 2] } 
   },
   {
     title: 'Banco de Projetos',
     to: '/banco-projetos',
     icon: 'mdi-database-outline',
-    // Sem 'meta', visível para todos os usuários logados
   },
   {
     title: 'Meus Projetos Orientados',
     to: '/projetos/orientados',
-    icon: 'mdi-clipboard-clock-outline',
-    meta: { requiredTypeId: [1] } // Visível para Admin e Orientador
+    icon: 'mdi-human-male-board-outline', // Ícone alterado para ser mais específico
+    meta: { requiredTypeId: [1, 3] } // Corrigido para incluir Orientador (ID 3)
   },
   {
     title: 'Aprovações de projetos',
     to: '/avaliacoes',
     icon: 'mdi-clipboard-check-outline',
-    meta: { requiredTypeId: [1, 4] } // Visível para Admin e Avaliador
+    meta: { requiredTypeId: [1, 4] }
   },
   {
     title: 'Minhas Avaliações',
     to: '/minhas-avaliacoes',
     icon: 'mdi-clipboard-clock-outline',
-    meta: { requiredTypeId: [1, 3, 4] } // Visível para Aluno, Orientador e Avaliador
+    meta: { requiredTypeId: [1, 3, 4] } 
   },
   {
     title: 'Resultados de Avaliações',
     to: '/ranking-projetos',
-    icon: 'mdi-clipboard-check-outline',
-    meta: { requiredTypeId: [1] } // Visível para Aluno, Orientador e Avaliador
+    icon: 'mdi-trophy-outline', // Ícone alterado para Ranking/Resultado
+    meta: { requiredTypeId: [1] } // Se for visível a todos os perfis, remova a meta.
   },
   {
     title: 'Gerenciar Avaliacoes',
     to: '/admin/avaliacoes',
     icon: 'mdi-clipboard-edit-outline',
-    meta: { requiredTypeId: [1] } // Visível para Admin
+    meta: { requiredTypeId: [1] } 
   },
   {
     title: 'Eventos',
@@ -76,24 +76,19 @@ const allNavLinks = [
   }
 ];
 
-const permanentDrawer = computed(() => {
-  return authStore.user?.id_tipo_usuario === 1;
-});
+// REMOVIDA A VARIÁVEL permanentDrawer, pois não é mais necessária
 
-// Filtra os links de navegação baseado no tipo de usuário logado
+// Filtra os links de navegação baseado no tipo de usuário logado (Mantido)
 const visibleNavLinks = computed(() => {
   return allNavLinks.filter(link => {
-    // Se o link tem uma restrição de perfil
     if (link.meta && link.meta.requiredTypeId) {
-      // Retorna true se o ID do tipo de usuário estiver na lista de permissões do link
       return link.meta.requiredTypeId.includes(authStore.user?.id_tipo_usuario);
     }
-    // Se não há restrição, o link é visível para todos
     return true;
   });
 });
 
-// Gera as iniciais do nome do usuário para o avatar
+// Gera as iniciais do nome do usuário para o avatar (Mantido)
 const userInitials = computed(() => {
   if (!authStore.userName) return '';
   const names = authStore.userName.split(" ");
@@ -103,7 +98,7 @@ const userInitials = computed(() => {
   return names[0].substring(0, 2).toUpperCase();
 });
 
-// Função de logout que chama a ação da store
+// Função de logout (Mantida)
 function logout() {
   authStore.logout();
 }
@@ -116,37 +111,14 @@ function logout() {
       color="green-darken-4"
       flat
       border
-      :class="{ 'pl-0': permanentDrawer }"
     >
       <v-app-bar-nav-icon
-        class="d-md-none"
         @click="drawer = !drawer"
-      ></v-app-bar-nav-icon>
-
-      <v-app-bar-nav-icon
-        v-if="permanentDrawer"
-        @click="drawer = !drawer"
-        class="d-none d-md-flex"
       ></v-app-bar-nav-icon>
 
       <v-toolbar-title class="font-weight-bold text-white">
         Projetaí
       </v-toolbar-title>
-
-      <div 
-        class="centralizar-menu" 
-        :class="{ 'd-none d-md-flex': !permanentDrawer, 'd-none': permanentDrawer }"
-      >
-        <v-btn
-          v-for="link in visibleNavLinks"
-          :key="link.title"
-          :to="link.to"
-          variant="text"
-          class="mx-1"
-        >
-          {{ link.title }}
-        </v-btn>
-      </div>
 
       <v-spacer></v-spacer>
       
@@ -189,8 +161,7 @@ function logout() {
     <v-navigation-drawer 
       v-model="drawer" 
       app
-      :permanent="permanentDrawer"
-      :temporary="!permanentDrawer"
+      permanent
     >
       <v-list nav>
         <v-list-item
@@ -205,19 +176,3 @@ function logout() {
     </v-navigation-drawer>
   </div>
 </template>
-
-<style scoped>
-.centralizar-menu {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-</style>
-
-<style scoped>
-.centralizar-menu {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-</style>

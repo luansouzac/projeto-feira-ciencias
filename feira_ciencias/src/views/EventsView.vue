@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useNotificationStore } from '@/stores/notification'
 import CrudModal from '@/components/CrudModal.vue';
 import { useEventoStore } from '@/stores/eventoStore'
-import EventoVinculoModal from '@/components/modals/EventoVinculoModal.vue'; 
+import EventoVinculoModal from '@/components/modals/EventoVinculoModal.vue';
 import api from '@/assets/plugins/axios.js';
 
 //Adicionando o store do evento
@@ -22,16 +22,16 @@ const currentItem = ref(null)
 // ✅ ESTADO PARA O MODAL DE VÍNCULO
 const isLinkModalOpen = ref(false);
 const eventoParaVincular = ref(null);
-  
+
 // --- ESTADO DA PÁGINA ---
 const filtroAtivo = ref('Todos')
 
 const modalConfig = {
   title: computed(() => (currentItem.value ? 'Editar Evento' : 'Novo Evento')),
   fields: [
-    { 
-      key: 'nome', 
-      label: 'Nome do Evento', 
+    {
+      key: 'nome',
+      label: 'Nome do Evento',
       type: 'text',
       cols: 12,
       rules: [v => !!v || 'O nome é obrigatório'],
@@ -39,7 +39,7 @@ const modalConfig = {
     },
     {
       key: 'data_evento',
-      label: 'Data do Evento', 
+      label: 'Data do Evento',
       type: 'date',
       cols: 12,
       rules: [v => !!v || 'A data é obrigatória'],
@@ -47,7 +47,7 @@ const modalConfig = {
     },
     {
       key: 'inicio_submissao',
-      label: 'Início da Submissão', 
+      label: 'Início da Submissão',
       type: 'datetime-local',
       cols: 12, md: 6,
       rules: [v => !!v || 'O início é obrigatório'],
@@ -55,7 +55,7 @@ const modalConfig = {
     },
     {
       key: 'fim_submissao',
-      label: 'Fim da Submissão', 
+      label: 'Fim da Submissão',
       type: 'datetime-local',
       cols: 12, md: 6,
       rules: [
@@ -66,7 +66,7 @@ const modalConfig = {
     },
     {
       key: 'inicio_inscricao',
-      label: 'Início da Inscrição', 
+      label: 'Início da Inscrição',
       type: 'date',
       cols: 12, md: 6,
       rules: [v => !!v || 'O início é obrigatório'],
@@ -74,14 +74,14 @@ const modalConfig = {
     },
     {
       key: 'fim_inscricao',
-      label: 'Fim da Inscrição', 
+      label: 'Fim da Inscrição',
       type: 'date',
       cols: 12, md: 6,
       defaultValue: '',
     },
     {
       key: 'min_pessoas',
-      label: 'Mínimo de Pessoas', 
+      label: 'Mínimo de Pessoas',
       type: 'number',
       cols: 12, md: 6,
       rules: [v => v > 0 || 'Deve ser maior que zero'],
@@ -89,7 +89,7 @@ const modalConfig = {
     },
     {
       key: 'max_pessoas',
-      label: 'Máximo de Pessoas', 
+      label: 'Máximo de Pessoas',
       type: 'number',
       cols: 12, md: 6,
       rules: [
@@ -98,9 +98,9 @@ const modalConfig = {
       ],
       defaultValue: 5,
     },
-    { 
-      key: 'ativo', 
-      label: 'Ativo', 
+    {
+      key: 'ativo',
+      label: 'Ativo',
       type: 'checkbox',
       cols: 12,
       defaultValue: 1,
@@ -118,7 +118,7 @@ const deleteEvento = async (evento) => {
     }
   }
 };
-  
+
 // --- COMPUTEDS E MÉTODOS DE AÇÃO ---
 const eventosFiltrados = computed(() => {
   if (filtroAtivo.value === 'Todos' || !filtroAtivo.value) {
@@ -126,7 +126,7 @@ const eventosFiltrados = computed(() => {
   }
   return getAllEventos.value.filter(p => p.ativo == filtroAtivo.value);
 })
-  
+
 // métodos
 const openCreateModal = () => {
   currentItem.value = null;
@@ -140,10 +140,10 @@ const openEditModal = (evento) => {
 
 // ✅ NOVO MÉTODO PARA ABRIR O MODAL DE VÍNCULO
 const openLinkModal = (evento) => {
-    eventoParaVincular.value = evento;
-    isLinkModalOpen.value = true;
+  eventoParaVincular.value = evento;
+  isLinkModalOpen.value = true;
 }
-  
+
 const handleSave = async (formData) => {
   isModalLoading.value = true;
 
@@ -161,18 +161,18 @@ const handleSave = async (formData) => {
     } else {
       // O store deve retornar o novo objeto criado para o usarmos no modal de vínculo
       savedEvent = await eventoStore.createEvento(formData);
-      success = !!savedEvent; 
+      success = !!savedEvent;
       successMessage = 'Evento criado com sucesso! Por favor, vincule os Orientadores.';
     }
 
     if (success) {
       notificationStore.showSuccess(successMessage);
       isModalOpen.value = false;
-      currentItem.value = null; 
-      
+      currentItem.value = null;
+
       // ✅ FLUXO CORRIGIDO: Se for um novo evento, abre o modal de vínculo imediatamente
       if (savedEvent && !isEditing) {
-          openLinkModal(savedEvent);
+        openLinkModal(savedEvent);
       }
       // Se foi uma edição, apenas fecha o modal de edição
     } else {
@@ -216,79 +216,57 @@ onMounted(() => {
         <p class="text-subtitle-2 text-grey-darken-1">Gerencie e acompanhe os eventos cadastrados.</p>
       </v-col>
       <v-col cols="12" md="6" class="d-flex justify-md-end">
-        <v-select v-model="filtroAtivo" :items="opcoesAtivo" label="Filtrar por Ativo" variant="outlined" density="compact" hide-details clearable style="max-width: 280px;"></v-select>
+        <v-select v-model="filtroAtivo" :items="opcoesAtivo" label="Filtrar por Ativo" variant="outlined"
+          density="compact" hide-details clearable style="max-width: 280px;"></v-select>
       </v-col>
     </v-row>
-    
+
     <v-row>
-        <v-card-text>
-            <div v-if="isLoadingEventos" class="text-center py-5">
-              <v-progress-circular indeterminate color="primary"></v-progress-circular>
-              <p class="mt-2">Carregando eventos...</p>
-            </div>
-            <div v-else-if="getEventErrors" class="text-center py-5 text-red-darken-2">
-              <v-icon icon="mdi-alert-circle"></v-icon>
-              <p class="mt-2">Erro ao carregar eventos: {{ getEventErrors }}</p>
-            </div>
-            <div v-else-if="eventosFiltrados.length === 0" class="text-center py-5">
-              <p>Nenhum evento encontrado com os filtros aplicados.</p>
-            </div>
-            <v-list v-else>
-              <v-list-item v-for="evento in eventosFiltrados" :key="evento.id_evento" class="mb-2 border rounded">
-                <v-list-item-content>
-                  <v-list-item-title class="font-weight-bold">
-                    {{ evento.nome }}
-                  </v-list-item-title>
-                  <v-list-item-subtitle>
-                    <v-chip :color="evento.ativo==1 ? 'green' : 'red'" density="compact">
-                      {{ evento.ativo ? 'Ativo' : 'Inativo' }}
-                    </v-chip>
-                  </v-list-item-subtitle>
-                </v-list-item-content>
-                <template v-slot:append>
-                  <v-btn
-                  icon="mdi-pencil"
-                    variant="text"
-                    size="small"
-                    color="green"
-                    @click.stop="openLinkModal(evento)"
-                  >
-                    <v-tooltip activator="parent">Vincular Orientadores/Avaliadores</v-tooltip>
-                  </v-btn>
-                  <v-btn
-                    icon="mdi-pencil"
-                    variant="text"
-                    size="small"
-                    @click.stop="openEditModal(evento)"
-                  ></v-btn>
-                  <v-btn
-                    icon="mdi-delete"
-                    variant="text"
-                    size="small"
-                    color="grey"
-                    @click.stop="deleteEvento(evento)"
-                  ></v-btn>
-                </template>
-              </v-list-item>
-            </v-list>
-        </v-card-text>
+      <v-card-text>
+        <div v-if="isLoadingEventos" class="text-center py-5">
+          <v-progress-circular indeterminate color="primary"></v-progress-circular>
+          <p class="mt-2">Carregando eventos...</p>
+        </div>
+        <div v-else-if="getEventErrors" class="text-center py-5 text-red-darken-2">
+          <v-icon icon="mdi-alert-circle"></v-icon>
+          <p class="mt-2">Erro ao carregar eventos: {{ getEventErrors }}</p>
+        </div>
+        <div v-else-if="eventosFiltrados.length === 0" class="text-center py-5">
+          <p>Nenhum evento encontrado com os filtros aplicados.</p>
+        </div>
+        <v-list v-else>
+          <v-list-item v-for="evento in eventosFiltrados" :key="evento.id_evento" class="mb-2 border rounded">
+            <v-list-item-content>
+              <v-list-item-title class="font-weight-bold">
+                {{ evento.nome }}
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                <v-chip :color="evento.ativo == 1 ? 'green' : 'red'" density="compact">
+                  {{ evento.ativo ? 'Ativo' : 'Inativo' }}
+                </v-chip>
+              </v-list-item-subtitle>
+            </v-list-item-content>
+            <template v-slot:append>
+              <v-btn variant="text" size="small" color="green" @click.stop="openLinkModal(evento)">
+                <v-icon>mdi-link</v-icon>
+
+                <v-tooltip activator="parent">Vincular Orientadores/Avaliadores</v-tooltip>
+              </v-btn>
+              <v-btn icon="mdi-pencil" variant="text" size="small" @click.stop="openEditModal(evento)"></v-btn>
+              <v-btn icon="mdi-delete" variant="text" size="small" color="grey"
+                @click.stop="deleteEvento(evento)"></v-btn>
+            </template>
+          </v-list-item>
+        </v-list>
+      </v-card-text>
     </v-row>
 
     <!-- Modal de Criação/Edição de Evento (Existente) -->
-    <CrudModal
-      v-model="isModalOpen"
-      :title="modalConfig.title"
-      :fields="modalConfig.fields"
-      :item="currentItem"
-      :loading="isModalLoading"
-      @save="handleSave"
-    />
+    <CrudModal v-model="isModalOpen" :title="modalConfig.title" :fields="modalConfig.fields" :item="currentItem"
+      :loading="isModalLoading" @save="handleSave" />
 
     <!-- ✅ NOVO MODAL DE VÍNCULO (Adicionado no template) -->
-    <EventoVinculoModal
-      v-model="isLinkModalOpen"
-      :evento="eventoParaVincular"
-    />
+    <EventoVinculoModal v-model="isLinkModalOpen" :evento="eventoParaVincular" />
   </v-container>
 </template>
 
@@ -298,6 +276,7 @@ onMounted(() => {
   line-height: 1.3em;
   font-weight: 500;
 }
+
 .v-card-text {
   min-height: 60px;
 }
