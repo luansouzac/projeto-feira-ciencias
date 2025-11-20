@@ -169,12 +169,6 @@ const handleSave = async (formData) => {
       notificationStore.showSuccess(successMessage);
       isModalOpen.value = false;
       currentItem.value = null;
-
-      // ✅ FLUXO CORRIGIDO: Se for um novo evento, abre o modal de vínculo imediatamente
-      if (savedEvent && !isEditing) {
-        openLinkModal(savedEvent);
-      }
-      // Se foi uma edição, apenas fecha o modal de edição
     } else {
       notificationStore.showError('Falha ao salvar o evento: ' + getEventErrors.value);
     }
