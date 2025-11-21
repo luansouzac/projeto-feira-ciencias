@@ -13,45 +13,40 @@ const notificationStore = useNotificationStore();
 
 // --- ESTADO LOCAL ---
 const activeTab = ref('orientadores');
-const isSearching = ref(false);
-const usersList = ref([]); // Lista de usuários para o seletor (Orientadores e Avaliadores)
 const currentLinks = ref({ orientadores: [], avaliadores: [] });
 const isLoadingLinks = ref(true);
 
-// --- ESTADO DO FORMULÁRIO DE VÍNCULO ---
+// --- ESTADO PARA BUSCA DINÂMICA ---
 const userToLink = ref(null);
+const usersSearchResults = ref([]); // ✅ Resultados da busca dinâmica
+const isSearchingUsers = ref(false); // ✅ Novo estado para feedback de loading
 const isSubmitting = ref(false);
 
 // --- PROPRIEDADES COMPUTADAS ---
 const eventoId = computed(() => props.evento?.id_evento);
 
-// Filtra a lista principal de usuários, removendo aqueles que já estão vinculados
+// Define os IDs de perfil que podem ser vinculados (baseado no seu EventoVinculoController)
+const availableRoles = computed(() => {
+    return [3, 4]; // Orientador e Avaliador
+});
+
+// Filtra os usuários buscados, removendo aqueles que já estão vinculados
 const availableUsers = computed(() => {
     const isOrientadorTab = activeTab.value === 'orientadores';
     const usersInCurrentTab = isOrientadorTab ? currentLinks.value.orientadores : currentLinks.value.avaliadores;
     const linkedUserIds = usersInCurrentTab.map(link => link.id_usuario || link.id_orientador || link.id_avaliador);
     
-    // Filtra para remover os usuários que já têm um vínculo
-    return usersList.value.filter(user => !linkedUserIds.includes(user.id_usuario));
+    // Filtra os resultados da busca dinâmica para remover os já vinculados
+    return usersSearchResults.value.filter(user => !linkedUserIds.includes(user.id_usuario));
 });
 
-// --- LÓGICA DE BUSCA ---
-
-const fetchUsersForLinking = async () => {
-    isSearching.value = true;
-    try {
-        // Busca usuários que podem ser orientadores (4) ou avaliadores (3)
-        const response = await api.get('/usuarios?id_tipo_usuario_in=3,4');
-        usersList.value = response.data;
-    } catch (err) {
-        notificationStore.showError('Falha ao carregar lista de professores/avaliadores.');
-    } finally {
-        isSearching.value = false;
-    }
-};
+// --- LÓGICA DE BUSCA DA API ---
 
 const fetchCurrentLinks = async () => {
-    // A verificação do eventoId agora é feita pelo watcher (Passo 3)
+    if (!eventoId.value) {
+        isLoadingLinks.value = false;
+        return;
+    }
     isLoadingLinks.value = true;
     try {
         const [orientadoresResponse, avaliadoresResponse] = await Promise.all([
@@ -67,7 +62,27 @@ const fetchCurrentLinks = async () => {
     }
 };
 
-// --- MÉTODOS DE VÍNCULO ---
+// ✅ FUNÇÃO CRUCIAL: Chama o backend para buscar usuários enquanto o administrador digita
+const fetchUsers = async (search) => {
+    // Só busca se a query tiver 2 caracteres ou mais para economizar recursos
+    if (search && search.length > 1) {
+        isSearchingUsers.value = true;
+        try {
+            const rolesString = availableRoles.value.join(',');
+            // Chama o endpoint do UsuarioController com os filtros de tipo e a pesquisa
+            const response = await api.get(`/usuarios?id_tipo_usuario_in=3,4&search=${search}`);
+            usersSearchResults.value = response.data;
+        } catch (err) {
+            notificationStore.showError('Falha na busca de usuários.');
+        } finally {
+            isSearchingUsers.value = false;
+        }
+    } else {
+        usersSearchResults.value = []; // Limpa os resultados se a pesquisa for muito curta
+    }
+};
+
+// --- MÉTODOS DE VÍNCULO (Link/Unlink) ---
 
 const linkUser = async () => {
     if (!userToLink.value) return notificationStore.showWarning('Selecione um usuário para vincular.');
@@ -81,13 +96,16 @@ const linkUser = async () => {
         const response = await api.post(`/eventos/${eventoId.value}/${tipo}`, payload);
 
         const newLink = response.data;
-        // Tenta encontrar o usuário na lista para atualizar a UI
-        newLink.usuario = usersList.value.find(u => u.id_usuario === newLink.id_orientador || u.id_usuario === newLink.id_avaliador);
+        // Pega os dados completos do usuário recém-vinculado para exibir o nome
+        const userData = usersSearchResults.value.find(u => u.id_usuario === userToLink.value);
+        
+        newLink[tipo === 'orientadores' ? 'orientador' : 'avaliador'] = userData;
         
         currentLinks.value[tipo].push(newLink);
         
         notificationStore.showSuccess(`Vínculo de ${tipo} criado com sucesso!`);
         userToLink.value = null;
+        usersSearchResults.value = []; // Limpa os resultados após o sucesso
 
     } catch (err) {
         notificationStore.showError(err.response?.data?.erro || 'Não foi possível criar o vínculo.');
@@ -117,19 +135,17 @@ const unlinkUser = async (link) => {
 
 // --- WATCHERS E INICIALIZAÇÃO ---
 
-// 1. Carrega a lista de usuários assim que o componente é montado
-onMounted(fetchUsersForLinking);
-
-// 2. ✅ WATCHER PRINCIPAL CORRIGIDO: Reage à mudança do ID e à abertura do modal
+// Reage à mudança do ID e à abertura do modal para buscar os vínculos
 watch(
     () => [props.modelValue, eventoId.value], 
     ([isOpening, newId]) => {
-        // Se o modal estiver aberto E tiver um ID válido, busca os vínculos
         if (isOpening && newId) {
             fetchCurrentLinks();
+            // NUNCA chamar fetchUsersForLinking aqui! A busca é dinâmica.
         } else if (!isOpening) {
             // Limpa o estado ao fechar
             currentLinks.value = { orientadores: [], avaliadores: [] };
+            usersSearchResults.value = [];
             userToLink.value = null;
             isLoadingLinks.value = true;
         }
@@ -156,18 +172,29 @@ const close = () => emit('update:modelValue', false);
         <v-row>
             <v-col cols="12" md="6" class="pr-md-6">
                 <h3 class="text-h6 font-weight-medium mb-3">Adicionar {{ activeTab === 'orientadores' ? 'Orientador' : 'Avaliador' }}</h3>
-                <v-select
+                
+                <!-- ✅ CAMPO CORRIGIDO: v-autocomplete para busca dinâmica -->
+                <v-autocomplete
                     v-model="userToLink"
                     :items="availableUsers"
                     item-title="nome"
                     item-value="id_usuario"
-                    :label="`Buscar por ${activeTab === 'orientadores' ? 'Professor/Orientador' : 'Avaliador'}`"
+                    :label="`Buscar por ${activeTab === 'orientadores' ? 'Professor/Orientador' : 'Avaliador'} (min. 2 caracteres)`"
                     variant="outlined"
-                    :loading="isSearching"
+                    :loading="isSearchingUsers"
                     hide-details
                     class="mb-3"
                     clearable
-                ></v-select>
+                    
+                    @update:search="fetchUsers"
+                    no-data-text="Digite um nome ou e-mail para buscar."
+                >
+                    <!-- Template para exibir o nome e o e-mail na lista de resultados -->
+                    <template v-slot:item="{ props, item }">
+                        <v-list-item v-bind="props" :title="item.raw.nome" :subtitle="item.raw.email"></v-list-item>
+                    </template>
+                </v-autocomplete>
+                
                 <v-btn
                     color="green-darken-3"
                     :disabled="!userToLink"
@@ -188,7 +215,8 @@ const close = () => emit('update:modelValue', false);
                     </div>
                     <v-list-item v-for="link in currentLinks[activeTab]" :key="link.id">
                         <v-list-item-title class="font-weight-medium">{{ link.avaliador?.nome || link.orientador?.nome || 'Usuário Desconhecido' }}</v-list-item-title>
-                        <v-list-item-subtitle>{{ link.usuario?.email || link.orientador?.email || 'N/A' }}</v-list-item-subtitle>
+                        <!-- Usamos o relacionamento correto para exibir o e-mail -->
+                        <v-list-item-subtitle>{{ link.avaliador?.email || link.orientador?.email || 'N/A' }}</v-list-item-subtitle>
                         <template v-slot:append>
                             <v-btn icon="mdi-close" variant="text" size="small" color="red-lighten-1" @click="unlinkUser(link)"></v-btn>
                         </template>
