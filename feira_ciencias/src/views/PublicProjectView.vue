@@ -1,9 +1,10 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router'; // ✅ Importado useRouter para navegação
 import api from '../assets/plugins/axios.js';
 
 const route = useRoute();
+const router = useRouter(); // Instância do router para navegação
 const projeto = ref(null);
 const carregando = ref(true);
 const erro = ref(null);
@@ -12,6 +13,7 @@ onMounted(async () => {
   const projetoId = route.params.id;
   try {
     const response = await api.get(`/public/projetos/${projetoId}`);
+    // A API deve retornar o objeto do Evento aninhado no Projeto (propriedade 'eventos')
     projeto.value = response.data;
   } catch (err) {
     console.error("Erro ao buscar dados públicos do projeto:", err);
@@ -38,11 +40,35 @@ const formatDate = (dateString) => {
     if (!dateString) return 'Data não definida';
     return new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 };
+
+// ✅ FUNÇÃO PARA VOLTAR AO EVENTO
+const goToEventList = () => {
+    const eventoId = projeto.value?.eventos?.id_evento;
+    if (eventoId) {
+        // Navega para a rota: /public/evento/:id/projetos
+        router.push(`/public/evento/${eventoId}/projetos`);
+    } else {
+        // Caso não haja ID do evento (segurança), volta para a home
+        router.push('/home'); 
+    }
+};
 </script>
 
 <template>
   <div class="bg-grey-lighten-5">
     <v-container class="py-10">
+      
+      <!-- Botão Voltar (Aparece se houver projeto) -->
+      <v-btn 
+        v-if="projeto"
+        variant="text" 
+        prepend-icon="mdi-arrow-left" 
+        @click="goToEventList" 
+        class="mb-6"
+      >
+        Voltar para a Lista do Evento
+      </v-btn>
+
       <div v-if="carregando" class="text-center py-16">
         <v-progress-circular indeterminate color="green-darken-3" size="64"></v-progress-circular>
         <p class="mt-4 text-grey-darken-1">A carregar projeto...</p>
@@ -142,4 +168,3 @@ const formatDate = (dateString) => {
     </v-container>
   </div>
 </template>
-
