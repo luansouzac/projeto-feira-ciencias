@@ -249,7 +249,6 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
         </v-tabs>
 
         <v-window v-model="activeTab">
-          <!-- Aba de Atribuições -->
           <v-window-item value="atribuicoes">
             <v-card-text class="pa-6">
               <v-select
@@ -279,20 +278,22 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
                 </v-list>
                 <p v-else class="text-center text-grey py-4">Nenhum avaliador atribuído a este projeto ainda.</p>
 
-                <!-- Formulário para adicionar novo avaliador -->
                 <div v-if="atribuicoes.length < 3">
                   <h2 class="text-h6 font-weight-medium mb-4">Adicionar Novo Avaliador</h2>
                   <v-row align="center">
                     <v-col cols="12" md="8">
-                      <v-select
+                      <v-autocomplete
                         v-model="selectedAvaliadorId"
                         :items="avaliadoresParaAtribuir"
                         item-title="nome"
                         item-value="id_usuario"
-                        label="Selecione um Avaliador"
+                        label="Pesquisar Avaliador"
+                        placeholder="Digite o nome..."
                         variant="outlined"
                         hide-details
-                      ></v-select>
+                        clearable
+                        no-data-text="Nenhum avaliador encontrado"
+                      ></v-autocomplete>
                     </v-col>
                     <v-col cols="12" md="4">
                       <v-btn 
@@ -315,7 +316,6 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
             </v-card-text>
           </v-window-item>
 
-          <!-- Aba de Questionários -->
           <v-window-item value="questionarios">
             <v-toolbar flat>
               <v-toolbar-title class="font-weight-medium">Questionários</v-toolbar-title>
@@ -368,7 +368,6 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
       </v-card>
     </div>
 
-    <!-- Modais -->
     <QuestionarioFormModal 
       v-model="isQuestionarioModalOpen"
       :questionario-to-edit="questionarioParaEditar"
@@ -385,4 +384,3 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
     />
   </v-container>
 </template>
-
