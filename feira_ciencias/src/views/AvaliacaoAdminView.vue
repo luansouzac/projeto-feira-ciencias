@@ -3,29 +3,30 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useNotificationStore } from '@/stores/notification';
 import api from '@/assets/plugins/axios.js';
 
-// Importação dos componentes de modal que serão utilizados nesta página
+// Importação dos componentes de modal
 import QuestionarioFormModal from '@/components/modals/QuestionarioFormModal.vue';
 import PerguntaFormModal from '@/components/modals/PerguntaFormModal.vue';
 
-// --- Stores e Estado Geral da Página ---
+// --- Stores e Estado Geral ---
 const notificationStore = useNotificationStore();
 const loading = ref(true);
 const erro = ref(null);
 const activeTab = ref('atribuicoes');
-const isSubmitting = ref(false); // Usado para os botões de loading
+const isSubmitting = ref(false); 
+const loadingAvaliadores = ref(false); // Loading específico para o campo de pesquisa
 
-// --- Dados Carregados da API ---
+// --- Dados da API ---
 const projetos = ref([]);
-const avaliadoresDisponiveis = ref([]); // Todos os utilizadores que podem ser avaliadores
+const avaliadoresDisponiveis = ref([]); // Lista dinâmica baseada no evento do projeto
 const questionarios = ref([]);
 const eventos = ref([]);
 
 // --- Estado da Aba "Atribuições" ---
-const atribuicoes = ref([]); // Avaliadores já atribuídos ao projeto selecionado
+const atribuicoes = ref([]); 
 const selectedProjectId = ref(null);
 const selectedAvaliadorId = ref(null);
 
-// --- Estado da Aba "Questionários" e seus Modais ---
+// --- Estado da Aba "Questionários" e Modais ---
 const isQuestionarioModalOpen = ref(false);
 const isPerguntaModalOpen = ref(false);
 const questionarioParaEditar = ref(null);
@@ -35,19 +36,17 @@ const perguntaParaEditar = ref(null);
 // --- Busca de Dados Iniciais ---
 onMounted(async () => {
   try {
-    // Faz todas as chamadas à API em paralelo para otimizar o carregamento
-    const [projetosResponse, avaliadoresResponse, questionariosResponse, eventosResponse] = await Promise.all([
-      api.get('/projetos'), // Busca todos os projetos para o seletor
-      api.get('/usuarios?id_tipo_usuario_in=3,4'), // Busca utilizadores do tipo 3 (Avaliador) e 4 (Orientador)
-      api.get('/questionarios'), // Busca os questionários existentes
-      api.get('/eventos') // Busca os eventos para o formulário de questionário
+    // Carregamos apenas o básico. Os avaliadores agora são carregados sob demanda.
+    const [projetosResponse, questionariosResponse, eventosResponse] = await Promise.all([
+      api.get('/projetos'), 
+      api.get('/questionarios'), 
+      api.get('/eventos') 
     ]);
     projetos.value = projetosResponse.data;
-    avaliadoresDisponiveis.value = avaliadoresResponse.data;
     questionarios.value = questionariosResponse.data;
     eventos.value = eventosResponse.data;
   } catch (err) {
-    erro.value = "Não foi possível carregar os dados necessários para a página.";
+    erro.value = "Não foi possível carregar os dados iniciais do painel.";
     console.error(err);
   } finally {
     loading.value = false;
@@ -56,21 +55,47 @@ onMounted(async () => {
 
 // --- Lógica da Aba "Atribuição de Avaliadores" ---
 
-// Observa quando o utilizador seleciona um projeto na lista e busca os avaliadores já atribuídos
+// Observa o projeto selecionado para buscar os dados corretos
 watch(selectedProjectId, async (newProjectId) => {
-  if (!newProjectId) {
-    atribuicoes.value = [];
-    return;
-  }
+  // Limpa estados anteriores
+  atribuicoes.value = [];
+  avaliadoresDisponiveis.value = [];
+  selectedAvaliadorId.value = null;
+
+  if (!newProjectId) return;
+
+  loadingAvaliadores.value = true; 
+
   try {
-    const response = await api.get(`/projetos/${newProjectId}/avaliadores`);
-    atribuicoes.value = response.data;
+    const projetoSelecionado = projetos.value.find(p => p.id_projeto === newProjectId);
+    
+    const promises = [
+       api.get(`/projetos/${newProjectId}/avaliadores`) // Quem já está atribuído
+    ];
+
+    if (projetoSelecionado && projetoSelecionado.id_evento) {
+        promises.push(api.get(`/eventos/${projetoSelecionado.id_evento}/avaliadores`));
+    }
+
+    const [atribuicoesResponse, avaliadoresResponse] = await Promise.all(promises);
+
+    atribuicoes.value = atribuicoesResponse.data;
+
+    if (avaliadoresResponse) {
+        avaliadoresDisponiveis.value = avaliadoresResponse.data.map(item => item.avaliador);
+    } else {
+        notificationStore.showWarning("Este projeto não tem um evento associado para buscar avaliadores.");
+    }
+
   } catch (err) {
-    notificationStore.showError("Falha ao buscar os avaliadores deste projeto.");
+    notificationStore.showError("Falha ao carregar dados do projeto ou avaliadores.");
+    console.error(err);
+  } finally {
+    loadingAvaliadores.value = false;
   }
 });
 
-// Atribui um novo avaliador ao projeto selecionado
+// Atribui novo avaliador
 const atribuirAvaliador = async () => {
   if (!selectedProjectId.value || !selectedAvaliadorId.value) {
     notificationStore.showWarning("Por favor, selecione um projeto e um avaliador.");
@@ -84,11 +109,11 @@ const atribuirAvaliador = async () => {
     };
     const response = await api.post('/avaliador_projeto', payload);
     
-    // Atualiza a lista na interface com os dados completos do avaliador
+    // Atualiza visualmente a lista sem precisar recarregar tudo
     const avaliadorInfo = avaliadoresDisponiveis.value.find(a => a.id_usuario === response.data.id_avaliador);
     atribuicoes.value.push({ ...response.data, avaliador: avaliadorInfo });
     
-    selectedAvaliadorId.value = null; // Limpa o seletor
+    selectedAvaliadorId.value = null; 
     notificationStore.showSuccess("Avaliador atribuído com sucesso!");
   } catch (err) {
     notificationStore.showError(err.response?.data?.erro || "Não foi possível atribuir o avaliador.");
@@ -97,7 +122,7 @@ const atribuirAvaliador = async () => {
   }
 };
 
-// Remove uma atribuição de avaliação
+// Remove atribuição
 const removerAtribuicao = async (atribuicao) => {
   if (!confirm(`Tem a certeza de que deseja remover ${atribuicao.avaliador.nome} deste projeto?`)) return;
 
@@ -110,28 +135,15 @@ const removerAtribuicao = async (atribuicao) => {
   }
 };
 
-// Filtra a lista de avaliadores para não mostrar quem já foi atribuído ao projeto atual
+// Computada para filtrar quem já está no projeto
 const avaliadoresParaAtribuir = computed(() => {
   const idsAtribuidos = atribuicoes.value.map(a => a.id_avaliador);
   return avaliadoresDisponiveis.value.filter(a => !idsAtribuidos.includes(a.id_usuario));
 });
 
-const eventosDisponiveisParaQuestionario = computed(() => {
-  const idsEventosUsados = new Set(questionarios.value.map(q => q.id_evento));
-  
-  return eventos.value.filter(evento => {
-    if (!idsEventosUsados.has(evento.id_evento)) {
-      return true;
-    }
-    if (questionarioParaEditar.value && questionarioParaEditar.value.id_evento === evento.id_evento) {
-      return true;
-    }
-    return false;
-  });
-});
-
-
 // --- Lógica da Aba "Gestão de Questionários" ---
+
+const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventId)?.nome || 'Evento desconhecido';
 
 const openCreateQuestionarioModal = () => {
   questionarioParaEditar.value = null;
@@ -162,72 +174,55 @@ const handleSaveQuestionario = async (formData) => {
   }
 };
 const handleDeleteQuestionario = async (questionario) => {
-    if (!confirm(`Tem a certeza de que deseja apagar o questionário "${questionario.titulo}"? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm(`Tem a certeza de que deseja apagar o questionário "${questionario.titulo}"?`)) return;
     try {
         await api.delete(`/questionarios/${questionario.id_questionario}`);
         questionarios.value = questionarios.value.filter(q => q.id_questionario !== questionario.id_questionario);
-        notificationStore.showSuccess("Questionário apagado com sucesso.");
-    } catch(err) {
-        notificationStore.showError("Não foi possível apagar o questionário.");
-    }
+        notificationStore.showSuccess("Questionário apagado.");
+    } catch(err) { notificationStore.showError("Erro ao apagar questionário."); }
 };
 const openAddPerguntaModal = (questionario) => {
   questionarioParaAdicionarPergunta.value = questionario;
   isPerguntaModalOpen.value = true;
 };
-
-const handleDeletePergunta = async (pergunta, questionario) => {
-    if (!confirm(`Tem a certeza de que deseja apagar a pergunta: "${pergunta.texto_pergunta}"?`)) return;
-    try {
-        await api.delete(`/perguntas_questionario/${pergunta.id_pergunta}`);
-        const qIndex = questionarios.value.findIndex(q => q.id_questionario === questionario.id_questionario);
-        if (qIndex !== -1) {
-            const pIndex = questionarios.value[qIndex].perguntas.findIndex(p => p.id_pergunta === pergunta.id_pergunta);
-            if (pIndex !== -1) {
-                questionarios.value[qIndex].perguntas.splice(pIndex, 1);
-            }
-        }
-        notificationStore.showSuccess("Pergunta apagada com sucesso.");
-    } catch(err) {
-        notificationStore.showError("Não foi possível apagar a pergunta.");
-    }
-};
-
-
 const openEditPerguntaModal = (pergunta, questionario) => {
   questionarioParaAdicionarPergunta.value = questionario;
   perguntaParaEditar.value = { ...pergunta };
   isPerguntaModalOpen.value = true;
 };
-
+const handleDeletePergunta = async (pergunta, questionario) => {
+    if (!confirm("Apagar pergunta?")) return;
+    try {
+        await api.delete(`/perguntas_questionario/${pergunta.id_pergunta}`);
+        const qIndex = questionarios.value.findIndex(q => q.id_questionario === questionario.id_questionario);
+        if (qIndex !== -1) {
+             const pIndex = questionarios.value[qIndex].perguntas.findIndex(p => p.id_pergunta === pergunta.id_pergunta);
+             if (pIndex !== -1) questionarios.value[qIndex].perguntas.splice(pIndex, 1);
+        }
+        notificationStore.showSuccess("Pergunta apagada.");
+    } catch(err) { notificationStore.showError("Erro ao apagar pergunta."); }
+};
 const handleSavePergunta = async (formData) => {
   isSubmitting.value = true;
   try {
     const questionario = questionarios.value.find(q => q.id_questionario === formData.id_questionario);
     if (!questionario) throw new Error("Questionário não encontrado");
-
-    if (formData.id_pergunta) { // A CONDIÇÃO QUE ESTÁ A FALHAR
+    if (formData.id_pergunta) {
       const response = await api.put(`/perguntas_questionario/${formData.id_pergunta}`, formData);
       const pIndex = questionario.perguntas.findIndex(p => p.id_pergunta === formData.id_pergunta);
-      if (pIndex !== -1) {
-        questionario.perguntas[pIndex] = response.data;
-      }
-      notificationStore.showSuccess("Pergunta atualizada com sucesso!");
+      if (pIndex !== -1) questionario.perguntas[pIndex] = response.data;
+      notificationStore.showSuccess("Pergunta atualizada!");
     } else {
       const response = await api.post('/perguntas_questionario', formData);
       if (!questionario.perguntas) questionario.perguntas = [];
       questionario.perguntas.push(response.data);
-      notificationStore.showSuccess("Pergunta adicionada com sucesso!");
+      notificationStore.showSuccess("Pergunta adicionada!");
     }
-    
     isPerguntaModalOpen.value = false;
   } catch(err) {
-    notificationStore.showError(err.response?.data?.erro || "Falha ao salvar a pergunta.");
-  } finally {
-    isSubmitting.value = false;
-  }
+    notificationStore.showError(err.response?.data?.erro || "Falha ao salvar pergunta.");
+  } finally { isSubmitting.value = false; }
 };
-const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventId)?.nome || 'Evento desconhecido';
 </script>
 
 <template>
@@ -236,11 +231,12 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
       <v-progress-circular indeterminate color="green-darken-3" size="64" />
       <p class="mt-4 text-grey-darken-1">A carregar painel de gestão...</p>
     </div>
+
     <v-alert v-else-if="erro" type="error" variant="tonal" prominent>{{ erro }}</v-alert>
 
     <div v-else>
       <h1 class="text-h4 font-weight-bold mb-2">Painel de Gestão de Avaliações</h1>
-      <p class="text-medium-emphasis mb-8">Atribua avaliadores aos projetos e gira os questionários para os eventos.</p>
+      <p class="text-medium-emphasis mb-8">Atribua avaliadores aos projetos e gira os questionários.</p>
 
       <v-card>
         <v-tabs v-model="activeTab" bg-color="green-darken-4" color="white" grow>
@@ -249,8 +245,10 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
         </v-tabs>
 
         <v-window v-model="activeTab">
+          
           <v-window-item value="atribuicoes">
             <v-card-text class="pa-6">
+              
               <v-select
                 v-model="selectedProjectId"
                 :items="projetos"
@@ -263,13 +261,12 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
               ></v-select>
 
               <div v-if="selectedProjectId">
+                
                 <h2 class="text-h6 font-weight-medium mb-4">Avaliadores Atribuídos ({{ atribuicoes.length }}/3)</h2>
                 <v-list v-if="atribuicoes.length > 0" lines="one" border rounded class="mb-8">
                   <v-list-item v-for="atribuicao in atribuicoes" :key="atribuicao.id" :title="atribuicao.avaliador.nome">
                     <template v-slot:prepend>
-                      <v-avatar color="grey-lighten-2">
-                        <v-icon>mdi-account-tie-outline</v-icon>
-                      </v-avatar>
+                      <v-avatar color="grey-lighten-2"><v-icon>mdi-account-tie-outline</v-icon></v-avatar>
                     </template>
                     <template v-slot:append>
                       <v-btn icon="mdi-close" variant="text" color="grey" @click="removerAtribuicao(atribuicao)"></v-btn>
@@ -282,24 +279,29 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
                   <h2 class="text-h6 font-weight-medium mb-4">Adicionar Novo Avaliador</h2>
                   <v-row align="center">
                     <v-col cols="12" md="8">
+                      
                       <v-autocomplete
                         v-model="selectedAvaliadorId"
                         :items="avaliadoresParaAtribuir"
                         item-title="nome"
                         item-value="id_usuario"
-                        label="Pesquisar Avaliador"
+                        label="Pesquisar Avaliador do Evento"
                         placeholder="Digite o nome..."
                         variant="outlined"
                         hide-details
                         clearable
-                        no-data-text="Nenhum avaliador encontrado"
+                        :loading="loadingAvaliadores"
+                        :disabled="loadingAvaliadores || !selectedProjectId"
+                        no-data-text="Nenhum avaliador disponível para este evento"
                       ></v-autocomplete>
+
                     </v-col>
                     <v-col cols="12" md="4">
                       <v-btn 
                         color="green-darken-3" 
                         @click="atribuirAvaliador"
                         :loading="isSubmitting"
+                        :disabled="!selectedAvaliadorId"
                         block 
                         size="large"
                       >
@@ -309,7 +311,7 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
                   </v-row>
                 </div>
                  <v-alert v-else type="success" variant="tonal" class="mt-6">
-                    Este projeto já atingiu o número máximo de 3 avaliadores.
+                    Este projeto já atingiu o limite de 3 avaliadores.
                 </v-alert>
 
               </div>
@@ -339,7 +341,7 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
                      <v-btn icon="mdi-delete" variant="text" size="small" color="red-lighten-1" @click.stop="handleDeleteQuestionario(q)"></v-btn>
                   </v-expansion-panel-title>
                   <v-expansion-panel-text class="bg-grey-lighten-5">
-                    <v-list-subheader>Perguntas do Questionário</v-list-subheader>
+                    <v-list-subheader>Perguntas</v-list-subheader>
                      <v-list v-if="q.perguntas && q.perguntas.length > 0" lines="two" class="bg-transparent">
                         <div v-for="(pergunta, index) in q.perguntas" :key="pergunta.id_pergunta">
                             <v-list-item :title="pergunta.texto_pergunta" :subtitle="`Critério: ${pergunta.criterio}`">
@@ -351,8 +353,7 @@ const getEventName = (eventId) => eventos.value.find(e => e.id_evento === eventI
                             <v-divider v-if="index < q.perguntas.length - 1"></v-divider>
                         </div>
                      </v-list>
-                     <p v-else class="text-center text-grey py-4">Nenhuma pergunta adicionada ainda.</p>
-
+                     <p v-else class="text-center text-grey py-4">Sem perguntas.</p>
                     <v-card-actions>
                         <v-spacer></v-spacer>
                         <v-btn color="green-darken-2" variant="text" @click="openAddPerguntaModal(q)" prepend-icon="mdi-plus">
